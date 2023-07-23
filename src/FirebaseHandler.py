@@ -7,7 +7,10 @@ import PathUtils
 from firebase_admin import firestore
 
 from src.PlayerState import PlayerState
+from src.firestoreEntities.Game import Game
 from src.firestoreEntities.Player import Player
+from src.firestoreEntities.TimekeepingEvent import TimekeepingEvent
+from src.firestoreEntities.Training import Training
 
 
 class FirebaseHandler(object):
@@ -50,5 +53,14 @@ class FirebaseHandler(object):
 
     def add_player(self, new_player: Player):
         self.db.collection('Players').add(new_player.to_dict())
+
+    def add_game(self, game: Game):
+        self.db.collection('Games').add(game.to_dict())
+
+    def add_timekeeping_event(self, timekeeping_event: TimekeepingEvent):
+        self.db.collection('Timekeeping').add(timekeeping_event.to_dict())
+
+    def add_training(self, training: Training):
+        self.db.collection('Trainings').add(training.to_dict())
 
 

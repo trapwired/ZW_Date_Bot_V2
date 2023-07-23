@@ -16,9 +16,4 @@ class Player:
                 'state': self.state}
 
     def __repr__(self):
-        return f"Player(\
-                telegramId={self.telegramId}, \
-                firstname={self.firstname}, \
-                lastname={self.lastname}, \
-                state={self.state}\
-            )"
+        return f"Player(telegramId={self.telegramId}, firstname={self.firstname}, lastname={self.lastname}, state={self.state})"
