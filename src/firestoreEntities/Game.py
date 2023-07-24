@@ -9,7 +9,7 @@ class Game:
         self.opponent = opponent
 
     @staticmethod
-    def from_dict(source):
+    def from_dict(source: dict):
         return Game(source['timestamp'], source['location'], source['opponent'])
 
     def to_dict(self):

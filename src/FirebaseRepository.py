@@ -16,7 +16,7 @@ from src.firestoreEntities.TimekeepingEvent import TimekeepingEvent
 from src.firestoreEntities.Training import Training
 
 
-class FirebaseAccess(object):
+class FirebaseRepository(object):
     def __init__(self, api_config: configparser.RawConfigParser):
         api_config_path = PathUtils.get_secrets_file_path(api_config['Firebase']['credentialsFileName'])
         cred_object = firebase_admin.credentials.Certificate(api_config_path)
@@ -48,11 +48,14 @@ class FirebaseAccess(object):
         return -42
 
     def get_player_state(self, telegram_id: int):
-        return PlayerState(self.get_player_object(telegram_id).state)
-
-    def update_player_state(self, telegram_id: int, new_player_state: PlayerState):
         player_id = self.get_player(telegram_id).id
-        self.db.collection('Players').document(player_id).update({'state': int(new_player_state)})
+        query_ref = self.db.collection('PlayersToState').where(filter=FieldFilter("playerId", "==", player_id))
+        return PlayerToState.from_dict(query_ref.get()[0].to_dict())
+
+    def update_player_state(self, player_firebase_id: str, new_player_state: PlayerState):
+        # TODO doc_ref_id = self.
+        # self.db.collection('PlayersToState').document(doc_ref_id).update({'state': int(new_player_state)})
+        pass
 
     def add_player(self, new_player: Player):
         return self.db.collection('Players').add(new_player.to_dict())
@@ -75,4 +78,6 @@ class FirebaseAccess(object):
     def add_player_to_game(self, player_to_game: PlayerToGame):
         self.db.collection('PlayersToGames').add(player_to_game.to_dict())
 
-
+    def get_player_to_state_document(self, player_fb_id):
+        pass
+# return document in playerToState

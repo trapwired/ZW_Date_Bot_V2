@@ -8,7 +8,7 @@ class Player:
         self.telegramId = telegram_id
 
     @staticmethod
-    def from_dict(source):
+    def from_dict(source: dict):
         return Player(source['telegramId'], source['firstname'], source['lastname'])
 
     def to_dict(self):

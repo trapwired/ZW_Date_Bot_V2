@@ -8,7 +8,7 @@ class Training:
         self.location = location
 
     @staticmethod
-    def from_dict(source):
+    def from_dict(source: dict):
         return Training(source['timestamp'], source['location'])
 
     def to_dict(self):

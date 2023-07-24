@@ -9,7 +9,7 @@ class PlayerToState:
         self.additional_info = additional_info
 
     @staticmethod
-    def from_dict(source):
+    def from_dict(source: dict):
         return PlayerToState(source['playerId'], source['state'], source['additionalInformation'])
 
     def to_dict(self):

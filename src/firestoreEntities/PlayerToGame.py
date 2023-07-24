@@ -8,7 +8,7 @@ class PlayerToGame:
         self.state = state
 
     @staticmethod
-    def from_dict(source):
+    def from_dict(source: dict):
         return PlayerToGame(source['playerId'], source['gameId'], source['state'])
 
     def to_dict(self):
