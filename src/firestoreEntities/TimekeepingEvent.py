@@ -18,4 +18,4 @@ class TimekeepingEvent:
                 'people_required': self.people_required}
 
     def __repr__(self):
-        return f"Game(timestamp={self.timestamp}, location={self.location}, people_required={self.people_required})"
+        return f"TimekeepingEvent(timestamp={self.timestamp}, location={self.location}, people_required={self.people_required})"

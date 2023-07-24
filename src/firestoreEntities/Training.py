@@ -16,4 +16,4 @@ class Training:
                 'location': self.location}
 
     def __repr__(self):
-        return f"Game(timestamp={self.timestamp}, location={self.location})"
+        return f"Training(timestamp={self.timestamp}, location={self.location})"

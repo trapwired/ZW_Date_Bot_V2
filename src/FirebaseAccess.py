@@ -6,14 +6,17 @@ from google.cloud.firestore_v1 import FieldFilter
 import PathUtils
 from firebase_admin import firestore
 
-from src.PlayerState import PlayerState
+from src.States.AttendanceState import AttendanceState
+from src.States.PlayerState import PlayerState
 from src.firestoreEntities.Game import Game
 from src.firestoreEntities.Player import Player
+from src.firestoreEntities.PlayerToGame import PlayerToGame
+from src.firestoreEntities.PlayerToState import PlayerToState
 from src.firestoreEntities.TimekeepingEvent import TimekeepingEvent
 from src.firestoreEntities.Training import Training
 
 
-class FirebaseHandler(object):
+class FirebaseAccess(object):
     def __init__(self, api_config: configparser.RawConfigParser):
         api_config_path = PathUtils.get_secrets_file_path(api_config['Firebase']['credentialsFileName'])
         cred_object = firebase_admin.credentials.Certificate(api_config_path)
@@ -52,7 +55,13 @@ class FirebaseHandler(object):
         self.db.collection('Players').document(player_id).update({'state': int(new_player_state)})
 
     def add_player(self, new_player: Player):
-        self.db.collection('Players').add(new_player.to_dict())
+        return self.db.collection('Players').add(new_player.to_dict())
+
+    def add_player_to_state(self, player_to_state: PlayerToState):
+        self.db.collection('PlayersToState').add(player_to_state.to_dict())
+
+    def get_player_id_from_telegram_id(self, telegram_id: int):
+        return self.get_player(telegram_id).id
 
     def add_game(self, game: Game):
         self.db.collection('Games').add(game.to_dict())
@@ -62,5 +71,8 @@ class FirebaseHandler(object):
 
     def add_training(self, training: Training):
         self.db.collection('Trainings').add(training.to_dict())
+
+    def add_player_to_game(self, player_to_game: PlayerToGame):
+        self.db.collection('PlayersToGames').add(player_to_game.to_dict())
 
 
