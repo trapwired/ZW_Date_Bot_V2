@@ -3,17 +3,17 @@ import configparser
 
 from google.cloud.firestore_v1 import FieldFilter
 
-import PathUtils
 from firebase_admin import firestore
 
 from src.States.AttendanceState import AttendanceState
 from src.States.PlayerState import PlayerState
-from src.firestoreEntities.Game import Game
-from src.firestoreEntities.Player import Player
-from src.firestoreEntities.PlayerToGame import PlayerToGame
-from src.firestoreEntities.PlayerToState import PlayerToState
-from src.firestoreEntities.TimekeepingEvent import TimekeepingEvent
-from src.firestoreEntities.Training import Training
+from src.Utils import PathUtils
+from src.databaseEntities.Game import Game
+from src.databaseEntities.Player import Player
+from src.databaseEntities.PlayerToGame import PlayerToGame
+from src.databaseEntities.PlayerToState import PlayerToState
+from src.databaseEntities.TimekeepingEvent import TimekeepingEvent
+from src.databaseEntities.Training import Training
 
 
 class FirebaseRepository(object):

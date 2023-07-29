@@ -1,16 +1,31 @@
 import configparser
+import telegram
+from telegram.ext import ApplicationBuilder
 
-from src import PathUtils
-from src.FirebaseService import FirebaseService
-from src.States.AttendanceState import AttendanceState
-from src.States.PlayerState import PlayerState
-from src.firestoreEntities.Player import Player
+from src.CommandHandler import CommandHandler
+from src.Utils import PathUtils
 
 if __name__ == "__main__":
     api_config = configparser.RawConfigParser()
     api_config.read(PathUtils.get_secrets_file_path('api_config.ini'), encoding='utf8')
 
-    firebase_service = FirebaseService(api_config)
+    application = ApplicationBuilder().token(api_config.get('Telegram', 'api_token')).build()
+
+    command_handler = CommandHandler('start', start)
+    application.add_handler(command_handler)
+
+    application.run_polling()
+
+
+    # command handler will init all workflows and services
+    # (playerstateservice, adminService)
+    # DataAccess
+    # (pass down telegram stuff to call in workflows)
+
+    # Init telegram service, give command handler to handle commands
+
+
+    # firebase_service = FirebaseService(api_config)
     # firebase_service.update_player_to_game_state(telegram_id=42, new_state=AttendanceState.YES)
     # TODO firebase_service.update_player_state(42, PlayerState.NEW)
     # firebase_service.add(Player(43, 'goodbye', 'world'))

@@ -2,7 +2,7 @@ import os
 
 
 def get_root_path():
-    path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-2])
+    path = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-3])
     return path
 
 

@@ -1,15 +1,14 @@
 import configparser
-import datetime
 
-from src.FirebaseRepository import FirebaseRepository
+from src.Data.FirebaseRepository import FirebaseRepository
 from src.States.AttendanceState import AttendanceState
 from src.States.PlayerState import PlayerState
 from src.Utils.Multidispatch import multidispatch
-from src.firestoreEntities.Game import Game
-from src.firestoreEntities.Player import Player
-from src.firestoreEntities.PlayerToState import PlayerToState
-from src.firestoreEntities.TimekeepingEvent import TimekeepingEvent
-from src.firestoreEntities.Training import Training
+from src.databaseEntities.Game import Game
+from src.databaseEntities.Player import Player
+from src.databaseEntities.PlayerToState import PlayerToState
+from src.databaseEntities.TimekeepingEvent import TimekeepingEvent
+from src.databaseEntities.Training import Training
 
 
 class FirebaseService(object):
