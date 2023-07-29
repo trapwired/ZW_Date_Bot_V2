@@ -1,6 +1,6 @@
 import configparser
 import telegram
-from telegram.ext import ApplicationBuilder
+from telegram.ext import ApplicationBuilder, MessageHandler
 
 from src.CommandHandler import CommandHandler
 from src.Utils import PathUtils
@@ -11,7 +11,7 @@ if __name__ == "__main__":
 
     application = ApplicationBuilder().token(api_config.get('Telegram', 'api_token')).build()
 
-    command_handler = CommandHandler('start', start)
+    command_handler = CommandHandler()
     application.add_handler(command_handler)
 
     application.run_polling()
