@@ -1,21 +1,30 @@
 import configparser
-import telegram
-from telegram.ext import ApplicationBuilder, MessageHandler
+import logging
+from telegram.ext import ApplicationBuilder
 
 from src.CommandHandler import CommandHandler
 from src.Utils import PathUtils
 
+
+def initialize_logging():
+    logging.basicConfig(
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
+
+
 if __name__ == "__main__":
+    initialize_logging()
+
     api_config = configparser.RawConfigParser()
     api_config.read(PathUtils.get_secrets_file_path('api_config.ini'), encoding='utf8')
 
     application = ApplicationBuilder().token(api_config.get('Telegram', 'api_token')).build()
 
-    command_handler = CommandHandler()
+    command_handler = CommandHandler(application.bot)
     application.add_handler(command_handler)
 
     application.run_polling()
-
 
     # command handler will init all workflows and services
     # (playerstateservice, adminService)
@@ -23,7 +32,6 @@ if __name__ == "__main__":
     # (pass down telegram stuff to call in workflows)
 
     # Init telegram service, give command handler to handle commands
-
 
     # firebase_service = FirebaseService(api_config)
     # firebase_service.update_player_to_game_state(telegram_id=42, new_state=AttendanceState.YES)

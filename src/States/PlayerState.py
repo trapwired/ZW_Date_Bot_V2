@@ -3,5 +3,6 @@ from enum import IntEnum
 
 class PlayerState(IntEnum):
     INIT = 0
-    FT = 42
+    DEFAULT = 42
+    FT = 43
     NEW = 432

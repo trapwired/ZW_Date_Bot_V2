@@ -1,7 +1,13 @@
 from abc import ABC, abstractmethod
 
+import telegram
+from telegram import Update
+
 
 class Workflow(ABC):
+
+    def __init__(self, bot: telegram.Bot):
+        self.bot = bot
 
     @abstractmethod
     def valid_commands(self):
@@ -12,5 +18,5 @@ class Workflow(ABC):
         pass
 
     @abstractmethod
-    def handle(self):
+    async def handle(self, update: Update):
         pass
