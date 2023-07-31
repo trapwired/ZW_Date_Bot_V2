@@ -11,7 +11,8 @@ __pycache__/
 *.so
 
 #secrets
-secrets/
+secrets/api_config.ini
+secrets/zw-date-bot-firebase-adminsdk.json
 
 # Distribution / packaging
 .Python
