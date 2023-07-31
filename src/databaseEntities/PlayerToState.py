@@ -1,5 +1,5 @@
-from src.States.AttendanceState import AttendanceState
-from src.States.PlayerState import PlayerState
+from src.Enums.AttendanceState import AttendanceState
+from src.Enums.PlayerState import PlayerState
 
 
 class PlayerToState:

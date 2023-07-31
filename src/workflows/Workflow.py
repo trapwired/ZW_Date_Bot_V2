@@ -3,11 +3,13 @@ from abc import ABC, abstractmethod
 import telegram
 from telegram import Update
 
+from src.Services.TelegramService import TelegramService
+
 
 class Workflow(ABC):
 
-    def __init__(self, bot: telegram.Bot):
-        self.bot = bot
+    def __init__(self, telegram_service: TelegramService):
+        self.telegram_service = telegram_service
 
     @abstractmethod
     def valid_commands(self):

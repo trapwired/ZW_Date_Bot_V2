@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     application = ApplicationBuilder().token(api_config.get('Telegram', 'api_token')).build()
 
-    command_handler = CommandHandler(application.bot)
+    command_handler = CommandHandler(application.bot, api_config)
     application.add_handler(command_handler)
 
     application.run_polling()

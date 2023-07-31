@@ -1,8 +1,8 @@
 import configparser
 
 from src.Data.FirebaseRepository import FirebaseRepository
-from src.States.AttendanceState import AttendanceState
-from src.States.PlayerState import PlayerState
+from src.Enums.AttendanceState import AttendanceState
+from src.Enums.PlayerState import PlayerState
 from src.Utils.Multidispatch import multidispatch
 from src.databaseEntities.Game import Game
 from src.databaseEntities.Player import Player
@@ -11,7 +11,7 @@ from src.databaseEntities.TimekeepingEvent import TimekeepingEvent
 from src.databaseEntities.Training import Training
 
 
-class FirebaseService(object):
+class DataAccess(object):
     # TODO Add retry / error handling logic, call via this method all db_access
     def __init__(self, api_config: configparser.RawConfigParser):
         self.firebase_repository = FirebaseRepository(api_config)

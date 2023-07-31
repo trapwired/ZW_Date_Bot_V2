@@ -5,8 +5,8 @@ from google.cloud.firestore_v1 import FieldFilter
 
 from firebase_admin import firestore
 
-from src.States.AttendanceState import AttendanceState
-from src.States.PlayerState import PlayerState
+from src.Enums.AttendanceState import AttendanceState
+from src.Enums.PlayerState import PlayerState
 from src.Utils import PathUtils
 from src.databaseEntities.Game import Game
 from src.databaseEntities.Player import Player
