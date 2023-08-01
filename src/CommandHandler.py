@@ -41,11 +41,12 @@ class CommandHandler(BaseHandler[Update, CCT]):
         if not update.message.text:
             return
 
-        player_state = PlayerState.INIT
+        telegram_id = update.effective_chat.id
+        player_state = self.player_state_service.get_player_state(telegram_id)
         command = update.message.text
 
         workflow = self.get_applicable_workflow(player_state, command)
-        await workflow.handle(update)
+        await workflow.handle(update, player_state)
 
     def get_applicable_workflow(self, player_state: PlayerState, command: str) -> Workflow:
         workflows = list(filter(lambda wf:
@@ -54,6 +55,12 @@ class CommandHandler(BaseHandler[Update, CCT]):
                                 self.workflows))
         if len(workflows) == 0:
             # TODO tryParse Game/TKE/Training
+            # if successful:
+            workflows = list(filter(lambda wf:
+                                    player_state in wf.valid_states()
+                                    and wf.supports_string_commands,
+                                    self.workflows))
+            # second attribute for workflows: accept wild strings
             pass
         if len(workflows) == 1:
             return workflows[0]
