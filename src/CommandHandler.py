@@ -6,18 +6,21 @@ from telegram.ext import ContextTypes, BaseHandler
 from telegram.ext._utils.types import CCT
 
 from src.Enums.PlayerState import PlayerState
+from src.Exceptions.ObjectNotFoundException import ObjectNotFoundException
 from src.Services.AdminService import AdminService
 from src.Services.IcsService import IcsService
 from src.Services.PlayerStateService import PlayerStateService
 from src.Services.TelegramService import TelegramService
 from src.workflows.DefaultWorkflow import DefaultWorkflow
+from src.workflows.StartWorkflow import StartWorkflow
 from src.workflows.Workflow import Workflow
 from src.Data.DataAccess import DataAccess
 
 
-def initialize_workflows(telegram_service: TelegramService):
+def initialize_workflows(telegram_service: TelegramService, data_access: DataAccess):
     default_workflow = DefaultWorkflow(telegram_service)
-    return default_workflow, [default_workflow]
+    start_workflow = StartWorkflow(telegram_service, data_access)
+    return default_workflow, start_workflow, [default_workflow]
 
 
 class CommandHandler(BaseHandler[Update, CCT]):
@@ -25,10 +28,12 @@ class CommandHandler(BaseHandler[Update, CCT]):
     def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser):
         super().__init__(self.handle_message)
         self.bot = bot
-        telegram_service, player_state_service, admin_service, ics_service = self.initialize_services(bot, api_config)
+        telegram_service, player_state_service, admin_service, ics_service, data_access = self.initialize_services(bot, api_config)
         self.player_state_service = player_state_service
         self.admin_service = admin_service
-        default_workflow, all_workflows = initialize_workflows(telegram_service)
+
+        default_workflow, start_workflow, all_workflows = initialize_workflows(telegram_service, data_access)
+        self.start_workflow = start_workflow
         self.default_workflow = default_workflow
         self.workflows = all_workflows
 
@@ -41,11 +46,7 @@ class CommandHandler(BaseHandler[Update, CCT]):
         if not update.message.text:
             return
 
-        telegram_id = update.effective_chat.id
-        player_state = self.player_state_service.get_player_state(telegram_id)
-        command = update.message.text
-
-        workflow = self.get_applicable_workflow(player_state, command)
+        player_state, workflow = self.get_playerstate_and_workflow(update)
         await workflow.handle(update, player_state)
 
     def get_applicable_workflow(self, player_state: PlayerState, command: str) -> Workflow:
@@ -73,4 +74,19 @@ class CommandHandler(BaseHandler[Update, CCT]):
         player_state_service = PlayerStateService(data_access)
         admin_service = AdminService(data_access)
         ics_service = IcsService(data_access)
-        return telegram_service, player_state_service, admin_service, ics_service
+        return telegram_service, player_state_service, admin_service, ics_service, data_access
+
+    def get_playerstate_and_workflow(self, update):
+        telegram_id = update.effective_chat.id
+        try:
+            player_state = self.player_state_service.get_player_state(telegram_id)
+        except ObjectNotFoundException:
+            # player not present
+            # TODO Add access Logic
+            workflow = self.start_workflow
+            player_state = None
+        else:
+            command = update.message.text
+            workflow = self.get_applicable_workflow(player_state, command)
+
+        return player_state, workflow

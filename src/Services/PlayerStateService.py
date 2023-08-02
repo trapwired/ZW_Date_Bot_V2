@@ -7,5 +7,4 @@ class PlayerStateService(object):
         self.data_access = data_access
 
     def get_player_state(self, telegram_id: int):
-        # return data_Acces.get_player_State
-        return PlayerState.INIT
+        return self.data_access.get_player_state(telegram_id)

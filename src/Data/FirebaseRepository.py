@@ -7,6 +7,7 @@ from firebase_admin import firestore
 
 from src.Enums.AttendanceState import AttendanceState
 from src.Enums.PlayerState import PlayerState
+from src.Exceptions.ObjectNotFoundException import ObjectNotFoundException
 from src.Utils import PathUtils
 from src.databaseEntities.Game import Game
 from src.databaseEntities.Player import Player
@@ -23,6 +24,27 @@ class FirebaseRepository(object):
         default_app = firebase_admin.initialize_app(cred_object)
         self.db = firestore.client(default_app)
 
+    def get_player(self, telegram_id: int) -> Player | None:
+        player_ref = self.db.collection('Players')
+        query_ref = player_ref.where(filter=FieldFilter("telegramId", "==", telegram_id))
+        res = query_ref.get()
+        if len(res) == 1:
+            return Player.from_dict(res[0].id, res[0].to_dict())
+        raise ObjectNotFoundException
+
+    def get_player_state(self, player: Player) -> PlayerToState | None:
+        player_id = player.doc_id
+        query_ref = self.db.collection('PlayersToState').where(filter=FieldFilter("playerId", "==", player_id))
+        res = query_ref.get()
+        if len(res) == 1:
+            return PlayerToState.from_dict(res[0].id, res[0].to_dict())
+        raise ObjectNotFoundException
+
+
+    ################################
+    # CURSOR - ONLY FINISHED ABOVE #
+    ################################
+
     def get_documents(self, collection: str):
 
         emp_ref = self.db.collection(collection)
@@ -30,27 +52,6 @@ class FirebaseRepository(object):
 
         for doc in docs:
             print('{} => {} '.format(doc.id, doc.to_dict()))
-
-    def get_player(self, telegram_id: int):
-        player_ref = self.db.collection('Players')
-        query_ref = player_ref.where(filter=FieldFilter("telegramId", "==", telegram_id))
-        res = query_ref.get()
-        if len(res) == 1:
-            return res[0]
-        return -42
-
-    def get_player_object(self, telegram_id: int):
-        player_ref = self.db.collection('Players')
-        query_ref = player_ref.where(filter=FieldFilter("telegramId", "==", telegram_id))
-        res = query_ref.get()
-        if len(res) == 1:
-            return Player.from_dict(res[0].to_dict())
-        return -42
-
-    def get_player_state(self, telegram_id: int):
-        player_id = self.get_player(telegram_id).id
-        query_ref = self.db.collection('PlayersToState').where(filter=FieldFilter("playerId", "==", player_id))
-        return PlayerToState.from_dict(query_ref.get()[0].to_dict())
 
     def update_player_state(self, player_firebase_id: str, new_player_state: PlayerState):
         # TODO doc_ref_id = self.
@@ -64,7 +65,7 @@ class FirebaseRepository(object):
         self.db.collection('PlayersToState').add(player_to_state.to_dict())
 
     def get_player_id_from_telegram_id(self, telegram_id: int):
-        return self.get_player(telegram_id).id
+        return self.get_player_old(telegram_id).id
 
     def add_game(self, game: Game):
         self.db.collection('Games').add(game.to_dict())

@@ -3,6 +3,7 @@ import configparser
 from src.Data.FirebaseRepository import FirebaseRepository
 from src.Enums.AttendanceState import AttendanceState
 from src.Enums.PlayerState import PlayerState
+from src.Exceptions.ObjectNotFoundException import ObjectNotFoundException
 from src.Utils.Multidispatch import multidispatch
 from src.databaseEntities.Game import Game
 from src.databaseEntities.Player import Player
@@ -12,6 +13,7 @@ from src.databaseEntities.Training import Training
 
 
 class DataAccess(object):
+
     # TODO Add retry / error handling logic, call via this method all db_access
     def __init__(self, api_config: configparser.RawConfigParser):
         self.firebase_repository = FirebaseRepository(api_config)
@@ -52,6 +54,12 @@ class DataAccess(object):
     @multidispatch(TimekeepingEvent)
     def update(self, timekeeping_event):
         pass  # TODO
+
+    # else
+    def get_player_state(self, telegram_id: int) -> PlayerToState:
+        player = self.firebase_repository.get_player(telegram_id)
+        return self.firebase_repository.get_player_state(player)
+
 
     def update_player_to_game_state(self, telegram_id: int, new_state: AttendanceState):
         # get game_id from playerState table
