@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-import telegram
 from telegram import Update
 
 from src.Enums.PlayerState import PlayerState

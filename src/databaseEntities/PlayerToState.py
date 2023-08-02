@@ -1,4 +1,3 @@
-from src.Enums.AttendanceState import AttendanceState
 from src.Enums.PlayerState import PlayerState
 
 

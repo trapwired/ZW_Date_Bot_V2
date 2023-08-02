@@ -8,6 +8,10 @@ from src.databaseEntities.Player import Player
 from src.workflows.Workflow import Workflow
 
 
+def create_player(update: Update) -> Player:
+    return Player(update.effective_chat.id, update.effective_user.first_name, update.effective_user.last_name)
+
+
 class StartWorkflow(Workflow):
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess):
@@ -21,16 +25,12 @@ class StartWorkflow(Workflow):
         if not command == '/start':
             await self.telegram_service.send_message(telegram_id, MessageType.WRONG_START_COMMAND)
             return
-        player = self.create_player(update)
+        player = create_player(update)
         self.data_access.add(player)
         await self.telegram_service.send_message(telegram_id, MessageType.WELCOME)
-        # TODO send help or default keys
 
     def valid_commands(self):
         return []
 
     def valid_states(self):
         return []
-
-    def create_player(self, update: Update) -> Player:
-        return Player(update.effective_chat.id, update.effective_user.first_name, update.effective_user.last_name)

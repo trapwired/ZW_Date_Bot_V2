@@ -82,7 +82,6 @@ class CommandHandler(BaseHandler[Update, CCT]):
             player_state = self.player_state_service.get_player_state(telegram_id)
         except ObjectNotFoundException:
             # player not present
-            # TODO Add access Logic
             workflow = self.start_workflow
             player_state = None
         else:

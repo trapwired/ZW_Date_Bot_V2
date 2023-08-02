@@ -1,6 +1,3 @@
-from src.Enums.PlayerState import PlayerState
-
-
 class Player:
     def __init__(self, telegram_id: int, firstname: str, lastname: str, doc_id: str = None):
         self.doc_id = doc_id

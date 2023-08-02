@@ -14,11 +14,8 @@ from src.databaseEntities.Training import Training
 
 class DataAccess(object):
 
-    # TODO Add retry / error handling logic, call via this method all db_access
     def __init__(self, api_config: configparser.RawConfigParser):
         self.firebase_repository = FirebaseRepository(api_config)
-
-    # ADD
 
     @multidispatch(Player)
     def add(self, player):
@@ -55,13 +52,12 @@ class DataAccess(object):
     def update(self, timekeeping_event):
         pass  # TODO
 
-    # else
     def get_player_state(self, telegram_id: int) -> PlayerToState:
         player = self.firebase_repository.get_player(telegram_id)
         return self.firebase_repository.get_player_state(player)
 
 
-    def update_player_to_game_state(self, telegram_id: int, new_state: AttendanceState):
+    def update_player_to_game_state(self, telegram_id: int, new_state: AttendanceState): # WIP
         # get game_id from playerState table
         player_state = self.firebase_repository.get_player_state(telegram_id)
         game_id = player_state.additional_info
@@ -69,7 +65,7 @@ class DataAccess(object):
 
         # create new one
 
-    def update_player_state(self, telegram_id: int, new_state: PlayerState):
+    def update_player_state(self, telegram_id: int, new_state: PlayerState): # WIP move to service, remove methods from Repo
         player_id = self.firebase_repository.get_player_id_from_telegram_id(telegram_id)
         document_id = self.firebase_repository.get_player_to_state_document(player_id)
         self.firebase_repository.update_player_state(document_id, new_state)
