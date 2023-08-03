@@ -1,0 +1,2 @@
+class MoreThanOneDBHitException(Exception):
+    pass

@@ -40,32 +40,25 @@ class FirebaseRepository(object):
             return PlayerToState.from_dict(res[0].id, res[0].to_dict())
         raise ObjectNotFoundException
 
+    def update_player_state(self, player_to_state: PlayerToState):
+        self.db.collection('PlayersToState').document(player_to_state.doc_id).update(
+            {'state': int(player_to_state.state)})
 
-    ################################
-    # CURSOR - ONLY FINISHED ABOVE #
-    ################################
-
-    def get_documents(self, collection: str):
-
-        emp_ref = self.db.collection(collection)
-        docs = emp_ref.stream()
-
-        for doc in docs:
-            print('{} => {} '.format(doc.id, doc.to_dict()))
-
-    def update_player_state(self, player_firebase_id: str, new_player_state: PlayerState):
-        # TODO doc_ref_id = self.
-        # self.db.collection('PlayersToState').document(doc_ref_id).update({'state': int(new_player_state)})
-        pass
+    def update_player_state_via_player_id(self, player_to_state: PlayerToState):
+        query_ref = self.db.collection('PlayersToState').where(
+            filter=FieldFilter("playerId", "==", player_to_state.player_id))
+        res = query_ref.get()
+        if len(res) == 1:
+            updated_player2state = player_to_state.add_document_id(res[0].id)
+            self.update_player_state(updated_player2state)
+        else:
+            return ObjectNotFoundException
 
     def add_player(self, new_player: Player):
         return self.db.collection('Players').add(new_player.to_dict())
 
     def add_player_to_state(self, player_to_state: PlayerToState):
         self.db.collection('PlayersToState').add(player_to_state.to_dict())
-
-    def get_player_id_from_telegram_id(self, telegram_id: int):
-        return self.get_player_old(telegram_id).id
 
     def add_game(self, game: Game):
         self.db.collection('Games').add(game.to_dict())
@@ -76,9 +69,10 @@ class FirebaseRepository(object):
     def add_training(self, training: Training):
         self.db.collection('Trainings').add(training.to_dict())
 
-    def add_player_to_game(self, player_to_game: PlayerToGame):
-        self.db.collection('PlayersToGames').add(player_to_game.to_dict())
+    def print_documents(self, collection: str):
+        emp_ref = self.db.collection(collection)
+        docs = emp_ref.stream()
 
-    def get_player_to_state_document(self, player_fb_id):
-        pass
-# return document in playerToState
+        for doc in docs:
+            print('{} => {} '.format(doc.id, doc.to_dict()))
+

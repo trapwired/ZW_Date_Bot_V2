@@ -17,9 +17,9 @@ from src.workflows.Workflow import Workflow
 from src.Data.DataAccess import DataAccess
 
 
-def initialize_workflows(telegram_service: TelegramService, data_access: DataAccess):
+def initialize_workflows(telegram_service: TelegramService, data_access: DataAccess, player_state_service: PlayerStateService):
     default_workflow = DefaultWorkflow(telegram_service)
-    start_workflow = StartWorkflow(telegram_service, data_access)
+    start_workflow = StartWorkflow(telegram_service, data_access, player_state_service)
     return default_workflow, start_workflow, [default_workflow]
 
 
@@ -32,7 +32,7 @@ class CommandHandler(BaseHandler[Update, CCT]):
         self.player_state_service = player_state_service
         self.admin_service = admin_service
 
-        default_workflow, start_workflow, all_workflows = initialize_workflows(telegram_service, data_access)
+        default_workflow, start_workflow, all_workflows = initialize_workflows(telegram_service, data_access, player_state_service)
         self.start_workflow = start_workflow
         self.default_workflow = default_workflow
         self.workflows = all_workflows

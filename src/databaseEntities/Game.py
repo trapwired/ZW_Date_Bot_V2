@@ -1,7 +1,7 @@
 import datetime
 
 
-class Game:
+class Game(object):
 
     def __init__(self, timestamp: datetime, location: str, opponent: str, doc_id: str = None):
         self.doc_id = doc_id
@@ -12,6 +12,10 @@ class Game:
     @staticmethod
     def from_dict(doc_id: str, source: dict):
         return Game(source['timestamp'], source['location'], source['opponent'], doc_id)
+
+    def add_document_id(self, doc_id: str):
+        self.doc_id = doc_id
+        return self
 
     def to_dict(self):
         return {'timestamp': self.timestamp,

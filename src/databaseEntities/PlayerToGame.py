@@ -1,7 +1,7 @@
 from src.Enums.AttendanceState import AttendanceState
 
 
-class PlayerToGame:
+class PlayerToGame(object):
     def __init__(self, player_id: str, game_id: str, state: AttendanceState, doc_id: str = None):
         self.doc_id = doc_id
         self.player_id = player_id
@@ -11,6 +11,10 @@ class PlayerToGame:
     @staticmethod
     def from_dict(doc_id: str, source: dict):
         return PlayerToGame(source['playerId'], source['gameId'], source['state'], doc_id)
+
+    def add_document_id(self, doc_id: str):
+        self.doc_id = doc_id
+        return self
 
     def to_dict(self):
         return {'playerId': self.player_id,
