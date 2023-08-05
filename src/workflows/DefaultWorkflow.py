@@ -1,8 +1,8 @@
 from telegram import Update
 
-from src.Enums.MessageType import MessageType
-from src.Enums.PlayerState import PlayerState
-from src.workflows.Workflow import Workflow
+from Enums.MessageType import MessageType
+from Enums.PlayerState import PlayerState
+from workflows.Workflow import Workflow
 
 
 class DefaultWorkflow(Workflow):

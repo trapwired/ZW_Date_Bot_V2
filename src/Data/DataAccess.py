@@ -1,15 +1,15 @@
 import configparser
 
-from src.Data.FirebaseRepository import FirebaseRepository
-from src.Enums.AttendanceState import AttendanceState
-from src.Enums.PlayerState import PlayerState
-from src.Exceptions.ObjectNotFoundException import ObjectNotFoundException
-from src.Utils.Multidispatch import multidispatch
-from src.databaseEntities.Game import Game
-from src.databaseEntities.Player import Player
-from src.databaseEntities.PlayerToState import PlayerToState
-from src.databaseEntities.TimekeepingEvent import TimekeepingEvent
-from src.databaseEntities.Training import Training
+from Data.FirebaseRepository import FirebaseRepository
+from Enums.AttendanceState import AttendanceState
+from Enums.PlayerState import PlayerState
+from Exceptions.ObjectNotFoundException import ObjectNotFoundException
+from Utils.Multidispatch import multidispatch
+from databaseEntities.Game import Game
+from databaseEntities.Player import Player
+from databaseEntities.PlayerToState import PlayerToState
+from databaseEntities.TimekeepingEvent import TimekeepingEvent
+from databaseEntities.Training import Training
 
 
 class DataAccess(object):

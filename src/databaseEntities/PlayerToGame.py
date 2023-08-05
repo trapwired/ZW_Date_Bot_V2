@@ -1,4 +1,4 @@
-from src.Enums.AttendanceState import AttendanceState
+from Enums.AttendanceState import AttendanceState
 
 
 class PlayerToGame(object):

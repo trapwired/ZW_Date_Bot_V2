@@ -1,7 +1,7 @@
 import telegram
 from telegram import ReplyKeyboardMarkup
 
-from src.Enums.MessageType import MessageType
+from Enums.MessageType import MessageType
 
 
 def get_text(message_type: MessageType, extra_text: str):

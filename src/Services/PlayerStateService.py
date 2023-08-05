@@ -1,7 +1,7 @@
-from src.Data import DataAccess
-from src.Enums.PlayerState import PlayerState
-from src.databaseEntities.Player import Player
-from src.databaseEntities.PlayerToState import PlayerToState
+from Data import DataAccess
+from Enums.PlayerState import PlayerState
+from databaseEntities.Player import Player
+from databaseEntities.PlayerToState import PlayerToState
 
 
 class PlayerStateService(object):

@@ -5,16 +5,16 @@ from google.cloud.firestore_v1 import FieldFilter
 
 from firebase_admin import firestore
 
-from src.Enums.AttendanceState import AttendanceState
-from src.Enums.PlayerState import PlayerState
-from src.Exceptions.ObjectNotFoundException import ObjectNotFoundException
-from src.Utils import PathUtils
-from src.databaseEntities.Game import Game
-from src.databaseEntities.Player import Player
-from src.databaseEntities.PlayerToGame import PlayerToGame
-from src.databaseEntities.PlayerToState import PlayerToState
-from src.databaseEntities.TimekeepingEvent import TimekeepingEvent
-from src.databaseEntities.Training import Training
+from Enums.AttendanceState import AttendanceState
+from Enums.PlayerState import PlayerState
+from Exceptions.ObjectNotFoundException import ObjectNotFoundException
+from Utils import PathUtils
+from databaseEntities.Game import Game
+from databaseEntities.Player import Player
+from databaseEntities.PlayerToGame import PlayerToGame
+from databaseEntities.PlayerToState import PlayerToState
+from databaseEntities.TimekeepingEvent import TimekeepingEvent
+from databaseEntities.Training import Training
 
 
 class FirebaseRepository(object):

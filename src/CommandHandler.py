@@ -5,16 +5,16 @@ from telegram import Update
 from telegram.ext import ContextTypes, BaseHandler
 from telegram.ext._utils.types import CCT
 
-from src.Enums.PlayerState import PlayerState
-from src.Exceptions.ObjectNotFoundException import ObjectNotFoundException
-from src.Services.AdminService import AdminService
-from src.Services.IcsService import IcsService
-from src.Services.PlayerStateService import PlayerStateService
-from src.Services.TelegramService import TelegramService
-from src.workflows.DefaultWorkflow import DefaultWorkflow
-from src.workflows.StartWorkflow import StartWorkflow
-from src.workflows.Workflow import Workflow
-from src.Data.DataAccess import DataAccess
+from Enums.PlayerState import PlayerState
+from Exceptions.ObjectNotFoundException import ObjectNotFoundException
+from Services.AdminService import AdminService
+from Services.IcsService import IcsService
+from Services.PlayerStateService import PlayerStateService
+from Services.TelegramService import TelegramService
+from workflows.DefaultWorkflow import DefaultWorkflow
+from workflows.StartWorkflow import StartWorkflow
+from workflows.Workflow import Workflow
+from Data.DataAccess import DataAccess
 
 
 def initialize_workflows(telegram_service: TelegramService, data_access: DataAccess, player_state_service: PlayerStateService):

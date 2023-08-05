@@ -1,4 +1,4 @@
-from src.Data import DataAccess
+from Data import DataAccess
 
 
 class AdminService(object):

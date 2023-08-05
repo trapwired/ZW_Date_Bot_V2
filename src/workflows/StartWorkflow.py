@@ -1,12 +1,12 @@
 from telegram import Update
 
-from src.Data.DataAccess import DataAccess
-from src.Enums.MessageType import MessageType
-from src.Enums.PlayerState import PlayerState
-from src.Services.PlayerStateService import PlayerStateService
-from src.Services.TelegramService import TelegramService
-from src.databaseEntities.Player import Player
-from src.workflows.Workflow import Workflow
+from Data.DataAccess import DataAccess
+from Enums.MessageType import MessageType
+from Enums.PlayerState import PlayerState
+from Services.PlayerStateService import PlayerStateService
+from Services.TelegramService import TelegramService
+from databaseEntities.Player import Player
+from workflows.Workflow import Workflow
 
 
 def create_player(update: Update) -> Player:

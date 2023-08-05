@@ -2,8 +2,8 @@ import configparser
 import logging
 from telegram.ext import ApplicationBuilder
 
-from src.CommandHandler import CommandHandler
-from src.Utils import PathUtils
+from CommandHandler import CommandHandler
+from Utils import PathUtils
 
 
 def initialize_logging():

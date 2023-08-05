@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 
 from telegram import Update
 
-from src.Enums.PlayerState import PlayerState
-from src.Services.TelegramService import TelegramService
+from Enums.PlayerState import PlayerState
+from Services.TelegramService import TelegramService
 
 
 class Workflow(ABC):

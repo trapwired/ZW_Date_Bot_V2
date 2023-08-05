@@ -1,4 +1,4 @@
-from src.Enums.PlayerState import PlayerState
+from Enums.PlayerState import PlayerState
 
 
 class PlayerToState(object):
