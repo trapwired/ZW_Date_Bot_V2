@@ -17,7 +17,8 @@ from workflows.Workflow import Workflow
 from Data.DataAccess import DataAccess
 
 
-def initialize_workflows(telegram_service: TelegramService, data_access: DataAccess, player_state_service: PlayerStateService):
+def initialize_workflows(telegram_service: TelegramService, data_access: DataAccess,
+                         player_state_service: PlayerStateService):
     default_workflow = DefaultWorkflow(telegram_service)
     start_workflow = StartWorkflow(telegram_service, data_access, player_state_service)
     return default_workflow, start_workflow, [default_workflow]
@@ -28,11 +29,13 @@ class CommandHandler(BaseHandler[Update, CCT]):
     def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser):
         super().__init__(self.handle_message)
         self.bot = bot
-        telegram_service, player_state_service, admin_service, ics_service, data_access = self.initialize_services(bot, api_config)
+        telegram_service, player_state_service, admin_service, ics_service, data_access = self.initialize_services(bot,
+                                                                                                                   api_config)
         self.player_state_service = player_state_service
         self.admin_service = admin_service
 
-        default_workflow, start_workflow, all_workflows = initialize_workflows(telegram_service, data_access, player_state_service)
+        default_workflow, start_workflow, all_workflows = initialize_workflows(telegram_service, data_access,
+                                                                               player_state_service)
         self.start_workflow = start_workflow
         self.default_workflow = default_workflow
         self.workflows = all_workflows
@@ -88,4 +91,45 @@ class CommandHandler(BaseHandler[Update, CCT]):
             command = update.message.text
             workflow = self.get_applicable_workflow(player_state, command)
 
+        dict = {
+            PlayerState.INIT: InitNode(telegramService, DataAccess, transitions=
+            {
+                '/start': Transition(self.handle_start, PlayerState.DEFAULT),
+                'default': Transition(self.handle_else, PlayerState.INIT)}),
+            PlayerState.DEFAULT: DefaultNode(telegramService, DataAccess, transitions=
+            {
+                '/help': Transition(self.handle_help, PlayerState.DEFAULT),
+                '/website': Transition(self.handle_website, PlayerState.DEFAULT),
+                '/stats': Transition(self.handle_stats, PlayerState.STATS),
+                '/edit': Transition(self.handle_edit, PlayerState.EDIT),
+            }),
+            PlayerState.STATS: StatsNode(telegramService, DataAccess, transitions=
+            {
+                '/games': Transition(self.handle_games, PlayerState.STATS_GAMES),
+                '/trainings': Transition(self.handle_trainings, PlayerState.STATS_TRAINING),
+                '/timekeepings': Transition(self.handle_timekeepings, PlayerState.TIMEKEEPING),
+                'continue later': Transition(self.handle_continueLater, PlayerState.DEFAULT)
+            }),
+            PlayerState.STATS_GAMES: StatsNode(telegramService, DataAccess, transitions=
+            {
+                '/game document_id': Transition(self.handle_documentId, PlayerState.STATS_GAMES),
+                'back to stats': Transition(self.handle_backToStats, PlayerState.STATS),
+                'continue later': Transition(self.handle_continueLater, PlayerState.DEFAULT),
+            }),
+            PlayerState.STATS_TRAININGS: StatsNode(telegramService, DataAccess, transitions=
+            {
+
+                '/training document_id': Transition(self.handle_documentId, PlayerState.STATS_TRAINING),
+                'back to stats': Transition(self.handle_backToStats, PlayerState.STATS),
+                'continue later': Transition(self.handle_continueLater, PlayerState.DEFAULT),
+            }),
+            PlayerState.STATS_TIMEKEEPINGS: StatsNode(telegramService, DataAccess, transitions=
+            {
+
+                '/tke document_id': Transition(self.handle_documentId, PlayerState.STATS_TIMEKEEPING),
+                'back to stats': Transition(self.handle_backToStats, PlayerState.STATS),
+                'continue later': Transition(self.handle_continueLater, PlayerState.DEFAULT),
+            }),
+
+        }
         return player_state, workflow
