@@ -6,6 +6,8 @@ from Enums.MessageType import MessageType
 
 def get_text(message_type: MessageType, extra_text: str):
     match message_type:
+        case MessageType.ERROR:
+            return 'Command not recognized. Please try again or type /help.'
         case MessageType.HELP:
             return 'Help is on its way'
         case MessageType.WRONG_START_COMMAND:
@@ -19,12 +21,14 @@ def get_text(message_type: MessageType, extra_text: str):
 def get_reply_keyboard(message_type: MessageType, extra_text: str):
     keyboard = None
     match message_type:
+        case MessageType.ERROR:
+            keyboard = [['/help']]
         case MessageType.HELP:
             keyboard = ['starship Enterprise']
 
     if keyboard is None:
         return keyboard
-    return ReplyKeyboardMarkup([keyboard])
+    return ReplyKeyboardMarkup(keyboard)
 
 
 class TelegramService(object):

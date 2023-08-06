@@ -11,6 +11,6 @@ class PlayerStateService(object):
     def get_player_state(self, telegram_id: int):
         return self.data_access.get_player_state(telegram_id)
 
-    def update_player_state(self, player: Player, new_state: PlayerState):
-        new_player_to_state = PlayerToState(player.doc_id, new_state)
-        self.data_access.update(new_player_to_state)
+    def update_player_state(self, player_state: PlayerToState, new_state: PlayerState):
+        player_state.state = new_state
+        self.data_access.update(player_state)

@@ -10,7 +10,7 @@ from Services.PlayerStateService import PlayerStateService
 from databaseEntities.PlayerToState import PlayerToState
 
 
-class Workflow(ABC):
+class Node(ABC):
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, player_state_service: PlayerStateService, supports_string_commands: bool = False):
         super().__init__(telegram_service)
@@ -19,14 +19,6 @@ class Workflow(ABC):
         self.supports_string_commands = supports_string_commands
 
     transitions = {}
-
-    @abstractmethod
-    def valid_commands(self):
-        pass
-
-    @abstractmethod
-    def valid_states(self):
-        return list(self.transitions.keys())
 
     async def handle(self, update: Update, data_access: DataAccess, player_state: PlayerToState):
         try:
