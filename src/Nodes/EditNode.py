@@ -5,7 +5,8 @@ from Services.PlayerStateService import PlayerStateService
 from Services.TelegramService import TelegramService
 
 
-class DefaultNode(Node):
+class EditNode(Node):
 
     async def handle(self, update: Update):
         pass
+

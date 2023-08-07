@@ -4,6 +4,7 @@ from telegram.ext import ApplicationBuilder
 
 from CommandHandler import CommandHandler
 from Utils import PathUtils
+from NodeHandler import NodeHandler
 
 
 def initialize_logging():
@@ -21,7 +22,8 @@ if __name__ == "__main__":
 
     application = ApplicationBuilder().token(api_config.get('Telegram', 'api_token')).build()
 
-    command_handler = CommandHandler(application.bot, api_config)
-    application.add_handler(command_handler)
+    # command_handler = CommandHandler(application.bot, api_config)
+    node_handler = NodeHandler(application.bot, api_config)
+    application.add_handler(node_handler)
 
     application.run_polling()

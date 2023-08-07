@@ -3,9 +3,9 @@ from enum import IntEnum
 
 class PlayerState(IntEnum):
     INIT = -1
-    MAIN_MENU = 0
+    DEFAULT = 0
 
-    # DELETE AFTER TESTING
-    DEFAULT = 42
-    FT = 43
-    NEW = 432
+    STATS = 1
+    STATS_TIMEKEEPINGS = 2
+    STATS_TRAININGS = 3
+    STATS_GAMES = 4
