@@ -15,7 +15,7 @@ def get_text(message_type: MessageType, extra_text: str):
         case MessageType.WELCOME:
             return 'Hi ' + extra_text + ', welcome to the Züri west manager'
         case _:
-            return 'Default'
+            return str(message_type)
 
 
 def get_reply_keyboard(message_type: MessageType, extra_text: str):

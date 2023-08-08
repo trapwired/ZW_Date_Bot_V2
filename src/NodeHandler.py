@@ -52,19 +52,21 @@ class NodeHandler(BaseHandler[Update, CCT]):
         if not update.message.text:
             return
 
-        player_state, node = self.get_playerstate_and_workflow(update)
-        await node.handle(update)
+        player_to_state, node = self.get_playerstate_and_workflow(update)
+        await node.handle(update, player_to_state)
 
     def get_playerstate_and_workflow(self, update):
         telegram_id = update.effective_chat.id
         try:
-            player_state = self.player_state_service.get_player_state(telegram_id)
+            player_to_state = self.player_state_service.get_player_state(telegram_id)
+            player_state = player_to_state.state
         except ObjectNotFoundException:
             # TODO more finegrained control than sending to initNode?
+            player_to_state = None  # TODO more clever
             player_state = PlayerState.INIT
 
         node = self.nodes[player_state]
-        return player_state, node
+        return player_to_state, node
 
     def initialize_nodes(self, telegram_service: TelegramService, player_state_service: PlayerStateService,
                          data_access: DataAccess):

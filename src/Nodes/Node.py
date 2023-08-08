@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from builtins import function
 
 from telegram import Update
+
+from typing import Callable
 
 from Services.TelegramService import TelegramService
 
@@ -9,8 +10,11 @@ from Services.PlayerStateService import PlayerStateService
 
 from Data.DataAccess import DataAccess
 
-from src.Enums.PlayerState import PlayerState
-from src.Nodes.Transition import Transition
+from Enums.PlayerState import PlayerState
+from Nodes.Transition import Transition
+from databaseEntities.PlayerToState import PlayerToState
+
+from Enums.MessageType import MessageType
 
 
 class Node(ABC):
@@ -26,9 +30,9 @@ class Node(ABC):
         self.add_transition('/help', self.handle_help)
 
     def transitions(self) -> dict:
-        return self.transitions.
+        return self.transitions
 
-    def add_transition(self, command: str, action: function, new_state: PlayerState = None):
+    def add_transition(self, command: str, action: Callable, new_state: PlayerState = None):
         if new_state is None:
             new_state = self.state
         self.transitions[command] = Transition(action, new_state)
@@ -36,13 +40,15 @@ class Node(ABC):
     def add_continue_later(self):
         self.add_transition('continue later', self.handle_continue_later, PlayerState.DEFAULT)
 
-    async def handle(self, update: Update):
+    async def handle(self, update: Update, player_to_state: PlayerToState):
         try:
             command = update.message.text
-            transition = self.transitions.get(command) # TODO maybe overwrite
+            transition = self.transitions.get(command) # TODO maybe overwrite - use regex to match
+            # TODO what if command is not present?
+
             # TODO do something with transition
-            action(self, update, data_access, player_state)
-            PlayerStateService.update_player_state(player_state, newState)
+            transition.action(self, update)
+            self.player_state_service.update_player_state(player_to_state, transition.new_state)
 
         except:
             self.telegram_service.send_message(update.effective_chat.id, MessageType.ERROR)
@@ -52,9 +58,11 @@ class Node(ABC):
         pass  # is it abstract, or already implemented here?
 
     async def handle_help(self, update: Update):
+        self.telegram_service.send_message(update.effective_chat.id, MessageType.HELP)
         pass  # TODO generate and send help (all transitions possible)
 
     async def handle_continue_later(self, update: Update):
+        self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER)
         pass # TODO
 
     def generate_keyboard(self):
