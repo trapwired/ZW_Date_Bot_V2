@@ -13,12 +13,7 @@ from Services.PlayerStateService import PlayerStateService
 from Services.TelegramService import TelegramService
 from src.Nodes.DefaultNode import DefaultNode
 from src.Nodes.InitNode import InitNode
-from src.Nodes.Node import Node
 from src.Nodes.StatsNode import StatsNode
-from src.Nodes.Transition import Transition
-from workflows.DefaultWorkflow import DefaultWorkflow
-from workflows.StartWorkflow import StartWorkflow
-from workflows.Workflow import Workflow
 from Data.DataAccess import DataAccess
 
 
@@ -73,11 +68,12 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         init_node = InitNode(PlayerState.INIT, telegram_service, player_state_service, data_access)
         init_node.add_transition('/start', init_node.handle_start, PlayerState.DEFAULT)
+        init_node.add_transition('', init_node.handle_else, PlayerState.INIT)
 
         default_node = DefaultNode(PlayerState.DEFAULT, telegram_service, player_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)
-        default_node.add_transition('/stats', default_node.handle_stats)
-        default_node.add_transition('/edit', default_node.handle_edit)
+        default_node.add_transition('/stats', default_node.handle_stats, PlayerState.STATS)
+        default_node.add_transition('/edit', default_node.handle_edit, PlayerState.EDIT)
 
         stats_node = StatsNode(PlayerState.STATS, telegram_service, player_state_service, data_access)
         stats_node.add_continue_later()

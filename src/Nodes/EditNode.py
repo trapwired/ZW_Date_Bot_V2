@@ -6,7 +6,4 @@ from Services.TelegramService import TelegramService
 
 
 class EditNode(Node):
-
-    async def handle(self, update: Update):
-        pass
-
+    pass

@@ -9,3 +9,5 @@ class PlayerState(IntEnum):
     STATS_TIMEKEEPINGS = 2
     STATS_TRAININGS = 3
     STATS_GAMES = 4
+
+    EDIT = 10

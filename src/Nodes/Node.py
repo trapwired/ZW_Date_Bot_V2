@@ -47,25 +47,27 @@ class Node(ABC):
             # TODO what if command is not present?
 
             # TODO do something with transition
-            transition.action(self, update)
+            action = transition.action
+            await action(update, player_to_state)
             self.player_state_service.update_player_state(player_to_state, transition.new_state)
 
-        except:
-            self.telegram_service.send_message(update.effective_chat.id, MessageType.ERROR)
+        except Exception as e:
+            await self.telegram_service.send_message(update.effective_chat.id, MessageType.ERROR, str(e))
 
-    @abstractmethod
-    async def handle_unknown_command(self, update: Update):
-        pass  # is it abstract, or already implemented here?
+    async def handle_unknown_command(self, update: Update, player_to_state: PlayerToState):
+        await self.telegram_service.send_message(update.effective_chat.id, MessageType.UNKNOWN_COMMAND)
+        pass  # TODO is it abstract, or already implemented here?
 
-    async def handle_help(self, update: Update):
-        self.telegram_service.send_message(update.effective_chat.id, MessageType.HELP)
-        pass  # TODO generate and send help (all transitions possible)
+    async def handle_help(self, update: Update, player_to_state: PlayerToState):
+        await self.telegram_service.send_message(update.effective_chat.id, MessageType.HELP, extra_text=str(type(self)), keyboard_btn_list=self.generate_keyboard())
+        # TODO generate and send help (all transitions possible)
 
-    async def handle_continue_later(self, update: Update):
-        self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER)
+    async def handle_continue_later(self, update: Update, player_to_state: PlayerToState):
+        await self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER)
         pass # TODO
 
     def generate_keyboard(self):
         # TODO via possible transitions (except help), generate keybaord + add to messages
         # add keyboard-gen as static class
-        pass
+        all_commands = list(self.transitions.keys())
+        return [[x] for x in all_commands]
