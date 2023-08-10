@@ -68,7 +68,6 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         init_node = InitNode(PlayerState.INIT, telegram_service, player_state_service, data_access)
         init_node.add_transition('/start', init_node.handle_start, PlayerState.DEFAULT)
-        init_node.add_transition('', init_node.handle_else, PlayerState.INIT)
 
         default_node = DefaultNode(PlayerState.DEFAULT, telegram_service, player_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)

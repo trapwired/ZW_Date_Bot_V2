@@ -43,10 +43,7 @@ class Node(ABC):
     async def handle(self, update: Update, player_to_state: PlayerToState):
         try:
             command = update.message.text
-            transition = self.transitions.get(command) # TODO maybe overwrite - use regex to match
-            # TODO what if command is not present?
-
-            # TODO do something with transition
+            transition = self.get_transition(command)
             action = transition.action
             await action(update, player_to_state)
             self.player_state_service.update_player_state(player_to_state, transition.new_state)
@@ -59,15 +56,24 @@ class Node(ABC):
         pass  # TODO is it abstract, or already implemented here?
 
     async def handle_help(self, update: Update, player_to_state: PlayerToState):
-        await self.telegram_service.send_message(update.effective_chat.id, MessageType.HELP, extra_text=str(type(self)), keyboard_btn_list=self.generate_keyboard())
-        # TODO generate and send help (all transitions possible)
+        await self.telegram_service.send_message(
+            update.effective_chat.id,
+            MessageType.HELP,
+            extra_text=str(type(self)),
+            keyboard_btn_list=self.generate_keyboard())
 
     async def handle_continue_later(self, update: Update, player_to_state: PlayerToState):
         await self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER)
-        pass # TODO
+        pass  # TODO
 
     def generate_keyboard(self):
         # TODO via possible transitions (except help), generate keybaord + add to messages
         # add keyboard-gen as static class
         all_commands = list(self.transitions.keys())
         return [[x] for x in all_commands]
+
+    def get_transition(self, command):
+        transition = self.transitions.get(command)
+        if transition is None:
+            transition = self.transitions.get('/help')
+        return transition
