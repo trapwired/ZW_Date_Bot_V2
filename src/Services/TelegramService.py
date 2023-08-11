@@ -14,6 +14,8 @@ def get_text(message_type: MessageType, extra_text: str):
             return 'Please start chatting with me by sending the command /start'
         case MessageType.WELCOME:
             return 'Hi ' + extra_text + ', welcome to the Züri west manager'
+        case MessageType.CONTINUE_LATER:
+            return 'Cheerio ' + extra_text + '!'
         case _:
             return message_type.name + ' ' + extra_text
 

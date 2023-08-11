@@ -11,9 +11,10 @@ from Services.AdminService import AdminService
 from Services.IcsService import IcsService
 from Services.PlayerStateService import PlayerStateService
 from Services.TelegramService import TelegramService
-from src.Nodes.DefaultNode import DefaultNode
-from src.Nodes.InitNode import InitNode
-from src.Nodes.StatsNode import StatsNode
+from Nodes.DefaultNode import DefaultNode
+from Nodes.InitNode import InitNode
+from Nodes.RejectedNode import RejectedNode
+from Nodes.StatsNode import StatsNode
 from Data.DataAccess import DataAccess
 
 
@@ -36,7 +37,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         self.player_state_service = player_state_service
         self.admin_service = admin_service
 
-        self.nodes = self.initialize_nodes(telegram_service, player_state_service, data_access)
+        self.nodes = self.initialize_nodes(telegram_service, player_state_service, data_access, api_config)
 
     def check_update(self, update: object):
         if isinstance(update, Update):
@@ -64,10 +65,13 @@ class NodeHandler(BaseHandler[Update, CCT]):
         return player_to_state, node
 
     def initialize_nodes(self, telegram_service: TelegramService, player_state_service: PlayerStateService,
-                         data_access: DataAccess):
+                         data_access: DataAccess, api_config: configparser.RawConfigParser):
 
         init_node = InitNode(PlayerState.INIT, telegram_service, player_state_service, data_access)
         init_node.add_transition('/start', init_node.handle_start, PlayerState.DEFAULT)
+
+        rejected_node = RejectedNode(PlayerState.INIT, telegram_service, player_state_service, data_access)
+        rejected_node.add_transition(api_config['Chats']['SPECTATOR_PASSWORD'], rejected_node.handle_correct_password, PlayerState.DEFAULT_SPECTATOR)
 
         default_node = DefaultNode(PlayerState.DEFAULT, telegram_service, player_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)
@@ -101,6 +105,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         return {
             PlayerState.INIT: init_node,
+            PlayerState.REJECTED: rejected_node,
             PlayerState.DEFAULT: default_node,
             PlayerState.STATS: stats_node,
             PlayerState.STATS_GAMES: stats_games_node,

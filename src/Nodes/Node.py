@@ -16,7 +16,6 @@ from databaseEntities.PlayerToState import PlayerToState
 
 from Enums.MessageType import MessageType
 
-
 class Node(ABC):
 
     def __init__(self, state: PlayerState, telegram_service: TelegramService, player_state_service: PlayerStateService,
@@ -46,6 +45,9 @@ class Node(ABC):
             transition = self.get_transition(command)
             action = transition.action
             await action(update, player_to_state)
+
+            if not transition.update_state:
+                return
             self.player_state_service.update_player_state(player_to_state, transition.new_state)
 
         except Exception as e:
@@ -63,8 +65,7 @@ class Node(ABC):
             keyboard_btn_list=self.generate_keyboard())
 
     async def handle_continue_later(self, update: Update, player_to_state: PlayerToState):
-        await self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER)
-        pass  # TODO
+        await self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER, update.effective_user.first_name)
 
     def generate_keyboard(self):
         # TODO via possible transitions (except help), generate keybaord + add to messages

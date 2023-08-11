@@ -11,3 +11,7 @@ class PlayerState(IntEnum):
     STATS_GAMES = 4
 
     EDIT = 10
+
+    DEFAULT_SPECTATOR = 100
+
+    REJECTED = 999

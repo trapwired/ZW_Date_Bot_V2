@@ -20,3 +20,7 @@ class MessageType(IntEnum):
     CONTINUE_LATER = 42
     UNKNOWN_COMMAND = 43
 
+    WELCOME_SPECTATOR = 102
+
+    REJECTED = 999
+
