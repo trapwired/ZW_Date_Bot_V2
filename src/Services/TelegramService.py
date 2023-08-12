@@ -9,7 +9,7 @@ def get_text(message_type: MessageType, extra_text: str):
         case MessageType.ERROR:
             return 'An Exception was raised:    \n' + extra_text
         case MessageType.HELP:
-            return 'Help is on its way (' + extra_text + ')'  # TODO remove / add list of all commands
+            return 'Help is on its way (' + extra_text + ')'  # TODO remove Exception / add list of all commands
         case MessageType.WRONG_START_COMMAND:
             return 'Please start chatting with me by sending the command /start'
         case MessageType.WELCOME:

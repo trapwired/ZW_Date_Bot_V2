@@ -1,3 +1,5 @@
+import sys
+import traceback
 from abc import ABC
 from telegram import Update
 from typing import Callable
@@ -10,8 +12,11 @@ from Nodes.Transition import Transition
 
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
+from Enums.RoleSet import RoleSet
 
 from databaseEntities.UsersToState import UsersToState
+
+from src.Enums.Role import Role
 
 
 class Node(ABC):
@@ -22,13 +27,13 @@ class Node(ABC):
         self.data_access = data_access
         self.user_state_service = user_state_service
         self.telegram_service = telegram_service
-        self.transitions = dict()
-        self.add_transition('/help', self.handle_help)
+        self.transitions = list()
+        self.help_transition = self.add_transition('/help', self.handle_help, allowed_roles=RoleSet.EVERYONE)
 
-    async def handle(self, update: Update, users_to_state: UserStateService) -> None:
+    async def handle(self, update: Update, users_to_state: UsersToState) -> None:
         try:
             command = update.message.text.lower()
-            transition = self.get_transition(command)
+            transition = self.get_transition(command, users_to_state.role)
             action = transition.action
             await action(update, users_to_state)
 
@@ -38,35 +43,28 @@ class Node(ABC):
 
         except Exception as e:
             await self.telegram_service.send_message(update.effective_chat.id, MessageType.ERROR, str(e))
+            traceback.print_exception(*sys.exc_info())
 
     ###############
     # TRANSITIONS #
     ###############
 
-    def transitions(self) -> dict:
-        return self.transitions
-
-    def get_transition(self, command: str) -> Transition:
-        transition = self.transitions.get(command)
-        if transition is None:
-            transition = self.transitions.get('/help')
+    def get_transition(self, command: str, role: Role) -> Transition:
+        transitions = list(filter(lambda t: t.can_be_taken(command, role), self.transitions))
+        if len(transitions) == 0:
+            transition = self.help_transition
+        else:
+            transition = transitions[0]
         return transition
 
-    def add_transition(self, command: str, action: Callable, new_state: UserState = None) -> None:
-        """
-        :param command: str => should be in the form of /someCommand
-        :param action: Callable => the action to take during this transition, defined in the Nodeclass itself
-        :param new_state: PlayerState => if it's none, update_state is set
-        to False, which implies not changing the node during the transition
-        """
-        command = command.lower()
-        if new_state is None:
-            self.transitions[command] = Transition(action, new_state, update_state=False)
-        else:
-            self.transitions[command] = Transition(action, new_state, update_state=True)
+    def add_transition(self, command: str, action: Callable, allowed_roles: RoleSet = RoleSet.EVERYONE,
+                       new_state: UserState = None) -> Transition:
+        new_transition = Transition(command, action, allowed_roles, new_state=new_state)
+        self.transitions.append(new_transition)
+        return new_transition
 
     def add_continue_later(self) -> None:
-        self.add_transition('continue later', self.handle_continue_later, UserState.DEFAULT)
+        self.add_transition('continue later', self.handle_continue_later, new_state=UserState.DEFAULT)
 
     ####################
     # DEFAULT HANDLERS #
@@ -77,7 +75,7 @@ class Node(ABC):
             update.effective_chat.id,
             MessageType.HELP,
             extra_text=str(type(self)),
-            keyboard_btn_list=self.generate_keyboard())
+            keyboard_btn_list=self.generate_keyboard(user_to_state.role))
 
     async def handle_continue_later(self, update: Update, user_to_state: UsersToState) -> None:
         await self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER,
@@ -87,6 +85,6 @@ class Node(ABC):
     # UTILITIES #
     #############
 
-    def generate_keyboard(self) -> [[str]]:
-        all_commands = list(self.transitions.keys())
-        return [[x] for x in all_commands]
+    def generate_keyboard(self, role: Role) -> [[str]]:
+        all_commands = list(filter(lambda t: t.is_for_role(role), self.transitions))
+        return [[x.command] for x in all_commands]

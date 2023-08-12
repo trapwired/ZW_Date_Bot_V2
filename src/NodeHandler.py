@@ -18,6 +18,7 @@ from Nodes.InitNode import InitNode
 from Nodes.RejectedNode import RejectedNode
 from Nodes.StatsNode import StatsNode
 from Data.DataAccess import DataAccess
+from src.Enums.RoleSet import RoleSet
 
 
 def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigParser):
@@ -30,7 +31,6 @@ def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigPar
 
 
 class NodeHandler(BaseHandler[Update, CCT]):
-
     GROUP_TYPES = [ChatType.GROUP, ChatType.SUPERGROUP]
 
     def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser):
@@ -52,7 +52,6 @@ class NodeHandler(BaseHandler[Update, CCT]):
         logging.info(update)
         chat_type = update.effective_chat.type
         if chat_type in self.GROUP_TYPES:
-            logging.info(update.effective_chat.id)
             return
         if not update.message.text:
             return
@@ -82,37 +81,37 @@ class NodeHandler(BaseHandler[Update, CCT]):
         rejected_node.add_transition(
             api_config['Chats']['SPECTATOR_PASSWORD'],
             rejected_node.handle_correct_password,
-            UserState.DEFAULT)
+            new_state=UserState.DEFAULT,
+            allowed_roles=RoleSet.REJECTED)
 
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)
-        default_node.add_transition('/stats', default_node.handle_stats, UserState.STATS)
-        default_node.add_transition('/edit', default_node.handle_edit, UserState.EDIT)
+        default_node.add_transition('/stats', default_node.handle_stats, new_state=UserState.STATS)
+        default_node.add_transition('/edit', default_node.handle_edit, new_state=UserState.EDIT, allowed_roles=RoleSet.PLAYERS)
 
         stats_node = StatsNode(UserState.STATS, telegram_service, user_state_service, data_access)
         stats_node.add_continue_later()
-        stats_node.add_transition('/games', stats_node.handle_games, UserState.STATS_GAMES)
-        stats_node.add_transition('/trainings', stats_node.handle_trainings, UserState.STATS_TRAININGS)
-        stats_node.add_transition('/timekeepings', stats_node.handle_timekeepings, UserState.STATS_TIMEKEEPINGS)
+        stats_node.add_transition('/games', stats_node.handle_games, new_state=UserState.STATS_GAMES)
+        stats_node.add_transition('/trainings', stats_node.handle_trainings, new_state=UserState.STATS_TRAININGS)
+        stats_node.add_transition('/timekeepings', stats_node.handle_timekeepings, new_state=UserState.STATS_TIMEKEEPINGS)
 
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
         stats_node.add_continue_later()
-        stats_node.add_transition('/game document_id', stats_node.handle_document_id, UserState.STATS_GAMES)
-        stats_node.add_transition('Overview', stats_node.handle_overview, UserState.STATS)
+        stats_node.add_transition('/game document_id', stats_node.handle_document_id, new_state=UserState.STATS_GAMES)
+        stats_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
 
-        stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service,
-                                         data_access)
+        stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access)
         stats_trainings_node.add_continue_later()
         stats_trainings_node.add_transition('/game document_id', stats_node.handle_document_id,
-                                            UserState.STATS_TRAININGS)
-        stats_trainings_node.add_transition('Overview', stats_node.handle_overview, UserState.STATS)
+                                            new_state=UserState.STATS_TRAININGS)
+        stats_trainings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
 
         stats_timekeepings_node = StatsNode(UserState.STATS_TIMEKEEPINGS, telegram_service, user_state_service,
                                             data_access)
         stats_timekeepings_node.add_continue_later()
         stats_timekeepings_node.add_transition('/game document_id', stats_node.handle_document_id,
-                                               UserState.STATS_TIMEKEEPINGS)
-        stats_timekeepings_node.add_transition('Overview', stats_node.handle_overview, UserState.STATS)
+                                               new_state=UserState.STATS_TIMEKEEPINGS)
+        stats_timekeepings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
 
         return {
             UserState.INIT: init_node,

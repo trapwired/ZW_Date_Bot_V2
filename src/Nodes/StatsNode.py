@@ -19,11 +19,11 @@ class StatsNode(Node):
         await self.telegram_service.send_message(update.effective_chat.id, MessageType.STATS_TO_TIMEKEEPINGS, 'statsNode: HandleTimekeepings')
 
     async def handle_document_id(self, update: Update, user_to_state: UsersToState):
-        # TODO Distinguish UsersToState
+        # Distinguish UsersToState
         await self.telegram_service.send_message(update.effective_chat.id, MessageType.STATS_HANDLE_DOC_ID, 'statsNode: handle_document_id')
 
     async def handle_overview(self, update: Update, user_to_state: UsersToState):
-        # TODO Distinguish UsersToState
+        # Distinguish UsersToState?
         await self.telegram_service.send_message(update.effective_chat.id, MessageType.STATS_OVERVIEW, 'statsNode: handle_overview')
 
 
