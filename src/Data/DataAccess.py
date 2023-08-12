@@ -2,10 +2,14 @@ import configparser
 from multipledispatch import dispatch
 
 from Data.FirebaseRepository import FirebaseRepository
-from Enums.PlayerState import PlayerState
+from Data.Tables import Tables
+
+from Enums.UserState import UserState
+from Enums.Table import Table
+
 from databaseEntities.Game import Game
-from databaseEntities.Player import Player
-from databaseEntities.PlayerToState import PlayerToState
+from databaseEntities.TelegramUser import TelegramUser
+from databaseEntities.UsersToState import UsersToState
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.GameAttendance import GameAttendance
 from databaseEntities.TimeKeepingAttendance import TimeKeepingAttendance
@@ -14,9 +18,7 @@ from databaseEntities.Training import Training
 
 from Exceptions.DocumentIdNotPresentException import DocumentIdNotPresentException
 
-from Data.Tables import Tables
-
-from Enums.Table import Table
+from src.Enums.UserState import UserState
 
 
 class DataAccess(object):
@@ -29,13 +31,13 @@ class DataAccess(object):
     # ADD #
     #######
 
-    @dispatch(Player)
-    def add(self, player: Player) -> PlayerToState:
-        doc_ref = self.firebase_repository.add(player, self.tables.get(Table.PLAYERS_TABLE))
-        player_doc_id = doc_ref[1].id
-        player_to_state = PlayerToState(player_doc_id, PlayerState.INIT)
-        doc_id = self.firebase_repository.add(player_to_state, self.tables.get(Table.PLAYERS_TO_STATE_TABLE))
-        return player_to_state.add_document_id(doc_id[1].id)
+    @dispatch(TelegramUser)
+    def add(self, user: TelegramUser) -> UsersToState:
+        doc_ref = self.firebase_repository.add(user, self.tables.get(Table.USERS_TABLE))
+        user_doc_id = doc_ref[1].id
+        user_to_state = UsersToState(user_doc_id, UserState.INIT)
+        doc_id = self.firebase_repository.add(user_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
+        return user_to_state.add_document_id(doc_id[1].id)
 
     @dispatch(Game)
     def add(self, game: Game) -> Game:
@@ -72,19 +74,19 @@ class DataAccess(object):
     # UPDATE #
     ##########
 
-    @dispatch(PlayerToState)
-    def update(self, player_to_state: PlayerToState):
-        if player_to_state.doc_id is None:
-            self.firebase_repository.update_player_state_via_player_id(player_to_state)
+    @dispatch(UsersToState)
+    def update(self, users_to_state: UsersToState):
+        if users_to_state.doc_id is None:
+            self.firebase_repository.update_user_state_via_user_id(users_to_state)
         else:
-            self.firebase_repository.update(player_to_state, self.tables.get(Table.PLAYERS_TO_STATE_TABLE))
+            self.firebase_repository.update(users_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
 
-    @dispatch(Player)
-    def update(self, player: Player):
-        if player.doc_id is None:
-            self.firebase_repository.update_player_via_telegram_id(player)
+    @dispatch(TelegramUser)
+    def update(self, user: TelegramUser):
+        if user.doc_id is None:
+            self.firebase_repository.update_user_via_telegram_id(user)
         else:
-            self.firebase_repository.update(player, self.tables.get(Table.PLAYERS_TABLE))
+            self.firebase_repository.update(user, self.tables.get(Table.USERS_TABLE))
 
     @dispatch(Game)
     def update(self, game: Game):
@@ -132,6 +134,6 @@ class DataAccess(object):
     # GET #
     #######
 
-    def get_player_state(self, telegram_id: int) -> PlayerToState:
-        player = self.firebase_repository.get_player(telegram_id)
-        return self.firebase_repository.get_player_state(player)
+    def get_user_state(self, telegram_id: int) -> UsersToState:
+        user = self.firebase_repository.get_user(telegram_id)
+        return self.firebase_repository.get_user_state(user)

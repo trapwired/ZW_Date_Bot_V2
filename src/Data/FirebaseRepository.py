@@ -5,14 +5,18 @@ from google.cloud.firestore_v1 import FieldFilter
 
 from firebase_admin import firestore
 
-from Exceptions.ObjectNotFoundException import ObjectNotFoundException
 from Utils import PathUtils
 from databaseEntities.Game import Game
-from databaseEntities.Player import Player
-from databaseEntities.PlayerToState import PlayerToState
 
 from Data.Tables import Tables
 from Enums.Table import Table
+
+from databaseEntities.TelegramUser import TelegramUser
+from databaseEntities.UsersToState import UsersToState
+
+from Exceptions.MoreThanOneObjectFoundException import MoreThanOneObjectFoundException
+from Exceptions.ObjectNotFoundException import ObjectNotFoundException
+
 
 class FirebaseRepository(object):
     def __init__(self, api_config: configparser.RawConfigParser, tables: Tables):
@@ -32,20 +36,23 @@ class FirebaseRepository(object):
     # GET #
     #######
 
-    def get_player(self, telegram_id: int) -> Player | None:
-        player_ref = self.db.collection(self.tables.get(Table.PLAYERS_TABLE))
-        query_ref = player_ref.where(filter=FieldFilter("telegramId", "==", telegram_id))
+    def get_user(self, telegram_id: int) -> TelegramUser | None:
+        user_ref = self.db.collection(self.tables.get(Table.USERS_TABLE))
+        query_ref = user_ref.where(filter=FieldFilter("telegramId", "==", telegram_id))
         res = query_ref.get()
+        if len(res) == 0:
+            raise ObjectNotFoundException
         if len(res) == 1:
-            return Player.from_dict(res[0].id, res[0].to_dict())
-        raise ObjectNotFoundException
+            return TelegramUser.from_dict(res[0].id, res[0].to_dict())
+        else:
+            raise MoreThanOneObjectFoundException
 
-    def get_player_state(self, player: Player) -> PlayerToState | None:
-        player_id = player.doc_id
-        query_ref = self.db.collection(self.tables.get(Table.PLAYERS_TO_STATE_TABLE)).where(filter=FieldFilter("playerId", "==", player_id))
+    def get_user_state(self, user: TelegramUser) -> UsersToState | None:
+        user_id = user.doc_id
+        query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(filter=FieldFilter("userId", "==", user_id))
         res = query_ref.get()
         if len(res) == 1:
-            return PlayerToState.from_dict(res[0].id, res[0].to_dict())
+            return UsersToState.from_dict(res[0].id, res[0].to_dict())
         raise ObjectNotFoundException
 
     def get_game(self, doc_id: str) -> Game | None:
@@ -65,25 +72,25 @@ class FirebaseRepository(object):
         self.raise_exception_if_document_not_exists(collection, db_object.doc_id)
         self.db.collection(collection).document(db_object.doc_id).update(db_object.to_dict())
 
-    def update_player_state(self, player_to_state: PlayerToState):
-        self.raise_exception_if_document_not_exists(self.tables.get(Table.PLAYERS_TO_STATE_TABLE), player_to_state.doc_id)
-        self.db.collection(self.tables.get(Table.PLAYERS_TO_STATE_TABLE)).document(player_to_state.doc_id).update(
-            {'state': int(player_to_state.state)})
+    def update_user_state(self, user_to_state: UsersToState):
+        self.raise_exception_if_document_not_exists(self.tables.get(Table.USERS_TO_STATE_TABLE), user_to_state.doc_id)
+        self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).document(user_to_state.doc_id).update(
+            {'state': int(user_to_state.state)})
 
-    def update_player_state_via_player_id(self, player_to_state: PlayerToState):
-        query_ref = self.db.collection(self.tables.get(Table.PLAYERS_TO_STATE_TABLE)).where(
-            filter=FieldFilter("playerId", "==", player_to_state.player_id))
+    def update_user_state_via_user_id(self, user_to_state: UsersToState):
+        query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
+            filter=FieldFilter("userId", "==", user_to_state.user_id))
         res = query_ref.get()
         if len(res) == 1:
-            updated_player2state = player_to_state.add_document_id(res[0].id)
-            self.update_player_state(updated_player2state)
+            updated_user_to_state = user_to_state.add_document_id(res[0].id)
+            self.update_user_state(updated_user_to_state)
         else:
             return ObjectNotFoundException
 
-    def update_player_via_telegram_id(self, player: Player):
-        player_id = self.get_player(player.telegramId).doc_id
-        player.doc_id = player_id
-        self.update(player, self.tables.get(Table.PLAYERS_TABLE))
+    def update_user_via_telegram_id(self, user: TelegramUser):
+        user_id = self.get_user(user.telegramId).doc_id
+        user.doc_id = user_id
+        self.update(user, self.tables.get(Table.USERS_TABLE))
 
     ########
     # ELSE #

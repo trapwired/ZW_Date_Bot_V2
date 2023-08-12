@@ -1,7 +1,7 @@
 from enum import IntEnum
 
 
-class PlayerState(IntEnum):
+class UserState(IntEnum):
     INIT = -1
     DEFAULT = 0
 
