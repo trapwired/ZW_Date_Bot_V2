@@ -35,7 +35,7 @@ class DataAccess(object):
         player_doc_id = doc_ref[1].id
         player_to_state = PlayerToState(player_doc_id, PlayerState.INIT)
         doc_id = self.firebase_repository.add(player_to_state, self.tables.get(Table.PLAYERS_TO_STATE_TABLE))
-        return player_to_state.add_document_id(doc_id)
+        return player_to_state.add_document_id(doc_id[1].id)
 
     @dispatch(Game)
     def add(self, game: Game) -> Game:

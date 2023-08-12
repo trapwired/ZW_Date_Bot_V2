@@ -1,7 +1,9 @@
 import configparser
+import logging
 
 import telegram
 from telegram import Update
+from telegram.constants import ChatType
 from telegram.ext import ContextTypes, BaseHandler
 from telegram.ext._utils.types import CCT
 
@@ -29,11 +31,13 @@ def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigPar
 
 class NodeHandler(BaseHandler[Update, CCT]):
 
+    GROUP_TYPES = [ChatType.GROUP, ChatType.SUPERGROUP]
+
     def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser):
         super().__init__(self.handle_message)
         self.bot = bot
-        telegram_service, player_state_service, admin_service, ics_service, data_access = initialize_services(bot,
-                                                                                                              api_config)
+        telegram_service, player_state_service, admin_service, ics_service, data_access = \
+            initialize_services(bot, api_config)
         self.player_state_service = player_state_service
         self.admin_service = admin_service
 
@@ -45,6 +49,11 @@ class NodeHandler(BaseHandler[Update, CCT]):
         return None
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        logging.info(update)
+        chat_type = update.effective_chat.type
+        if chat_type in self.GROUP_TYPES:
+            logging.info(update.effective_chat.id)
+            return
         if not update.message.text:
             return
 
@@ -66,7 +75,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
     def initialize_nodes(self, telegram_service: TelegramService, player_state_service: PlayerStateService,
                          data_access: DataAccess, api_config: configparser.RawConfigParser):
 
-        init_node = InitNode(PlayerState.INIT, telegram_service, player_state_service, data_access)
+        init_node = InitNode(PlayerState.INIT, telegram_service, player_state_service, data_access, api_config, self.bot)
         init_node.add_transition('/start', init_node.handle_start)
 
         rejected_node = RejectedNode(PlayerState.INIT, telegram_service, player_state_service, data_access)
