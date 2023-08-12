@@ -1,20 +1,17 @@
-from abc import ABC, abstractmethod
-
+from abc import ABC
 from telegram import Update
-
 from typing import Callable
 
 from Services.TelegramService import TelegramService
-
 from Services.PlayerStateService import PlayerStateService
 
 from Data.DataAccess import DataAccess
-
-from Enums.PlayerState import PlayerState
 from Nodes.Transition import Transition
 from databaseEntities.PlayerToState import PlayerToState
 
+from Enums.PlayerState import PlayerState
 from Enums.MessageType import MessageType
+
 
 class Node(ABC):
 
@@ -25,23 +22,11 @@ class Node(ABC):
         self.player_state_service = player_state_service
         self.telegram_service = telegram_service
         self.transitions = dict()
-        self.add_transition('', self.handle_unknown_command)  # TODO handle unknown command, clever regex?
         self.add_transition('/help', self.handle_help)
 
-    def transitions(self) -> dict:
-        return self.transitions
-
-    def add_transition(self, command: str, action: Callable, new_state: PlayerState = None):
-        if new_state is None:
-            new_state = self.state
-        self.transitions[command] = Transition(action, new_state)
-
-    def add_continue_later(self):
-        self.add_transition('continue later', self.handle_continue_later, PlayerState.DEFAULT)
-
-    async def handle(self, update: Update, player_to_state: PlayerToState):
+    async def handle(self, update: Update, player_to_state: PlayerToState) -> None:
         try:
-            command = update.message.text
+            command = update.message.text.lower()
             transition = self.get_transition(command)
             action = transition.action
             await action(update, player_to_state)
@@ -53,28 +38,54 @@ class Node(ABC):
         except Exception as e:
             await self.telegram_service.send_message(update.effective_chat.id, MessageType.ERROR, str(e))
 
-    async def handle_unknown_command(self, update: Update, player_to_state: PlayerToState):
-        await self.telegram_service.send_message(update.effective_chat.id, MessageType.UNKNOWN_COMMAND)
-        pass  # TODO is it abstract, or already implemented here?
+    ###############
+    # TRANSITIONS #
+    ###############
 
-    async def handle_help(self, update: Update, player_to_state: PlayerToState):
+    def transitions(self) -> dict:
+        return self.transitions
+
+    def get_transition(self, command: str) -> Transition:
+        transition = self.transitions.get(command)
+        if transition is None:
+            transition = self.transitions.get('/help')
+        return transition
+
+    def add_transition(self, command: str, action: Callable, new_state: PlayerState = None) -> None:
+        """
+        :param command: str => should be in the form of /someCommand
+        :param action: Callable => the action to take during this transition, defined in the Nodeclass itself
+        :param new_state: PlayerState => if it's none, update_state is set
+        to False, which implies not changing the node during the transition
+        """
+        command = command.lower()
+        if new_state is None:
+            self.transitions[command] = Transition(action, new_state, update_state=False)
+        else:
+            self.transitions[command] = Transition(action, new_state, update_state=True)
+
+    def add_continue_later(self) -> None:
+        self.add_transition('continue later', self.handle_continue_later, PlayerState.DEFAULT)
+
+    ####################
+    # DEFAULT HANDLERS #
+    ####################
+
+    async def handle_help(self, update: Update, player_to_state: PlayerToState) -> None:
         await self.telegram_service.send_message(
             update.effective_chat.id,
             MessageType.HELP,
             extra_text=str(type(self)),
             keyboard_btn_list=self.generate_keyboard())
 
-    async def handle_continue_later(self, update: Update, player_to_state: PlayerToState):
-        await self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER, update.effective_user.first_name)
+    async def handle_continue_later(self, update: Update, player_to_state: PlayerToState) -> None:
+        await self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER,
+                                                 update.effective_user.first_name)
 
-    def generate_keyboard(self):
-        # TODO via possible transitions (except help), generate keybaord + add to messages
-        # add keyboard-gen as static class
+    #############
+    # UTILITIES #
+    #############
+
+    def generate_keyboard(self) -> [[str]]:
         all_commands = list(self.transitions.keys())
         return [[x] for x in all_commands]
-
-    def get_transition(self, command):
-        transition = self.transitions.get(command)
-        if transition is None:
-            transition = self.transitions.get('/help')
-        return transition

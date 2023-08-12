@@ -9,13 +9,16 @@ def get_text(message_type: MessageType, extra_text: str):
         case MessageType.ERROR:
             return 'An Exception was raised:    \n' + extra_text
         case MessageType.HELP:
-            return 'Help is on its way (' + extra_text + ')'  # TODO remove
+            return 'Help is on its way (' + extra_text + ')'  # TODO remove / add list of all commands
         case MessageType.WRONG_START_COMMAND:
             return 'Please start chatting with me by sending the command /start'
         case MessageType.WELCOME:
             return 'Hi ' + extra_text + ', welcome to the Züri west manager'
         case MessageType.CONTINUE_LATER:
             return 'Cheerio ' + extra_text + '!'
+        case MessageType.REJECTED:
+            return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \
+                   'you got the bot recommended from... :)'
         case _:
             return message_type.name + ' ' + extra_text
 
@@ -25,6 +28,9 @@ def get_reply_keyboard(message_type: MessageType, extra_text: str):
     match message_type:
         case MessageType.ERROR:
             keyboard = [['/help']]
+        case MessageType.WRONG_START_COMMAND:
+            keyboard = [['/start']]
+            return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
         case MessageType.HELP:
             keyboard = [['starship Enterprise']]
 

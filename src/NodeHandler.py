@@ -57,8 +57,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
             player_to_state = self.player_state_service.get_player_state(telegram_id)
             player_state = player_to_state.state
         except ObjectNotFoundException:
-            # TODO more finegrained control than sending to initNode?
-            player_to_state = None  # TODO more clever
+            player_to_state = None
             player_state = PlayerState.INIT
 
         node = self.nodes[player_state]
@@ -68,10 +67,13 @@ class NodeHandler(BaseHandler[Update, CCT]):
                          data_access: DataAccess, api_config: configparser.RawConfigParser):
 
         init_node = InitNode(PlayerState.INIT, telegram_service, player_state_service, data_access)
-        init_node.add_transition('/start', init_node.handle_start, PlayerState.DEFAULT)
+        init_node.add_transition('/start', init_node.handle_start)
 
         rejected_node = RejectedNode(PlayerState.INIT, telegram_service, player_state_service, data_access)
-        rejected_node.add_transition(api_config['Chats']['SPECTATOR_PASSWORD'], rejected_node.handle_correct_password, PlayerState.DEFAULT_SPECTATOR)
+        rejected_node.add_transition(
+            api_config['Chats']['SPECTATOR_PASSWORD'],
+            rejected_node.handle_correct_password,
+            PlayerState.DEFAULT)
 
         default_node = DefaultNode(PlayerState.DEFAULT, telegram_service, player_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)

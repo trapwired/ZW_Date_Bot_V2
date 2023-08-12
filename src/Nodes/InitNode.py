@@ -2,20 +2,14 @@ from telegram import Update
 
 from Nodes.Node import Node
 
-from Services.PlayerStateService import PlayerStateService
-from Services.TelegramService import TelegramService
-
 from Enums.MessageType import MessageType
+from Enums.PlayerState import PlayerState
+from Enums.Role import Role
 
 from databaseEntities.PlayerToState import PlayerToState
-
-from Exceptions.ObjectNotFoundException import ObjectNotFoundException
-
 from databaseEntities.Player import Player
 
-from Enums.PlayerState import PlayerState
-
-from Data.DataAccess import DataAccess
+from Exceptions.ObjectNotFoundException import ObjectNotFoundException
 
 
 def create_player(update: Update) -> Player:
@@ -24,14 +18,10 @@ def create_player(update: Update) -> Player:
 
 class InitNode(Node):
 
-    def __init__(self, state: PlayerState, telegram_service: TelegramService, player_state_service: PlayerStateService,
-                 data_access: DataAccess):
-        super().__init__(state, telegram_service, player_state_service, data_access)
-        self.transitions['/help'].update_state = False
-
+    # Override to add new player
     async def handle(self, update: Update, player_to_state: PlayerToState):
+        telegram_id = update.effective_chat.id
         try:
-            telegram_id = update.effective_chat.id
             player_to_state = self.player_state_service.get_player_state(telegram_id)
         except ObjectNotFoundException:
             player = create_player(update)
@@ -39,18 +29,23 @@ class InitNode(Node):
         await super().handle(update, player_to_state)
 
     async def handle_start(self, update: Update, player_to_state: PlayerToState):
-        # TODO authenticate
         telegram_id = update.effective_chat.id
-        if self.is_allowed_to_use_bot(telegram_id):
+        if self.is_player(telegram_id):
+            player_to_state = player_to_state.add_role(Role.PLAYER)
             self.player_state_service.update_player_state(player_to_state, PlayerState.DEFAULT)
             await self.telegram_service.send_message(update.effective_chat.id, MessageType.WELCOME)
+            await self.telegram_service.send_message(
+                update.effective_chat.id,
+                MessageType.HELP,
+                keyboard_btn_list=self.generate_keyboard())
         else:
+            player_to_state = player_to_state.add_role(Role.REJECTED)
             self.player_state_service.update_player_state(player_to_state, PlayerState.REJECTED)
             await self.telegram_service.send_message(update.effective_chat.id, MessageType.REJECTED)
 
-    def is_allowed_to_use_bot(self, telegram_id: int):
+    def is_player(self, telegram_id: int):
+        # is person member of group chat
         return False
 
     async def handle_help(self, update: Update, player_to_state: PlayerToState):
-        await self.telegram_service.send_message(update.effective_chat.id, MessageType.WRONG_START_COMMAND,
-                                                 'initNode: handle_help')
+        await self.telegram_service.send_message(update.effective_chat.id, MessageType.WRONG_START_COMMAND)
