@@ -8,17 +8,23 @@ from telegram.ext import ContextTypes, BaseHandler
 from telegram.ext._utils.types import CCT
 
 from Enums.UserState import UserState
+from Enums.RoleSet import RoleSet
+
 from Exceptions.ObjectNotFoundException import ObjectNotFoundException
+from Exceptions.NodesMissingException import NodesMissingException
+
 from Services.AdminService import AdminService
 from Services.IcsService import IcsService
 from Services.UserStateService import UserStateService
 from Services.TelegramService import TelegramService
+
 from Nodes.DefaultNode import DefaultNode
 from Nodes.InitNode import InitNode
 from Nodes.RejectedNode import RejectedNode
 from Nodes.StatsNode import StatsNode
+from Nodes.EditNode import EditNode
+
 from Data.DataAccess import DataAccess
-from src.Enums.RoleSet import RoleSet
 
 
 def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigParser):
@@ -35,6 +41,15 @@ def add_nodes_reference_to_all_nodes(nodes: dict):
         node.add_nodes(nodes)
 
 
+def check_all_user_states_have_node(nodes):
+    missing_states = []
+    for state in UserState:
+        if state not in nodes:
+            missing_states.append(state)
+    if len(missing_states) > 0:
+        raise NodesMissingException(missing_states)
+
+
 class NodeHandler(BaseHandler[Update, CCT]):
     GROUP_TYPES = [ChatType.GROUP, ChatType.SUPERGROUP]
 
@@ -48,6 +63,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
         add_nodes_reference_to_all_nodes(self.nodes)
+        check_all_user_states_have_node(self.nodes)
 
     def check_update(self, update: object):
         if isinstance(update, Update):
@@ -122,6 +138,9 @@ class NodeHandler(BaseHandler[Update, CCT]):
                                                new_state=UserState.STATS_TIMEKEEPINGS)
         stats_timekeepings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
 
+        edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access)
+        edit_node.add_continue_later()
+
         all_nodes_dict = {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
@@ -129,7 +148,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.STATS: stats_node,
             UserState.STATS_GAMES: stats_games_node,
             UserState.STATS_TRAININGS: stats_trainings_node,
-            UserState.STATS_TIMEKEEPINGS: stats_timekeepings_node
+            UserState.STATS_TIMEKEEPINGS: stats_timekeepings_node,
+            UserState.EDIT: edit_node
         }
 
         return all_nodes_dict
