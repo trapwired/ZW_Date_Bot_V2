@@ -1,10 +1,10 @@
 import telegram
-from telegram import ReplyKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup
 
 from Enums.MessageType import MessageType
 
 
-def get_text(message_type: MessageType, extra_text: str):
+def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
     match message_type:
         case MessageType.ERROR:
             return 'An Exception was raised:    \n' + extra_text
@@ -13,9 +13,9 @@ def get_text(message_type: MessageType, extra_text: str):
         case MessageType.WRONG_START_COMMAND:
             return 'Please start chatting with me by sending the command /start'
         case MessageType.WELCOME:
-            return 'Hi ' + extra_text + ', welcome to the Züri west manager'
+            return 'Hi ' + first_name + ', welcome to the Züri west manager'
         case MessageType.CONTINUE_LATER:
-            return 'Cheerio ' + extra_text + '!'
+            return 'Cheerio ' + first_name + '!'
         case MessageType.REJECTED:
             return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \
                    'you got the bot recommended from... :)'
@@ -23,30 +23,45 @@ def get_text(message_type: MessageType, extra_text: str):
             return message_type.name + ' ' + extra_text
 
 
-def get_reply_keyboard(message_type: MessageType, extra_text: str):
-    keyboard = None
+def get_reply_keyboard(message_type: MessageType, all_commands: [str]):
     match message_type:
-        case MessageType.ERROR:
-            keyboard = [['/help']]
         case MessageType.WRONG_START_COMMAND:
             keyboard = [['/start']]
             return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-        case MessageType.HELP:
-            keyboard = [['starship Enterprise']]
+        case MessageType.REJECTED:
+            return None
+    keyboard = generate_keyboard(all_commands)
+    return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 
-    if keyboard is None:
-        return keyboard
-    return ReplyKeyboardMarkup(keyboard)
+
+def generate_keyboard(all_commands: [str]) -> [[str]]:
+    all_commands.sort()
+    result = []
+    max_line_length = 25
+    current_line_length = 0
+    current_line = []
+    for c in all_commands:
+        if current_line_length + len(c) < max_line_length:
+            current_line.append(c)
+            current_line_length += len(c)
+        else:
+            result.append(current_line)
+            current_line_length = len(c)
+            current_line = [c]
+    if len(current_line) > 0:
+        result.append(current_line)
+    return result
 
 
 class TelegramService(object):
     def __init__(self, bot: telegram.Bot):
         self.bot = bot
 
-    async def send_message(self, telegram_id: int, message_type: MessageType, extra_text: str = '', keyboard_btn_list=None):
-        text = get_text(message_type, extra_text)
-        if keyboard_btn_list is None:
-            reply_keyboard = get_reply_keyboard(message_type, extra_text)
-        else:
-            reply_keyboard = ReplyKeyboardMarkup(keyboard_btn_list, one_time_keyboard=True)
-        await self.bot.send_message(chat_id=telegram_id, text=text, reply_markup=reply_keyboard)
+    async def send_message(self, update: Update, all_commands: [str], message_type: MessageType = None,
+                           message: str = None, message_extra_text: str = ''):
+        chat_id = update.effective_chat.id
+        first_name = update.effective_user.first_name
+        if message is None:
+            message = get_text(message_type, first_name=first_name, extra_text=message_extra_text)
+        reply_keyboard = get_reply_keyboard(message_type, all_commands)
+        await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_keyboard)

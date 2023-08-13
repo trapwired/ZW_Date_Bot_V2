@@ -1,7 +1,7 @@
 import sys
 import traceback
 from abc import ABC
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from typing import Callable
 
 from Services.TelegramService import TelegramService
@@ -30,19 +30,23 @@ class Node(ABC):
         self.transitions = list()
         self.help_transition = self.add_transition('/help', self.handle_help, allowed_roles=RoleSet.EVERYONE)
 
-    async def handle(self, update: Update, users_to_state: UsersToState) -> None:
+    async def handle(self, update: Update, user_to_state: UsersToState) -> None:
         try:
             command = update.message.text.lower()
-            transition = self.get_transition(command, users_to_state.role)
+            transition = self.get_transition(command, user_to_state.role)
             action = transition.action
-            await action(update, users_to_state)
+            await action(update, user_to_state)
 
             if not transition.update_state:
                 return
-            self.user_state_service.update_user_state(users_to_state, transition.new_state)
+            self.user_state_service.update_user_state(user_to_state, transition.new_state)
 
         except Exception as e:
-            await self.telegram_service.send_message(update.effective_chat.id, MessageType.ERROR, str(e))
+            await self.telegram_service.send_message(
+                update=update,
+                all_commands=self.get_commands(user_to_state.role),
+                message_type=MessageType.ERROR,
+                message_extra_text=str(e))
             traceback.print_exception(*sys.exc_info())
 
     ###############
@@ -72,19 +76,21 @@ class Node(ABC):
 
     async def handle_help(self, update: Update, user_to_state: UsersToState) -> None:
         await self.telegram_service.send_message(
-            update.effective_chat.id,
-            MessageType.HELP,
-            extra_text=str(type(self)),
-            keyboard_btn_list=self.generate_keyboard(user_to_state.role))
+            update=update,
+            all_commands=self.get_commands(user_to_state.role),
+            message_type=MessageType.HELP,
+            message_extra_text=str(type(self)))
 
     async def handle_continue_later(self, update: Update, user_to_state: UsersToState) -> None:
-        await self.telegram_service.send_message(update.effective_chat.id, MessageType.CONTINUE_LATER,
-                                                 update.effective_user.first_name)
+        await self.telegram_service.send_message(
+            update=update,
+            all_commands=self.get_commands(user_to_state.role),
+            message_type=MessageType.CONTINUE_LATER)
 
     #############
     # UTILITIES #
     #############
 
-    def generate_keyboard(self, role: Role) -> [[str]]:
+    def get_commands(self, role: Role) -> [str]:
         all_commands = list(filter(lambda t: t.is_for_role(role), self.transitions))
-        return [[x.command] for x in all_commands]
+        return [x.command for x in all_commands]

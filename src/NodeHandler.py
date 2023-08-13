@@ -96,9 +96,9 @@ class NodeHandler(BaseHandler[Update, CCT]):
         stats_node.add_transition('/timekeepings', stats_node.handle_timekeepings, new_state=UserState.STATS_TIMEKEEPINGS)
 
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
-        stats_node.add_continue_later()
-        stats_node.add_transition('/game document_id', stats_node.handle_document_id, new_state=UserState.STATS_GAMES)
-        stats_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
+        stats_games_node.add_continue_later()
+        stats_games_node.add_transition('/game document_id', stats_node.handle_document_id, new_state=UserState.STATS_GAMES)
+        stats_games_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
 
         stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access)
         stats_trainings_node.add_continue_later()
