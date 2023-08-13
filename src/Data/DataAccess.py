@@ -16,9 +16,7 @@ from databaseEntities.TimeKeepingAttendance import TimeKeepingAttendance
 from databaseEntities.TrainingAttendance import TrainingAttendance
 from databaseEntities.Training import Training
 
-from Exceptions.DocumentIdNotPresentException import DocumentIdNotPresentException
-
-from src.Enums.UserState import UserState
+from Utils.CustomExceptions import DocumentIdNotPresentException
 
 
 class DataAccess(object):

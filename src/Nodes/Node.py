@@ -17,6 +17,7 @@ from Enums.RoleSet import RoleSet
 from databaseEntities.UsersToState import UsersToState
 
 from src.Enums.Role import Role
+from src.Utils.CommandDescriptions import CommandDescriptions
 
 
 class Node(ABC):
@@ -80,11 +81,12 @@ class Node(ABC):
     ####################
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
+        commands = self.get_commands(user_to_state.role, new_state)
+        message = CommandDescriptions.get_descriptions(commands)
         await self.telegram_service.send_message(
             update=update,
-            all_commands=self.get_commands(user_to_state.role, new_state),
-            message_type=MessageType.HELP,
-            message_extra_text=str(type(self)))
+            all_commands=commands,
+            message=message)
 
     async def handle_continue_later(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         await self.telegram_service.send_message(

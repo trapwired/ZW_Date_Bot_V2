@@ -9,8 +9,6 @@ from Enums.MessageType import MessageType
 from Enums.Role import Role
 from Enums.UserState import UserState
 
-from Exceptions.ObjectNotFoundException import ObjectNotFoundException
-
 from Data.DataAccess import DataAccess
 
 from Services.UserStateService import UserStateService
@@ -18,6 +16,8 @@ from Services.TelegramService import TelegramService
 
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
+
+from Utils.CustomExceptions import ObjectNotFoundException
 
 
 def create_user(update: Update) -> TelegramUser:

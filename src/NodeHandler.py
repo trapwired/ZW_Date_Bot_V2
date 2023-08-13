@@ -10,9 +10,6 @@ from telegram.ext._utils.types import CCT
 from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
 
-from Exceptions.ObjectNotFoundException import ObjectNotFoundException
-from Exceptions.NodesMissingException import NodesMissingException
-
 from Services.AdminService import AdminService
 from Services.IcsService import IcsService
 from Services.UserStateService import UserStateService
@@ -25,6 +22,9 @@ from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 
 from Data.DataAccess import DataAccess
+
+from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundException, MissingCommandDescriptionException
+from Utils.CommandDescriptions import CommandDescriptions
 
 
 def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigParser):
@@ -41,13 +41,30 @@ def add_nodes_reference_to_all_nodes(nodes: dict):
         node.add_nodes(nodes)
 
 
-def check_all_user_states_have_node(nodes):
+def check_all_user_states_have_node(nodes: dict):
     missing_states = []
     for state in UserState:
         if state not in nodes:
             missing_states.append(state)
     if len(missing_states) > 0:
         raise NodesMissingException(missing_states)
+
+
+def check_all_commands_have_description(nodes: dict, api_config: configparser.RawConfigParser):
+    missing_commands = []
+    command_set = set()
+    for node in nodes.values():
+        for transition in node.transitions:
+            command_set.add(transition.command)
+
+    descriptions = CommandDescriptions.descriptions
+    for command in command_set:
+        if command not in descriptions:
+            if not command == api_config['Chats']['SPECTATOR_PASSWORD'].lower():
+                missing_commands.append(command)
+
+    if len(missing_commands) > 0:
+        raise MissingCommandDescriptionException(missing_commands)
 
 
 class NodeHandler(BaseHandler[Update, CCT]):
@@ -63,7 +80,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
         add_nodes_reference_to_all_nodes(self.nodes)
-        check_all_user_states_have_node(self.nodes)
+
+        self.do_checks(api_config)
 
     def check_update(self, update: object):
         if isinstance(update, Update):
@@ -153,3 +171,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         }
 
         return all_nodes_dict
+
+    def do_checks(self, api_config: configparser.RawConfigParser):
+        check_all_user_states_have_node(self.nodes)
+        check_all_commands_have_description(self.nodes, api_config)

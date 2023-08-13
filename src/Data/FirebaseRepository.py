@@ -14,8 +14,7 @@ from Enums.Table import Table
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
 
-from Exceptions.MoreThanOneObjectFoundException import MoreThanOneObjectFoundException
-from Exceptions.ObjectNotFoundException import ObjectNotFoundException
+from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException
 
 
 class FirebaseRepository(object):

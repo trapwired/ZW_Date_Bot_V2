@@ -1,2 +1,0 @@
-class DocumentIdNotPresentException(Exception):
-    pass

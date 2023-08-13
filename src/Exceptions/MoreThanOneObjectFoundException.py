@@ -1,2 +1,0 @@
-class MoreThanOneObjectFoundException(Exception):
-    pass
