@@ -29,22 +29,27 @@ class Node(ABC):
         self.telegram_service = telegram_service
         self.transitions = list()
         self.help_transition = self.add_transition('/help', self.handle_help, allowed_roles=RoleSet.EVERYONE)
+        self.nodes = dict()
+
+    def add_nodes(self, nodes: dict):
+        self.nodes = nodes
 
     async def handle(self, update: Update, user_to_state: UsersToState) -> None:
         try:
             command = update.message.text.lower()
             transition = self.get_transition(command, user_to_state.role)
             action = transition.action
-            await action(update, user_to_state)
+            new_state = transition.new_state
+            await action(update, user_to_state, new_state)
 
             if not transition.update_state:
                 return
-            self.user_state_service.update_user_state(user_to_state, transition.new_state)
+            self.user_state_service.update_user_state(user_to_state, new_state)
 
         except Exception as e:
             await self.telegram_service.send_message(
                 update=update,
-                all_commands=self.get_commands(user_to_state.role),
+                all_commands=self.get_commands(user_to_state.role, UserState.DEFAULT),
                 message_type=MessageType.ERROR,
                 message_extra_text=str(e))
             traceback.print_exception(*sys.exc_info())
@@ -74,23 +79,28 @@ class Node(ABC):
     # DEFAULT HANDLERS #
     ####################
 
-    async def handle_help(self, update: Update, user_to_state: UsersToState) -> None:
+    async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         await self.telegram_service.send_message(
             update=update,
-            all_commands=self.get_commands(user_to_state.role),
+            all_commands=self.get_commands(user_to_state.role, new_state),
             message_type=MessageType.HELP,
             message_extra_text=str(type(self)))
 
-    async def handle_continue_later(self, update: Update, user_to_state: UsersToState) -> None:
+    async def handle_continue_later(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         await self.telegram_service.send_message(
             update=update,
-            all_commands=self.get_commands(user_to_state.role),
+            all_commands=self.get_commands(user_to_state.role, UserState.DEFAULT),
             message_type=MessageType.CONTINUE_LATER)
 
     #############
     # UTILITIES #
     #############
 
-    def get_commands(self, role: Role) -> [str]:
-        all_commands = list(filter(lambda t: t.is_for_role(role), self.transitions))
+    def get_commands(self, role: Role, new_state: UserState) -> [str]:
+        if new_state is None:
+            new_node = self
+        else:
+            new_node = self.nodes[new_state]
+
+        all_commands = list(filter(lambda t: t.is_for_role(role), new_node.transitions))
         return [x.command for x in all_commands]

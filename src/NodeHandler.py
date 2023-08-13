@@ -30,6 +30,11 @@ def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigPar
     return telegram_service, user_state_service, admin_service, ics_service, data_access
 
 
+def add_nodes_reference_to_all_nodes(nodes: dict):
+    for node in nodes.values():
+        node.add_nodes(nodes)
+
+
 class NodeHandler(BaseHandler[Update, CCT]):
     GROUP_TYPES = [ChatType.GROUP, ChatType.SUPERGROUP]
 
@@ -42,6 +47,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         self.admin_service = admin_service
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
+        add_nodes_reference_to_all_nodes(self.nodes)
 
     def check_update(self, update: object):
         if isinstance(update, Update):
@@ -87,17 +93,20 @@ class NodeHandler(BaseHandler[Update, CCT]):
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)
         default_node.add_transition('/stats', default_node.handle_stats, new_state=UserState.STATS)
-        default_node.add_transition('/edit', default_node.handle_edit, new_state=UserState.EDIT, allowed_roles=RoleSet.PLAYERS)
+        default_node.add_transition('/edit', default_node.handle_edit, new_state=UserState.EDIT,
+                                    allowed_roles=RoleSet.PLAYERS)
 
         stats_node = StatsNode(UserState.STATS, telegram_service, user_state_service, data_access)
         stats_node.add_continue_later()
         stats_node.add_transition('/games', stats_node.handle_games, new_state=UserState.STATS_GAMES)
         stats_node.add_transition('/trainings', stats_node.handle_trainings, new_state=UserState.STATS_TRAININGS)
-        stats_node.add_transition('/timekeepings', stats_node.handle_timekeepings, new_state=UserState.STATS_TIMEKEEPINGS)
+        stats_node.add_transition('/timekeepings', stats_node.handle_timekeepings,
+                                  new_state=UserState.STATS_TIMEKEEPINGS)
 
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
         stats_games_node.add_continue_later()
-        stats_games_node.add_transition('/game document_id', stats_node.handle_document_id, new_state=UserState.STATS_GAMES)
+        stats_games_node.add_transition('/game document_id', stats_node.handle_document_id,
+                                        new_state=UserState.STATS_GAMES)
         stats_games_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
 
         stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access)
@@ -113,7 +122,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
                                                new_state=UserState.STATS_TIMEKEEPINGS)
         stats_timekeepings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
 
-        return {
+        all_nodes_dict = {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
             UserState.DEFAULT: default_node,
@@ -122,3 +131,5 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.STATS_TRAININGS: stats_trainings_node,
             UserState.STATS_TIMEKEEPINGS: stats_timekeepings_node
         }
+
+        return all_nodes_dict

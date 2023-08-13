@@ -13,7 +13,7 @@ from src.Enums.Role import Role
 class Transition(object):
     def __init__(self,
                  command: str,
-                 action: Callable[[Update, UsersToState], None],
+                 action: Callable[[Update, UsersToState, UserState | None], None],
                  allowed_roles: RoleSet = RoleSet.EVERYONE,
                  new_state: UserState = None):
         self.command = command.lower()
