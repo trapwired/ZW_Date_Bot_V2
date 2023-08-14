@@ -9,7 +9,7 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.ERROR:
             return 'An Exception was raised:    \n' + extra_text
         case MessageType.HELP:
-            return 'Help is on its way (' + extra_text + ')'  # TODO remove Exception / add list of all commands
+            return 'Help is on its way (' + extra_text + ')'
         case MessageType.WRONG_START_COMMAND:
             return 'Please start chatting with me by sending the command /start'
         case MessageType.WELCOME:
@@ -19,6 +19,14 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.REJECTED:
             return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \
                    'you got the bot recommended from... :)'
+        case MessageType.STATS_OVERVIEW:
+            return 'Do you want to show stats for a game, training or timekeeping-event?'
+        case MessageType.STATS_TO_GAMES:
+            return 'Click on the game you want to see the stats for'
+        case MessageType.STATS_TO_TRAININGS:
+            return 'Click on the training you want to see the stats for'
+        case MessageType.STATS_TO_TIMEKEEPINGS:
+            return 'Click on the timekeeping-event you want to see the stats for'
         case _:
             return message_type.name + ' ' + extra_text
 
