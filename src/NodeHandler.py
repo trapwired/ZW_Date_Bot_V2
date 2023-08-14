@@ -55,13 +55,13 @@ def check_all_commands_have_description(nodes: dict, api_config: configparser.Ra
     command_set = set()
     for node in nodes.values():
         for transition in node.transitions:
-            command_set.add(transition.command)
+            if transition.needs_description:
+                command_set.add(transition.command)
 
     descriptions = CommandDescriptions.descriptions
     for command in command_set:
         if command not in descriptions:
-            if not command == api_config['Chats']['SPECTATOR_PASSWORD'].lower():
-                missing_commands.append(command)
+            missing_commands.append(command)
 
     if len(missing_commands) > 0:
         raise MissingCommandDescriptionException(missing_commands)
@@ -122,7 +122,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
             api_config['Chats']['SPECTATOR_PASSWORD'],
             rejected_node.handle_correct_password,
             new_state=UserState.DEFAULT,
-            allowed_roles=RoleSet.REJECTED)
+            allowed_roles=RoleSet.REJECTED,
+            needs_description=False)
 
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)
@@ -139,9 +140,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
         stats_games_node.add_continue_later()
-        stats_games_node.add_transition('/game document_id', stats_node.handle_document_id,
-                                        new_state=UserState.STATS_GAMES)
         stats_games_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
+        stats_games_node.add_game_transitions()
 
         stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access)
         stats_trainings_node.add_continue_later()

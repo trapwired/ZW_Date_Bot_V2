@@ -135,3 +135,11 @@ class DataAccess(object):
     def get_user_state(self, telegram_id: int) -> UsersToState:
         user = self.firebase_repository.get_user(telegram_id)
         return self.firebase_repository.get_user_state(user)
+
+    def get_ordered_games(self) -> [Game]:
+        event_list = self.firebase_repository.get_future_events(Table.GAMES_TABLE)
+        game_list = []
+        for game in event_list:
+            new_game = Game.from_dict(game.id, game.to_dict())
+            game_list.append(new_game)
+        return game_list.sort(key=lambda g: g.timestamp)

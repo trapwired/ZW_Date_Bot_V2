@@ -68,7 +68,7 @@ class Node(ABC):
         return transition
 
     def add_transition(self, command: str, action: Callable, allowed_roles: RoleSet = RoleSet.EVERYONE,
-                       new_state: UserState = None) -> Transition:
+                       new_state: UserState = None, needs_description: bool = True) -> Transition:
         new_transition = Transition(command, action, allowed_roles, new_state=new_state)
         self.transitions.append(new_transition)
         return new_transition

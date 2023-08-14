@@ -1,3 +1,5 @@
+import datetime
+
 import firebase_admin
 import configparser
 
@@ -14,7 +16,7 @@ from Enums.Table import Table
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
 
-from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException
+from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException
 
 
 class FirebaseRepository(object):
@@ -48,7 +50,8 @@ class FirebaseRepository(object):
 
     def get_user_state(self, user: TelegramUser) -> UsersToState | None:
         user_id = user.doc_id
-        query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(filter=FieldFilter("userId", "==", user_id))
+        query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
+            filter=FieldFilter("userId", "==", user_id))
         res = query_ref.get()
         if len(res) == 1:
             return UsersToState.from_dict(res[0].id, res[0].to_dict())
@@ -59,6 +62,16 @@ class FirebaseRepository(object):
         query_ref = self.db.collection(self.tables.get(Table.GAMES_TABLE)).document(doc_id)
         res = query_ref.get()
         return Game.from_dict(res.id, res.to_dict())
+
+    def get_future_events(self, table: Table) -> list:
+        # get all events in table which take place in the future
+        now = datetime.datetime.now()
+        query_ref = self.db.collection(self.tables.get(table)).where(filter=FieldFilter("timestamp", ">", now))
+        event_list = query_ref.get()
+        if len(event_list) == 0:
+            raise NoEventFoundException()
+        return event_list
+
 
     ################
     # ADD / UPDATE #
