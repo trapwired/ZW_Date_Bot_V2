@@ -33,10 +33,11 @@ class StatsNode(Node):
     async def handle_doc_id(self, update: Update, user_to_state: UsersToState, new_state: UserState, document_id: str):
         stats = self.data_access.get_stats_game(document_id)
         stats_with_names = self.data_access.get_names(stats)
+        message = PrintUtils.pretty_print_game_summary(stats_with_names, update.message.text)
         await self.telegram_service.send_message(
             update=update,
             all_commands=self.get_commands(user_to_state.role, new_state),
-            message='Got game with doc id: ' + document_id)
+            message=message)
 
     async def handle_games(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(

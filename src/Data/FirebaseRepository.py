@@ -32,11 +32,8 @@ class FirebaseRepository(object):
     def raise_exception_if_document_not_exists(self, collection: str, document_ref: str):
         doc = self.db.collection(collection).document(document_ref)
         res = doc.get().to_dict()
-        # TODO pass doc id to exception
-        # return documnt, update usages
-
         if res is None:
-            raise ObjectNotFoundException
+            raise ObjectNotFoundException(collection, document_ref)
 
     #######
     # GET #
@@ -86,7 +83,7 @@ class FirebaseRepository(object):
         entries = query_ref.get()
         return entries
 
-    def get_all_players(self):
+    def get_all_players_to_state(self):
         query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
             filter=FieldFilter("role", "in", RoleSet.PLAYERS))
         entries = query_ref.get()

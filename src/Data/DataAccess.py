@@ -156,10 +156,12 @@ class DataAccess(object):
                     unsure.append(new_attendance.user_id)
 
         all_added_players = set(yes + no + unsure)
-        all_player_ids = self.firebase_repository.get_all_players()
-        for player in all_player_ids:
-            if player not in all_added_players:
-                unsure.append(player.id)
+        all_users_to_state = self.firebase_repository.get_all_players_to_state()
+        for element in all_users_to_state:
+            user_to_state = UsersToState.from_dict(element.id, element.to_dict())
+            user_id = user_to_state.user_id
+            if user_id not in all_added_players:
+                unsure.append(user_id)
 
         return yes, no, unsure
 
@@ -170,10 +172,10 @@ class DataAccess(object):
         unsure_with_names = self.add_names(unsure)
         return yes_with_names, no_with_names, unsure_with_names
 
-    def add_names(self, doc_id_list: list):
+    def add_names(self, doc_id_list: list) -> list[TelegramUser]:
         result = []
         for doc in doc_id_list:
             user_ref = self.firebase_repository.get_document(doc, Table.USERS_TABLE)
-            user = TelegramUser.from_dict(user_ref[0].id, user_ref[0].to_dict())
+            user = TelegramUser.from_dict(user_ref.id, user_ref.to_dict())
             result.append(user)
         return result
