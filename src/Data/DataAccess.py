@@ -6,15 +6,15 @@ from Data.Tables import Tables
 
 from Enums.UserState import UserState
 from Enums.Table import Table
+from Enums.AttendanceState import AttendanceState
 
 from databaseEntities.Game import Game
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
-from databaseEntities.GameAttendance import GameAttendance
 from databaseEntities.TimeKeepingAttendance import TimeKeepingAttendance
-from databaseEntities.TrainingAttendance import TrainingAttendance
 from databaseEntities.Training import Training
+from databaseEntities.Attendance import Attendance
 
 from Utils.CustomExceptions import DocumentIdNotPresentException
 
@@ -35,32 +35,31 @@ class DataAccess(object):
         user_doc_id = doc_ref[1].id
         user_to_state = UsersToState(user_doc_id, UserState.INIT)
         doc_id = self.firebase_repository.add(user_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
+        # TODO Add Unsure for each game
         return user_to_state.add_document_id(doc_id[1].id)
 
     @dispatch(Game)
     def add(self, game: Game) -> Game:
         doc_ref = self.firebase_repository.add(game, self.tables.get(Table.GAMES_TABLE))
+        # TODO add unsure for each player
         return game.add_document_id(doc_ref[1].id)
 
     @dispatch(Training)
     def add(self, training: Training) -> Training:
         doc_ref = self.firebase_repository.add(training, self.tables.get(Table.TRAININGS_TABLE))
+        # TODO add unsure for each player
         return training.add_document_id(doc_ref[1].id)
 
     @dispatch(TimekeepingEvent)
     def add(self, timekeeping_event: TimekeepingEvent) -> TimekeepingEvent:
         doc_ref = self.firebase_repository.add(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
+        # TODO add unsure for each player
         return timekeeping_event.add_document_id(doc_ref[1].id)
 
-    @dispatch(GameAttendance)
-    def add(self, game_attendance: GameAttendance) -> GameAttendance:
-        doc_ref = self.firebase_repository.add(game_attendance, self.tables.get(Table.GAME_ATTENDANCE_TABLE))
-        return game_attendance.add_document_id(doc_ref[1].id)
-
-    @dispatch(TrainingAttendance)
-    def add(self, training_attendance: TrainingAttendance) -> TrainingAttendance:
-        doc_ref = self.firebase_repository.add(training_attendance, self.tables.get(Table.TRAINING_ATTENDANCE_TABLE))
-        return training_attendance.add_document_id(doc_ref[1].id)
+    @dispatch(Attendance)
+    def add(self, attendance: Attendance) -> Attendance:
+        doc_ref = self.firebase_repository.add(attendance, self.tables.get(Table.GAME_ATTENDANCE_TABLE))
+        return attendance.add_document_id(doc_ref[1].id)
 
     @dispatch(TimeKeepingAttendance)
     def add(self, timekeeping_attendance: TimeKeepingAttendance) -> TimeKeepingAttendance:
@@ -104,22 +103,17 @@ class DataAccess(object):
     def update(self, timekeeping_event: TimekeepingEvent):
         if timekeeping_event.doc_id is None:
             # TODO: Find / Match / AddDocId
+            # TODO is already a entry for this player and tke present? yes, update, no, create
             raise DocumentIdNotPresentException()
         self.firebase_repository.update(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
 
-    @dispatch(GameAttendance)
-    def update(self, game_attendance: GameAttendance):
-        if game_attendance.doc_id is None:
+    @dispatch(Attendance)
+    def update(self, attendance: Attendance):
+        if attendance.doc_id is None:
             # TODO / AddDocId
+            # TODO is already a entry for this player and game present? yes, update, no, create
             raise DocumentIdNotPresentException()
-        self.firebase_repository.update_game(game_attendance, self.tables.get(Table.GAME_ATTENDANCE_TABLE))
-
-    @dispatch(TrainingAttendance)
-    def update(self, training_attendance: TrainingAttendance):
-        if training_attendance.doc_id is None:
-            # TODO: Find / Match
-            raise DocumentIdNotPresentException()
-        self.firebase_repository.update(training_attendance, self.tables.get(Table.TRAINING_ATTENDANCE_TABLE))
+        self.firebase_repository.update(attendance, self.tables.get(Table.GAME_ATTENDANCE_TABLE))
 
     @dispatch(TimeKeepingAttendance)
     def update(self, timekeeping_attendance: TimeKeepingAttendance):
@@ -142,4 +136,44 @@ class DataAccess(object):
         for game in event_list:
             new_game = Game.from_dict(game.id, game.to_dict())
             game_list.append(new_game)
-        return game_list.sort(key=lambda g: g.timestamp)
+        return sorted(game_list, key=lambda g: g.timestamp)
+
+    def get_stats_game(self, game_id: str) -> (list, list, list):
+        # TODO Challenge: Precompute this does not work, how to update on update?
+        yes = []
+        no = []
+        unsure = []
+
+        game_attendance_list = self.firebase_repository.get_attendance_list(game_id, Table.GAME_ATTENDANCE_TABLE)
+        for attendance in game_attendance_list:
+            new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
+            match new_attendance.state:
+                case AttendanceState.YES:
+                    yes.append(new_attendance.user_id)
+                case AttendanceState.NO:
+                    no.append(new_attendance.user_id)
+                case AttendanceState.UNSURE:
+                    unsure.append(new_attendance.user_id)
+
+        all_added_players = set(yes + no + unsure)
+        all_player_ids = self.firebase_repository.get_all_players()
+        for player in all_player_ids:
+            if player not in all_added_players:
+                unsure.append(player.id)
+
+        return yes, no, unsure
+
+    def get_names(self, stats: (list, list, list)):
+        yes, no, unsure = stats
+        yes_with_names = self.add_names(yes)
+        no_with_names = self.add_names(no)
+        unsure_with_names = self.add_names(unsure)
+        return yes_with_names, no_with_names, unsure_with_names
+
+    def add_names(self, doc_id_list: list):
+        result = []
+        for doc in doc_id_list:
+            user_ref = self.firebase_repository.get_document(doc, Table.USERS_TABLE)
+            user = TelegramUser.from_dict(user_ref[0].id, user_ref[0].to_dict())
+            result.append(user)
+        return result

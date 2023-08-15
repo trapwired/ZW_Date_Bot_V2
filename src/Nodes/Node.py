@@ -1,7 +1,7 @@
 import sys
 import traceback
 from abc import ABC
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update
 from typing import Callable
 
 from Services.TelegramService import TelegramService
@@ -13,11 +13,11 @@ from Nodes.Transition import Transition
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
+from Enums.Role import Role
 
 from databaseEntities.UsersToState import UsersToState
 
-from src.Enums.Role import Role
-from src.Utils.CommandDescriptions import CommandDescriptions
+from Utils.CommandDescriptions import CommandDescriptions
 
 
 class Node(ABC):
@@ -69,7 +69,8 @@ class Node(ABC):
 
     def add_transition(self, command: str, action: Callable, allowed_roles: RoleSet = RoleSet.EVERYONE,
                        new_state: UserState = None, needs_description: bool = True) -> Transition:
-        new_transition = Transition(command, action, allowed_roles, new_state=new_state)
+        new_transition = Transition(command, action, allowed_roles, new_state=new_state,
+                                    needs_description=needs_description)
         self.transitions.append(new_transition)
         return new_transition
 
@@ -81,7 +82,7 @@ class Node(ABC):
     ####################
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
-        commands = self.get_commands(user_to_state.role, new_state)
+        commands = self.get_commands(user_to_state.role, new_state, is_for_help_descriptions=True)
         message = CommandDescriptions.get_descriptions(commands)
         await self.telegram_service.send_message(
             update=update,
@@ -98,11 +99,14 @@ class Node(ABC):
     # UTILITIES #
     #############
 
-    def get_commands(self, role: Role, new_state: UserState) -> [str]:
+    def get_commands(self, role: Role, new_state: UserState, is_for_help_descriptions: bool = False) -> [str]:
         if new_state is None:
             new_node = self
         else:
             new_node = self.nodes[new_state]
 
-        all_commands = list(filter(lambda t: t.is_for_role(role), new_node.transitions))
+        all_commands = list(
+            filter(lambda t:
+                   t.is_for_role(role) and (t.needs_description or not is_for_help_descriptions),
+                   new_node.transitions))
         return [x.command for x in all_commands]
