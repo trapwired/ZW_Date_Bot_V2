@@ -1,4 +1,5 @@
 import logging
+from abc import ABC
 from typing import Callable
 
 from telegram import Update
@@ -10,7 +11,7 @@ from databaseEntities.UsersToState import UsersToState
 from src.Enums.Role import Role
 
 
-class Transition(object):
+class Transition(ABC):
     def __init__(self,
                  command: str,
                  action: Callable[[Update, UsersToState, UserState | None], None],

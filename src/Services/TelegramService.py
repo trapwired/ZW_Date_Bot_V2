@@ -3,6 +3,8 @@ from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup
 
 from Enums.MessageType import MessageType
 
+from src.Utils import PrintUtils
+
 
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
     match message_type:
@@ -72,4 +74,6 @@ class TelegramService(object):
         if message is None:
             message = get_text(message_type, first_name=first_name, extra_text=message_extra_text)
         reply_keyboard = get_reply_keyboard(message_type, all_commands)
-        await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_keyboard)
+        message_to_send = PrintUtils.escape_message(message)
+        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_keyboard,
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)

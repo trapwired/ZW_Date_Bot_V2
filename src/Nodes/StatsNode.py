@@ -27,8 +27,9 @@ class StatsNode(Node):
             game_stats = self.data_access.get_stats_game(game.doc_id)
             # TODO remove game_stats, data is old and cant be udpated?
             game_string = PrintUtils.pretty_print_game(game, game_stats)
-            game_function = partial(self.handle_doc_id, document_id=game.doc_id)
-            self.add_transition(command=game_string, action=game_function, needs_description=False)
+            game_function = self.handle_doc_id
+            self.add_transition(command=game_string, action=game_function, needs_description=False,
+                                document_id=game.doc_id)
 
     async def handle_doc_id(self, update: Update, user_to_state: UsersToState, new_state: UserState, document_id: str):
         stats = self.data_access.get_stats_game(document_id)

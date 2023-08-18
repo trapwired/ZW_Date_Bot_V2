@@ -18,7 +18,7 @@ class NodesMissingException(Exception):
 
 class ObjectNotFoundException(Exception):
     def __init__(self, collection, doc_ref):
-        message = f'{doc_ref} does not exist in {collection}'
+        message = f'\"{doc_ref}\" does not exist in \"{collection}\"'
         super().__init__(message)
 
 

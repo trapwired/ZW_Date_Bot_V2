@@ -8,7 +8,6 @@ from Services.TelegramService import TelegramService
 from Services.UserStateService import UserStateService
 
 from Data.DataAccess import DataAccess
-from Nodes.Transition import Transition
 
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
@@ -18,6 +17,10 @@ from Enums.Role import Role
 from databaseEntities.UsersToState import UsersToState
 
 from Utils.CommandDescriptions import CommandDescriptions
+
+from Transitions.Transition import Transition
+
+from src.Transitions.EventTransition import EventTransition
 
 
 class Node(ABC):
@@ -68,9 +71,14 @@ class Node(ABC):
         return transition
 
     def add_transition(self, command: str, action: Callable, allowed_roles: RoleSet = RoleSet.EVERYONE,
-                       new_state: UserState = None, needs_description: bool = True) -> Transition:
-        new_transition = Transition(command, action, allowed_roles, new_state=new_state,
-                                    needs_description=needs_description)
+                       new_state: UserState = None, needs_description: bool = True,
+                       document_id: str = None) -> Transition:
+        if document_id is not None:
+            new_transition = EventTransition(command, action, document_id, allowed_roles, new_state=new_state,
+                                             needs_description=needs_description)
+        else:
+            new_transition = Transition(command, action, allowed_roles, new_state=new_state,
+                                        needs_description=needs_description)
         self.transitions.append(new_transition)
         return new_transition
 
