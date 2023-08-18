@@ -19,8 +19,7 @@ from databaseEntities.UsersToState import UsersToState
 from Utils.CommandDescriptions import CommandDescriptions
 
 from Transitions.Transition import Transition
-
-from src.Transitions.EventTransition import EventTransition
+from Transitions.EventTransition import EventTransition
 
 
 class Node(ABC):
@@ -53,7 +52,7 @@ class Node(ABC):
         except Exception as e:
             await self.telegram_service.send_message(
                 update=update,
-                all_commands=self.get_commands(user_to_state.role, UserState.DEFAULT),
+                all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
                 message_type=MessageType.ERROR,
                 message_extra_text=str(e))
             traceback.print_exception(*sys.exc_info())
@@ -90,24 +89,25 @@ class Node(ABC):
     ####################
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
-        commands = self.get_commands(user_to_state.role, new_state, is_for_help_descriptions=True)
-        message = CommandDescriptions.get_descriptions(commands)
+        commands_for_buttons = self.get_commands_for_buttons(user_to_state.role, new_state)
+        commands_for_text = self.get_commands_for_help(user_to_state.role, new_state)
+        message = CommandDescriptions.get_descriptions(commands_for_text)
         await self.telegram_service.send_message(
             update=update,
-            all_commands=commands,
+            all_buttons=commands_for_buttons,
             message=message)
 
     async def handle_continue_later(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         await self.telegram_service.send_message(
             update=update,
-            all_commands=self.get_commands(user_to_state.role, UserState.DEFAULT),
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
             message_type=MessageType.CONTINUE_LATER)
 
     #############
     # UTILITIES #
     #############
 
-    def get_commands(self, role: Role, new_state: UserState, is_for_help_descriptions: bool = False) -> [str]:
+    def get_commands_for_help(self, role: Role, new_state: UserState) -> [str]:
         if new_state is None:
             new_node = self
         else:
@@ -115,6 +115,18 @@ class Node(ABC):
 
         all_commands = list(
             filter(lambda t:
-                   t.is_for_role(role) and (t.needs_description or not is_for_help_descriptions),
+                   t.is_for_role(role) and t.needs_description,
+                   new_node.transitions))
+        return [x.command for x in all_commands]
+
+    def get_commands_for_buttons(self, role: Role, new_state: UserState) -> [str]:
+        if new_state is None:
+            new_node = self
+        else:
+            new_node = self.nodes[new_state]
+
+        all_commands = list(
+            filter(lambda t:
+                   t.is_for_role(role),
                    new_node.transitions))
         return [x.command for x in all_commands]

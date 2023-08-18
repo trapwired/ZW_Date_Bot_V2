@@ -49,14 +49,14 @@ class InitNode(Node):
             self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
             await self.telegram_service.send_message(
                 update=update,
-                all_commands=self.get_commands(user_to_state.role, new_state),
+                all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
                 message_type=MessageType.WELCOME)
         else:
             user_to_state = user_to_state.add_role(Role.REJECTED)
             self.user_state_service.update_user_state(user_to_state, UserState.REJECTED)
             await self.telegram_service.send_message(
                 update=update,
-                all_commands=self.get_commands(user_to_state.role, new_state),
+                all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
                 message_type=MessageType.REJECTED)
 
     async def is_in_group_chat(self, telegram_id: int):
@@ -66,5 +66,5 @@ class InitNode(Node):
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(
             update=update,
-            all_commands=self.get_commands(user_to_state.role, new_state),
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
             message_type=MessageType.WRONG_START_COMMAND)
