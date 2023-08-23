@@ -9,8 +9,8 @@ from Enums.UserState import UserState
 
 from databaseEntities.UsersToState import UsersToState
 
-from src.Utils import PrintUtils
-from src.Utils.CustomExceptions import NoEventFoundException
+from Utils import PrintUtils
+from Utils.CustomExceptions import NoEventFoundException
 
 
 class StatsNode(Node):

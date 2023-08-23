@@ -8,7 +8,7 @@ from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
 from databaseEntities.UsersToState import UsersToState
 
-from src.Enums.Role import Role
+from Enums.Role import Role
 
 
 class Transition(ABC):

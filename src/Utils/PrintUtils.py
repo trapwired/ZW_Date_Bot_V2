@@ -1,4 +1,4 @@
-from src.databaseEntities.Game import Game
+from databaseEntities.Game import Game
 
 
 def pretty_print_game_stats(game_stats: (list, list, list)):

@@ -18,7 +18,7 @@ from databaseEntities.UsersToState import UsersToState
 
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException
 
-from src.Enums.RoleSet import RoleSet
+from Enums.RoleSet import RoleSet
 
 
 class FirebaseRepository(object):

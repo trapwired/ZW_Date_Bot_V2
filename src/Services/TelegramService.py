@@ -3,7 +3,7 @@ from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup
 
 from Enums.MessageType import MessageType
 
-from src.Utils import PrintUtils
+from Utils import PrintUtils
 
 
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
