@@ -115,7 +115,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
                          data_access: DataAccess, api_config: configparser.RawConfigParser):
 
         init_node = InitNode(UserState.INIT, telegram_service, user_state_service, data_access, api_config, self.bot)
-        init_node.add_transition('/start', init_node.handle_start)
+        init_node.add_transition('/start', init_node.handle_start, allowed_roles=RoleSet.REALLY_EVERYONE)
 
         rejected_node = RejectedNode(UserState.INIT, telegram_service, user_state_service, data_access)
         rejected_node.add_transition(

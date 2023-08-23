@@ -46,11 +46,12 @@ class FirebaseRepository(object):
         return query_ref.get()
 
     def get_user(self, telegram_id: int) -> TelegramUser | None:
-        user_ref = self.db.collection(self.tables.get(Table.USERS_TABLE))
+        table = self.tables.get(Table.USERS_TABLE)
+        user_ref = self.db.collection(table)
         query_ref = user_ref.where(filter=FieldFilter("telegramId", "==", telegram_id))
         res = query_ref.get()
         if len(res) == 0:
-            raise ObjectNotFoundException
+            raise ObjectNotFoundException(table, telegram_id)
         if len(res) == 1:
             return TelegramUser.from_dict(res[0].id, res[0].to_dict())
         else:
