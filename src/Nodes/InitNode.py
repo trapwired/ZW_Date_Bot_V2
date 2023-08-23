@@ -45,15 +45,17 @@ class InitNode(Node):
     async def handle_start(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         telegram_id = update.effective_chat.id
         if await self.is_in_group_chat(telegram_id):
+            new_state = UserState.DEFAULT
             user_to_state = user_to_state.add_role(Role.PLAYER)
-            self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+            self.user_state_service.update_user_state(user_to_state, new_state)
             await self.telegram_service.send_message(
                 update=update,
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
                 message_type=MessageType.WELCOME)
         else:
+            new_state = UserState.REJECTED
             user_to_state = user_to_state.add_role(Role.REJECTED)
-            self.user_state_service.update_user_state(user_to_state, UserState.REJECTED)
+            self.user_state_service.update_user_state(user_to_state, new_state)
             await self.telegram_service.send_message(
                 update=update,
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
