@@ -1,5 +1,5 @@
 import telegram
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton
 
 from Enums.MessageType import MessageType
 
@@ -16,6 +16,8 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
             return 'Please start chatting with me by sending the command /start'
         case MessageType.WELCOME:
             return 'Hi ' + first_name + ', welcome to the Züri west manager'
+        case MessageType.WEBSITE:
+            return 'Here we go!'
         case MessageType.CONTINUE_LATER:
             return 'Cheerio ' + first_name + '!'
         case MessageType.REJECTED:
@@ -40,8 +42,17 @@ def get_reply_keyboard(message_type: MessageType, all_commands: [str]):
             return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
         case MessageType.REJECTED:
             return None
-    keyboard = generate_keyboard(all_commands)
-    return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
+        case MessageType.WEBSITE:
+            if not all_commands:
+                return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
+                                            text="handball.ch/Züri West 1",
+                                            url='https://www.handball.ch/de/matchcenter/teams/36769')]])
+            else:
+                keyboard = generate_keyboard(all_commands)
+                return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
+        case _:
+            keyboard = generate_keyboard(all_commands)
+            return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 
 
 def generate_keyboard(all_commands: [str]) -> [[str]]:
