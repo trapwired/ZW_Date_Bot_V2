@@ -1,8 +1,8 @@
 class TelegramUser(object):
     def __init__(self, telegram_id: int, firstname: str, lastname: str, doc_id: str = None):
         self.doc_id = doc_id
-        self.lastname = lastname
-        self.firstname = firstname
+        self.lastname = str(lastname or '')
+        self.firstname = str(firstname or '')
         self.telegramId = telegram_id
 
     @staticmethod
