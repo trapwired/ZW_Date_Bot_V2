@@ -71,13 +71,13 @@ class Node(ABC):
 
     def add_transition(self, command: str, action: Callable, allowed_roles: RoleSet = RoleSet.EVERYONE,
                        new_state: UserState = None, needs_description: bool = True,
-                       document_id: str = None) -> Transition:
+                       document_id: str = None, is_active_function: Callable = None) -> Transition:
         if document_id is not None:
             new_transition = EventTransition(command, action, document_id, allowed_roles, new_state=new_state,
                                              needs_description=needs_description)
         else:
             new_transition = Transition(command, action, allowed_roles, new_state=new_state,
-                                        needs_description=needs_description)
+                                        needs_description=needs_description, is_active_function=is_active_function)
         self.transitions.append(new_transition)
         return new_transition
 
@@ -127,6 +127,6 @@ class Node(ABC):
 
         all_commands = list(
             filter(lambda t:
-                   t.is_for_role(role),
+                   t.is_for_role(role) and t.is_active(),
                    new_node.transitions))
         return [x.command for x in all_commands]

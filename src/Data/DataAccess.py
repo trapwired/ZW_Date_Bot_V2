@@ -16,7 +16,8 @@ from databaseEntities.TimeKeepingAttendance import TimeKeepingAttendance
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 
-from Utils.CustomExceptions import DocumentIdNotPresentException
+from Utils.CustomExceptions import DocumentIdNotPresentException, NoEventFoundException
+
 
 
 class DataAccess(object):
@@ -179,3 +180,10 @@ class DataAccess(object):
             user = TelegramUser.from_dict(user_ref.id, user_ref.to_dict())
             result.append(user)
         return result
+
+    def any_events_in_future(self, event_table: Table, x):
+        try:
+            self.firebase_repository.get_future_events(event_table)
+        except NoEventFoundException as e:
+            return False
+        return True

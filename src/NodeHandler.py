@@ -1,5 +1,6 @@
 import configparser
 import logging
+from functools import partial
 
 import telegram
 from telegram import Update
@@ -9,6 +10,7 @@ from telegram.ext._utils.types import CCT
 
 from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
+from Enums.Table import Table
 
 from Services.AdminService import AdminService
 from Services.IcsService import IcsService
@@ -77,6 +79,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
             initialize_services(bot, api_config)
         self.user_state_service = user_state_service
         self.admin_service = admin_service
+        self.data_access = data_access
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
         add_nodes_reference_to_all_nodes(self.nodes)
@@ -133,10 +136,18 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         stats_node = StatsNode(UserState.STATS, telegram_service, user_state_service, data_access)
         stats_node.add_continue_later()
-        stats_node.add_transition('/games', stats_node.handle_games, new_state=UserState.STATS_GAMES)
-        stats_node.add_transition('/trainings', stats_node.handle_trainings, new_state=UserState.STATS_TRAININGS)
-        stats_node.add_transition('/timekeepings', stats_node.handle_timekeepings,
-                                  new_state=UserState.STATS_TIMEKEEPINGS)
+        stats_node.add_transition(
+            '/games', stats_node.handle_games,
+            new_state=UserState.STATS_GAMES,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
+        stats_node.add_transition(
+            '/trainings', stats_node.handle_trainings,
+            new_state=UserState.STATS_TRAININGS,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
+        stats_node.add_transition(
+            '/timekeepings', stats_node.handle_timekeepings,
+            new_state=UserState.STATS_TIMEKEEPINGS,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
 
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
         stats_games_node.add_continue_later()
