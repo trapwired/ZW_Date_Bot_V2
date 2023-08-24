@@ -12,6 +12,13 @@ from databaseEntities.UsersToState import UsersToState
 from Enums.Role import Role
 
 
+def initialize_is_active_function(function):
+    if function is not None:
+        return function
+    else:
+        return lambda x: True
+
+
 class Transition(ABC):
     def __init__(self,
                  command: str,
@@ -26,19 +33,13 @@ class Transition(ABC):
         self.update_state = new_state is not None
         self.new_state = new_state
         self.needs_description = needs_description
-        self.is_active_function = self.initialize_is_active_function(is_active_function)
+        self.is_active_function = initialize_is_active_function(is_active_function)
 
     def can_be_taken(self, command: str, role: Role) -> bool:
-        return self.command == command and self.is_for_role(role)
+        return self.command == command and self.is_for_role(role) and self.is_active()
 
     def is_for_role(self, role: Role) -> bool:
         return role in self.allowed_roles
 
     def is_active(self):
         return self.is_active_function(x=5)
-
-    def initialize_is_active_function(self, function):
-        if function is not None:
-            return function
-        else:
-            return lambda x: True

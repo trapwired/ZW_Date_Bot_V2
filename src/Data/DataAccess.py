@@ -19,7 +19,6 @@ from databaseEntities.Attendance import Attendance
 from Utils.CustomExceptions import DocumentIdNotPresentException, NoEventFoundException
 
 
-
 class DataAccess(object):
 
     def __init__(self, api_config: configparser.RawConfigParser):
@@ -181,9 +180,9 @@ class DataAccess(object):
             result.append(user)
         return result
 
-    def any_events_in_future(self, event_table: Table, x):
+    def any_events_in_future(self, event_table: Table, x=42):
         try:
             self.firebase_repository.get_future_events(event_table)
-        except NoEventFoundException as e:
+        except NoEventFoundException:
             return False
         return True
