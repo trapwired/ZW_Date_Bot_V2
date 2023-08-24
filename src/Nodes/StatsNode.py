@@ -6,6 +6,7 @@ from Nodes.Node import Node
 
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
+from Enums.Event import Event
 
 from databaseEntities.UsersToState import UsersToState
 
@@ -14,22 +15,24 @@ from Utils.CustomExceptions import NoEventFoundException
 
 
 class StatsNode(Node):
-    def add_game_transitions(self):
-        # Get all Games
+    def add_event_transitions(self, event_type: Event):
         try:
-            games = self.data_access.get_ordered_games()
+            events = []
+            match event_type:
+                case Event.GAME:
+                    events = self.data_access.get_ordered_games()
+                case Event.TRAINING:
+                    events = self.data_access.get_ordered_trainings()
+                case Event.TIMEKEEPING:
+                    events = self.data_access.get_ordered_timekeepings()
         except NoEventFoundException as e:
-            # TODO send back on click: no games upcoming in future
             return
-        # Loop over games, add transition for each
-        for game in games:
-            # TODO get summary of who is present, pass to prettyPrint
-            game_stats = self.data_access.get_stats_game(game.doc_id)
-            # TODO remove game_stats, data is old and cant be udpated?
-            game_string = PrintUtils.pretty_print_game(game, game_stats)
-            game_function = self.handle_doc_id
-            self.add_transition(command=game_string, action=game_function, needs_description=False,
-                                document_id=game.doc_id)
+
+        for event in events:
+            event_string = PrintUtils.pretty_print(event)
+            event_function = self.handle_doc_id
+            self.add_transition(command=event_string, action=event_function, needs_description=False,
+                                document_id=event.doc_id)
 
     async def handle_doc_id(self, update: Update, user_to_state: UsersToState, new_state: UserState, document_id: str):
         stats = self.data_access.get_stats_game(document_id)

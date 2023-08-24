@@ -1,14 +1,29 @@
 from databaseEntities.Game import Game
 
+from multipledispatch import dispatch
+
+from databaseEntities.TimekeepingEvent import TimekeepingEvent
+from databaseEntities.Training import Training
+
 
 def pretty_print_game_stats(game_stats: (list, list, list)):
     yes, no, unsure = game_stats
     return f'{len(yes)}Y / {len(no)}N / {len(unsure)}U'
 
 
-def pretty_print_game(game: Game, game_stats: (list, list, list)) -> str:
-    short_game_stats = pretty_print_game_stats(game_stats)
-    return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location} | {short_game_stats}'
+@dispatch(Game)
+def pretty_print(game: Game) -> str:
+    return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location}'
+
+
+@dispatch(Training)
+def pretty_print(training: Training) -> str:
+    return f'{training.timestamp.strftime("%d.%m.%Y %H:%M")} | {training.location}'
+
+
+@dispatch(TimekeepingEvent)
+def pretty_print(tke: TimekeepingEvent) -> str:
+    return f'{tke.timestamp.strftime("%d.%m.%Y %H:%M")} | {tke.location}'
 
 
 def pretty_print_game_summary(stats: (list, list, list), game_string: str) -> str:

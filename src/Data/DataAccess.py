@@ -138,8 +138,23 @@ class DataAccess(object):
             game_list.append(new_game)
         return sorted(game_list, key=lambda g: g.timestamp)
 
+    def get_ordered_trainings(self) -> [Training]:
+        event_list = self.firebase_repository.get_future_events(Table.TRAININGS_TABLE)
+        training_list = []
+        for training in event_list:
+            new_training = Training.from_dict(training.id, training.to_dict())
+            training_list.append(new_training)
+        return sorted(training_list, key=lambda t: t.timestamp)
+
+    def get_ordered_timekeepings(self) -> [TimekeepingEvent]:
+        event_list = self.firebase_repository.get_future_events(Table.TIMEKEEPING_TABLE)
+        timekeepings_list = []
+        for timekeeping in event_list:
+            new_timekeeping = TimekeepingEvent.from_dict(timekeeping.id, timekeeping.to_dict())
+            timekeepings_list.append(new_timekeeping)
+        return sorted(timekeepings_list, key=lambda t: t.timestamp)
+
     def get_stats_game(self, game_id: str) -> (list, list, list):
-        # TODO Challenge: Precompute this does not work, how to update on update?
         yes = []
         no = []
         unsure = []

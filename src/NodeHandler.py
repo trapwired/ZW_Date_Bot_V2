@@ -11,6 +11,7 @@ from telegram.ext._utils.types import CCT
 from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
 from Enums.Table import Table
+from Enums.Event import Event
 
 from Services.AdminService import AdminService
 from Services.IcsService import IcsService
@@ -152,20 +153,18 @@ class NodeHandler(BaseHandler[Update, CCT]):
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
         stats_games_node.add_continue_later()
         stats_games_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
-        stats_games_node.add_game_transitions()
+        stats_games_node.add_event_transitions(Event.GAME)
 
         stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access)
         stats_trainings_node.add_continue_later()
-        stats_trainings_node.add_transition('/game document_id', None,
-                                            new_state=UserState.STATS_TRAININGS)
         stats_trainings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
+        stats_trainings_node.add_event_transitions(Event.TRAINING)
 
         stats_timekeepings_node = StatsNode(UserState.STATS_TIMEKEEPINGS, telegram_service, user_state_service,
                                             data_access)
         stats_timekeepings_node.add_continue_later()
-        stats_timekeepings_node.add_transition('/game document_id', None,
-                                               new_state=UserState.STATS_TIMEKEEPINGS)
         stats_timekeepings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
+        stats_timekeepings_node.add_event_transitions(Event.TIMEKEEPING)
 
         edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access)
         edit_node.add_continue_later()
