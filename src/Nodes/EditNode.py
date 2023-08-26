@@ -9,6 +9,7 @@ from databaseEntities.UsersToState import UsersToState
 
 from Utils import PrintUtils
 
+from src.Enums.AttendanceState import AttendanceState
 from src.Utils import CallbackUtils
 
 
@@ -20,11 +21,11 @@ class EditNode(Node):
         message = PrintUtils.pretty_print(game)
         # TODO add message? Add summary into string? (update needed...)
 
-        options = ['Yes', 'No', 'Unsure']
+        options = [AttendanceState.YES, AttendanceState.NO, AttendanceState.UNSURE]
         button_list = []
         for option in options:
             new_button = \
-                InlineKeyboardButton(option,
+                InlineKeyboardButton(option.name,
                                      callback_data=CallbackUtils.get_callback_message(UserState.EDIT, option,
                                                                                       document_id))
             button_list.append(new_button)

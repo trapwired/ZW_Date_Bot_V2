@@ -13,6 +13,7 @@ from Utils import PrintUtils
 class StatsNode(Node):
 
     async def handle_event_id(self, update: Update, user_to_state: UsersToState, new_state: UserState, document_id: str):
+        # TODO add handle for timekeepings and trainings + add to editNode
         stats = self.data_access.get_stats_game(document_id)
         stats_with_names = self.data_access.get_names(stats)
         message = PrintUtils.pretty_print_game_summary(stats_with_names, update.message.text)

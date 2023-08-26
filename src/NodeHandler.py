@@ -99,6 +99,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         if chat_type in self.GROUP_TYPES:
             # Handle group messages
             return
+
         if update.callback_query:
             # TODO handle query, send to node?
             query = update.callback_query
@@ -106,10 +107,12 @@ class NodeHandler(BaseHandler[Update, CCT]):
             await query.edit_message_text(text=f"Selected option: {query.data}")
             # + send again keyboard? or only once?
             # let correct node handle?
-        if not update.message or not update.message.text:
+        elif not update.message or not update.message.text:
+            # Handle not messages (but pictures and co)
             return
+        else:
+            users_to_state, node = self.get_user_state_and_workflow(update)
 
-        users_to_state, node = self.get_user_state_and_workflow(update)
         await node.handle(update, users_to_state)
 
     def get_user_state_and_workflow(self, update):
