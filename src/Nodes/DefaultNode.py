@@ -21,12 +21,10 @@ class DefaultNode(Node):
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
-            message_type=MessageType.TO_STATS,
-            message_extra_text='defaultNode: Transition To stats')
+            message_type=MessageType.STATS_OVERVIEW)
 
     async def handle_edit(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
-            message_type=MessageType.TO_EDIT,
-            message_extra_text='defaultNode: Transition to edit')
+            message_type=MessageType.EDIT_OVERVIEW)

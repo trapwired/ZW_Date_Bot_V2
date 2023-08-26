@@ -28,6 +28,7 @@ from Data.DataAccess import DataAccess
 
 from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundException, MissingCommandDescriptionException
 from Utils.CommandDescriptions import CommandDescriptions
+from Utils import NodeUtils
 
 
 def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigParser):
@@ -153,21 +154,52 @@ class NodeHandler(BaseHandler[Update, CCT]):
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
         stats_games_node.add_continue_later()
         stats_games_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
-        stats_games_node.add_event_transitions(Event.GAME)
+        NodeUtils.add_event_transitions_to_node(Event.GAME, stats_games_node, stats_games_node.handle_event_id)
 
         stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access)
         stats_trainings_node.add_continue_later()
         stats_trainings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
-        stats_trainings_node.add_event_transitions(Event.TRAINING)
+        NodeUtils.add_event_transitions_to_node(Event.TRAINING, stats_trainings_node,
+                                                stats_trainings_node.handle_event_id)
 
         stats_timekeepings_node = StatsNode(UserState.STATS_TIMEKEEPINGS, telegram_service, user_state_service,
                                             data_access)
         stats_timekeepings_node.add_continue_later()
         stats_timekeepings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
-        stats_timekeepings_node.add_event_transitions(Event.TIMEKEEPING)
+        NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, stats_timekeepings_node,
+                                                stats_timekeepings_node.handle_event_id)
 
         edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access)
         edit_node.add_continue_later()
+        edit_node.add_transition(
+            '/games', edit_node.handle_games,
+            new_state=UserState.EDIT_GAMES,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
+        edit_node.add_transition(
+            '/trainings', edit_node.handle_trainings,
+            new_state=UserState.EDIT_TRAININGS,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
+        edit_node.add_transition(
+            '/timekeepings', edit_node.handle_timekeepings,
+            new_state=UserState.EDIT_TIMEKEEPINGS,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
+
+        edit_games_node = EditNode(UserState.EDIT_GAMES, telegram_service, user_state_service, data_access)
+        edit_games_node.add_continue_later()
+        edit_games_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
+        NodeUtils.add_event_transitions_to_node(Event.GAME, edit_games_node, edit_games_node.handle_event_id)
+
+        edit_trainings_node = EditNode(UserState.EDIT_TRAININGS, telegram_service, user_state_service, data_access)
+        edit_trainings_node.add_continue_later()
+        edit_trainings_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
+        NodeUtils.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node, edit_trainings_node.handle_event_id)
+
+        edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
+                                          data_access)
+        edit_timekeepings_node.add_continue_later()
+        edit_timekeepings_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
+        NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
+                                                edit_timekeepings_node.handle_event_id)
 
         all_nodes_dict = {
             UserState.INIT: init_node,
@@ -177,7 +209,10 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.STATS_GAMES: stats_games_node,
             UserState.STATS_TRAININGS: stats_trainings_node,
             UserState.STATS_TIMEKEEPINGS: stats_timekeepings_node,
-            UserState.EDIT: edit_node
+            UserState.EDIT: edit_node,
+            UserState.EDIT_GAMES: edit_games_node,
+            UserState.EDIT_TRAININGS: edit_trainings_node,
+            UserState.EDIT_TIMEKEEPINGS: edit_timekeepings_node,
         }
 
         return all_nodes_dict

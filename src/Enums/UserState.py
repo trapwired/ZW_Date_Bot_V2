@@ -11,5 +11,8 @@ class UserState(IntEnum):
     STATS_GAMES = 4
 
     EDIT = 10
+    EDIT_TIMEKEEPINGS = 11
+    EDIT_TRAININGS = 12
+    EDIT_GAMES = 13
 
     REJECTED = 999

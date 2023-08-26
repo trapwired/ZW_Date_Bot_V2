@@ -21,6 +21,7 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.REJECTED:
             return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \
                    'you got the bot recommended from... :)'
+
         case MessageType.STATS_OVERVIEW:
             return 'Do you want to show stats for a game, training or timekeeping-event?'
         case MessageType.STATS_TO_GAMES:
@@ -29,6 +30,16 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
             return 'Click on the training you want to see the stats for'
         case MessageType.STATS_TO_TIMEKEEPINGS:
             return 'Click on the timekeeping-event you want to see the stats for'
+
+        case MessageType.EDIT_OVERVIEW:
+            return 'Do you want to edit your attendance for a game, training or timekeeping-event?'
+        case MessageType.EDIT_TO_GAMES:
+            return 'Click on the game you want to change your attendance-status'
+        case MessageType.EDIT_TO_TRAININGS:
+            return 'Click on the training you want to change your attendance-status'
+        case MessageType.EDIT_TO_TIMEKEEPINGS:
+            return 'Click on the timekeeping-event you want to change your attendance-status'
+
         case _:
             return message_type.name + ' ' + extra_text
 
