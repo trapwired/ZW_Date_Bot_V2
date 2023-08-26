@@ -1,6 +1,6 @@
 import configparser
 import logging
-from telegram.ext import ApplicationBuilder
+from telegram.ext import ApplicationBuilder, CallbackQueryHandler
 
 from Utils import PathUtils
 from NodeHandler import NodeHandler

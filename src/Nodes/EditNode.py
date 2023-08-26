@@ -23,9 +23,10 @@ class EditNode(Node):
         options = ['Yes', 'No', 'Unsure']
         button_list = []
         for option in options:
-            new_button = InlineKeyboardButton(option,
-                                              callback_data=CallbackUtils.get_callback_message(UserState.EDIT, option,
-                                                                                               document_id))
+            new_button = \
+                InlineKeyboardButton(option,
+                                     callback_data=CallbackUtils.get_callback_message(UserState.EDIT, option,
+                                                                                      document_id))
             button_list.append(new_button)
         reply_markup = InlineKeyboardMarkup([button_list])
 

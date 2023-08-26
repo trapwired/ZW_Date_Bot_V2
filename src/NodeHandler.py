@@ -97,8 +97,16 @@ class NodeHandler(BaseHandler[Update, CCT]):
         logging.info(update)
         chat_type = update.effective_chat.type
         if chat_type in self.GROUP_TYPES:
+            # Handle group messages
             return
-        if not update.message.text:
+        if update.callback_query:
+            # TODO handle query, send to node?
+            query = update.callback_query
+            await query.answer()
+            await query.edit_message_text(text=f"Selected option: {query.data}")
+            # + send again keyboard? or only once?
+            # let correct node handle?
+        if not update.message or not update.message.text:
             return
 
         users_to_state, node = self.get_user_state_and_workflow(update)
