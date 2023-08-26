@@ -79,12 +79,13 @@ class TelegramService(object):
         self.bot = bot
 
     async def send_message(self, update: Update, all_buttons: [str], message_type: MessageType = None,
-                           message: str = None, message_extra_text: str = ''):
+                           message: str = None, message_extra_text: str = '', reply_markup=None):
         chat_id = update.effective_chat.id
         first_name = update.effective_user.first_name
         if message is None:
             message = get_text(message_type, first_name=first_name, extra_text=message_extra_text)
-        reply_keyboard = get_reply_keyboard(message_type, all_buttons)
+        if reply_markup is None:
+            reply_markup = get_reply_keyboard(message_type, all_buttons)
         message_to_send = PrintUtils.escape_message(message)
-        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_keyboard,
+        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)

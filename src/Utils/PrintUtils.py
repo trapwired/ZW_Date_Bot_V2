@@ -48,7 +48,7 @@ def pretty_print_game_summary(stats: (list, list, list), game_string: str) -> st
 
 
 def escape_message(message: str):
-    escape_chars = '.|()#_!-'
+    escape_chars = '.|()#_!-+'
     result = ''
     for char in message:
         if char in escape_chars:
