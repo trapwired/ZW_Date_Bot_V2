@@ -26,7 +26,7 @@ def pretty_print(tke: TimekeepingEvent) -> str:
     return f'{tke.timestamp.strftime("%d.%m.%Y %H:%M")} | {tke.location}'
 
 
-def pretty_print_game_summary(stats: (list, list, list), game_string: str) -> str:
+def pretty_print_event_summary(stats: (list, list, list), game_string: str) -> str:
     yes, no, unsure = stats
     total_players = len(yes) + len(no) + len(unsure)
     result = game_string + '\n\n'

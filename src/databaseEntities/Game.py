@@ -1,9 +1,9 @@
-import datetime
+from datetime import datetime
 
 
 class Game(object):
 
-    def __init__(self, timestamp: datetime, location: str, opponent: str, doc_id: str = None):
+    def __init__(self, timestamp: datetime | str, location: str, opponent: str, doc_id: str = None):
         self.doc_id = doc_id
         self.timestamp = timestamp
         self.location = location

@@ -7,12 +7,12 @@ from Data.Tables import Tables
 from Enums.UserState import UserState
 from Enums.Table import Table
 from Enums.AttendanceState import AttendanceState
+from Enums.Event import Event
 
 from databaseEntities.Game import Game
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
-from databaseEntities.TimeKeepingAttendance import TimeKeepingAttendance
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 
@@ -60,12 +60,6 @@ class DataAccess(object):
     def add(self, attendance: Attendance) -> Attendance:
         doc_ref = self.firebase_repository.add(attendance, self.tables.get(Table.GAME_ATTENDANCE_TABLE))
         return attendance.add_document_id(doc_ref[1].id)
-
-    @dispatch(TimeKeepingAttendance)
-    def add(self, timekeeping_attendance: TimeKeepingAttendance) -> TimeKeepingAttendance:
-        doc_ref = self.firebase_repository.add(timekeeping_attendance,
-                                               self.tables.get(Table.TIMEKEEPING_ATTENDANCE_TABLE))
-        return timekeeping_attendance.add_document_id(doc_ref[1].id)
 
     ##########
     # UPDATE #
@@ -115,13 +109,6 @@ class DataAccess(object):
             raise DocumentIdNotPresentException()
         self.firebase_repository.update(attendance, self.tables.get(Table.GAME_ATTENDANCE_TABLE))
 
-    @dispatch(TimeKeepingAttendance)
-    def update(self, timekeeping_attendance: TimeKeepingAttendance):
-        if timekeeping_attendance.doc_id is None:
-            # TODO: Find / Match
-            raise DocumentIdNotPresentException()
-        self.firebase_repository.update(timekeeping_attendance, self.tables.get(Table.TIMEKEEPING_ATTENDANCE_TABLE))
-
     #######
     # GET #
     #######
@@ -157,13 +144,17 @@ class DataAccess(object):
             timekeepings_list.append(new_timekeeping)
         return sorted(timekeepings_list, key=lambda t: t.timestamp)
 
-    def get_stats_game(self, game_id: str) -> (list, list, list):
+    def get_stats_event(self, event_id: str, event_type: Event) -> (list, list, list):
         yes = []
         no = []
         unsure = []
 
-        game_attendance_list = self.firebase_repository.get_attendance_list(game_id, Table.GAME_ATTENDANCE_TABLE)
-        for attendance in game_attendance_list:
+        tables = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
+                  Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
+                  Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}
+
+        event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=tables[event_type])
+        for attendance in event_attendance_list:
             new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
             match new_attendance.state:
                 case AttendanceState.YES:

@@ -4,19 +4,20 @@ from Nodes.Node import Node
 
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
+from Enums.AttendanceState import AttendanceState
+from Enums.Event import Event
 
 from databaseEntities.UsersToState import UsersToState
 
 from Utils import PrintUtils
-
-from src.Enums.AttendanceState import AttendanceState
-from src.Utils import CallbackUtils
+from Utils import CallbackUtils
 
 
 class EditNode(Node):
 
     async def handle_event_id(self, update: Update, user_to_state: UsersToState, new_state: UserState,
-                              document_id: str):
+                              document_id: str, event_type: Event):
+        # TODO evtl: what about game, training and timekeeping?
         game = self.data_access.get_game(document_id)
         message = PrintUtils.pretty_print(game)
         # TODO add message? Add summary into string? (update needed...)

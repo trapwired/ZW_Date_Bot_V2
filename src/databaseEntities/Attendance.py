@@ -2,10 +2,12 @@ from Enums.AttendanceState import AttendanceState
 
 
 class Attendance(object):
-    def __init__(self, user_id: str, event_id: str, state: AttendanceState, doc_id: str = None):
+    def __init__(self, user_id: str, event_id: str, state: AttendanceState | str, doc_id: str = None):
         self.doc_id = doc_id
         self.user_id = user_id
         self.event_id = event_id
+        if type(state) is str:
+            state = AttendanceState(int(state))
         self.state = state
 
     @staticmethod

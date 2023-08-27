@@ -7,8 +7,12 @@ class UsersToState(object):
                  doc_id: str = None):
         self.doc_id = doc_id
         self.user_id = user_id
+        if type(state) is str:
+            state = UserState(int(state))
         self.state = state
         self.additional_info = additional_info
+        if type(role) is str:
+            role = Role(int(role))
         self.role = role
 
     @staticmethod

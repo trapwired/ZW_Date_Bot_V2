@@ -3,6 +3,8 @@ class TelegramUser(object):
         self.doc_id = doc_id
         self.lastname = str(lastname or '')
         self.firstname = str(firstname or '')
+        if type(telegram_id) is str:
+            telegram_id = int(telegram_id)
         self.telegramId = telegram_id
 
     @staticmethod

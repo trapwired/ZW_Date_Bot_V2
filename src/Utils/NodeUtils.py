@@ -25,4 +25,4 @@ def add_event_transitions_to_node(event_type: Event, node: Node, event_function:
     for event in events:
         event_string = PrintUtils.pretty_print(event)
         node.add_transition(command=event_string, action=event_function, needs_description=False,
-                            document_id=event.doc_id)
+                            document_id=event.doc_id, event_type=event_type)

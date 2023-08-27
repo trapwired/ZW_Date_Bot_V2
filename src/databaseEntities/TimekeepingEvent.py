@@ -7,6 +7,8 @@ class TimekeepingEvent(object):
         self.doc_id = doc_id
         self.timestamp = timestamp
         self.location = location
+        if type(people_required) is str:
+            people_required = int(people_required)
         self.people_required = people_required
 
     @staticmethod

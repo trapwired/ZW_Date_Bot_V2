@@ -203,7 +203,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
         edit_trainings_node = EditNode(UserState.EDIT_TRAININGS, telegram_service, user_state_service, data_access)
         edit_trainings_node.add_continue_later()
         edit_trainings_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
-        NodeUtils.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node, edit_trainings_node.handle_event_id)
+        NodeUtils.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
+                                                edit_trainings_node.handle_event_id)
 
         edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
                                           data_access)

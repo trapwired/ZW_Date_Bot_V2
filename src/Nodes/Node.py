@@ -21,6 +21,8 @@ from Utils.CommandDescriptions import CommandDescriptions
 from Transitions.Transition import Transition
 from Transitions.EventTransition import EventTransition
 
+from Enums.Event import Event
+
 
 class Node(ABC):
 
@@ -71,9 +73,10 @@ class Node(ABC):
 
     def add_transition(self, command: str, action: Callable, allowed_roles: RoleSet = RoleSet.EVERYONE,
                        new_state: UserState = None, needs_description: bool = True,
-                       document_id: str = None, is_active_function: Callable = None) -> Transition:
+                       document_id: str = None, is_active_function: Callable = None,
+                       event_type: Event = None) -> Transition:
         if document_id is not None:
-            new_transition = EventTransition(command, action, document_id, allowed_roles, new_state=new_state,
+            new_transition = EventTransition(command, action, document_id, event_type, allowed_roles, new_state=new_state,
                                              needs_description=needs_description)
         else:
             new_transition = Transition(command, action, allowed_roles, new_state=new_state,
