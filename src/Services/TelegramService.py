@@ -52,7 +52,7 @@ def get_reply_keyboard(message_type: MessageType, all_commands: [str]):
         case MessageType.REJECTED:
             return None
     keyboard = generate_keyboard(all_commands)
-    return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
+    return ReplyKeyboardMarkup(keyboard, one_time_keyboard=False)
 
 
 def generate_keyboard(all_commands: [str]) -> [[str]]:
