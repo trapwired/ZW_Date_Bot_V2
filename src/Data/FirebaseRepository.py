@@ -7,18 +7,19 @@ from google.cloud.firestore_v1 import FieldFilter
 
 from firebase_admin import firestore
 
-from Utils import PathUtils
-from databaseEntities.Game import Game
-
 from Data.Tables import Tables
-from Enums.Table import Table
 
+from Enums.Table import Table
+from Enums.RoleSet import RoleSet
+
+from databaseEntities.Game import Game
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
+from databaseEntities.TimekeepingEvent import TimekeepingEvent
+from databaseEntities.Training import Training
 
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException
-
-from Enums.RoleSet import RoleSet
+from Utils import PathUtils
 
 
 class FirebaseRepository(object):
@@ -71,6 +72,14 @@ class FirebaseRepository(object):
     def get_game(self, doc_id: str) -> Game | None:
         res = self.get_document(doc_id, Table.GAMES_TABLE)
         return Game.from_dict(res.id, res.to_dict())
+
+    def get_training(self, doc_id: str) -> Training | None:
+        res = self.get_document(doc_id, Table.TRAININGS_TABLE)
+        return Training.from_dict(res.id, res.to_dict())
+
+    def get_timekeeping(self, doc_id: str) -> TimekeepingEvent | None:
+        res = self.get_document(doc_id, Table.TIMEKEEPING_TABLE)
+        return TimekeepingEvent.from_dict(res.id, res.to_dict())
 
     def get_future_events(self, table: Table) -> list:
         # get all events in table which take place in the future

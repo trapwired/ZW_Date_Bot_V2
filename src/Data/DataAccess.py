@@ -116,6 +116,12 @@ class DataAccess(object):
     def get_game(self, doc_id: str):
         return self.firebase_repository.get_game(doc_id)
 
+    def get_training(self, doc_id: str):
+        return self.firebase_repository.get_training(doc_id)
+
+    def get_timekeeping(self, doc_id: str):
+        return self.firebase_repository.get_timekeeping(doc_id)
+
     def get_user_state(self, telegram_id: int) -> UsersToState:
         user = self.firebase_repository.get_user(telegram_id)
         return self.firebase_repository.get_user_state(user)

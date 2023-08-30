@@ -15,23 +15,33 @@ from Utils import CallbackUtils
 
 class EditNode(Node):
 
-    async def handle_event_id(self, update: Update, user_to_state: UsersToState, new_state: UserState,
+    async def handle_game_id(self, update: Update, user_to_state: UsersToState, new_state: UserState,
                               document_id: str, event_type: Event):
-        # TODO evtl: what about game, training and timekeeping?
         game = self.data_access.get_game(document_id)
         message = PrintUtils.pretty_print(game)
-        # TODO add message? Add summary into string? (update needed...)
+        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, document_id)
+        await self.telegram_service.send_message(
+            update=update,
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            message=message,
+            reply_markup=reply_markup)
 
-        options = [AttendanceState.YES, AttendanceState.NO, AttendanceState.UNSURE]
-        button_list = []
-        for option in options:
-            new_button = \
-                InlineKeyboardButton(option.name,
-                                     callback_data=CallbackUtils.get_callback_message(UserState.EDIT, option,
-                                                                                      document_id))
-            button_list.append(new_button)
-        reply_markup = InlineKeyboardMarkup([button_list])
+    async def handle_training_id(self, update: Update, user_to_state: UsersToState, new_state: UserState,
+                              document_id: str, event_type: Event):
+        training = self.data_access.get_training(document_id)
+        message = PrintUtils.pretty_print(training)
+        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, document_id)
+        await self.telegram_service.send_message(
+            update=update,
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            message=message,
+            reply_markup=reply_markup)
 
+    async def handle_timekeeping_id(self, update: Update, user_to_state: UsersToState, new_state: UserState,
+                              document_id: str, event_type: Event):
+        training = self.data_access.get_timekeeping(document_id)
+        message = PrintUtils.pretty_print(training)
+        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, document_id)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),

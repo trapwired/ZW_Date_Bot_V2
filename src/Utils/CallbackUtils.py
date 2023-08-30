@@ -1,8 +1,19 @@
 from Enums.UserState import UserState
-
 from Enums.AttendanceState import AttendanceState
 
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
 DELIMITER = '-'
+OPTIONS = [AttendanceState.YES, AttendanceState.NO, AttendanceState.UNSURE]
+
+
+def get_reply_markup(user_state: UserState, document_id: str):
+    button_list = []
+    for option in OPTIONS:
+        new_button = InlineKeyboardButton(option.name,
+                                          callback_data=get_callback_message(user_state, option, document_id))
+        button_list.append(new_button)
+    return InlineKeyboardMarkup([button_list])
 
 
 def get_callback_message(user_state: UserState, option: AttendanceState, doc_id: str):
