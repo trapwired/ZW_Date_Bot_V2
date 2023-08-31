@@ -24,11 +24,14 @@ from Nodes.RejectedNode import RejectedNode
 from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 
+from Nodes.EditCallbackNode import EditCallbackNode
+
 from Data.DataAccess import DataAccess
 
 from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundException, MissingCommandDescriptionException
 from Utils.CommandDescriptions import CommandDescriptions
 from Utils import NodeUtils
+from Utils import CallbackUtils
 
 
 def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigParser):
@@ -84,6 +87,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         self.data_access = data_access
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
+        self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access)
         add_nodes_reference_to_all_nodes(self.nodes)
 
         self.do_checks(api_config)
@@ -96,26 +100,24 @@ class NodeHandler(BaseHandler[Update, CCT]):
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(update)
         chat_type = update.effective_chat.type
+
         if chat_type in self.GROUP_TYPES:
             # Handle group messages
             return
 
         if update.callback_query:
-            # TODO handle query, send to node?
-            query = update.callback_query
-            await query.answer()
-            await query.edit_message_text(text=f"Selected option: {query.data}")
-            # + send again keyboard? or only once?
-            # let correct node handle?
-        elif not update.message or not update.message.text:
-            # Handle not messages (but pictures and co)
+            callback_node = self.get_callback_node(update)
+            await callback_node.handle(update)
             return
-        else:
-            users_to_state, node = self.get_user_state_and_workflow(update)
 
+        if not update.message or not update.message.text:
+            # Handle pictures and co
+            return
+
+        users_to_state, node = self.get_user_state_and_node(update)
         await node.handle(update, users_to_state)
 
-    def get_user_state_and_workflow(self, update):
+    def get_user_state_and_node(self, update):
         telegram_id = update.effective_chat.id
         try:
             users_to_state = self.user_state_service.get_user_state(telegram_id)
@@ -229,6 +231,26 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         return all_nodes_dict
 
+    def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess):
+        edit_callback_node = EditCallbackNode(telegram_service, data_access)
+
+        callback_nodes_dict = {
+            UserState.EDIT: edit_callback_node
+        }
+
+        return callback_nodes_dict
+
     def do_checks(self, api_config: configparser.RawConfigParser):
         check_all_user_states_have_node(self.nodes)
         check_all_commands_have_description(self.nodes, api_config)
+
+    def get_callback_node(self, update):
+        query = update.callback_query
+        callback_message = CallbackUtils.try_parse_callback_message(query.data)
+        if callback_message is None:
+            # TODO What if parse failed
+            raise Exception('Parsing of Callback message failed: ', query.data)
+
+        user_state, _, _ = callback_message
+        # TODO What if node not found?
+        return self.callback_nodes[user_state]
