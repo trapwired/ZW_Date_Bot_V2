@@ -232,13 +232,13 @@ class NodeHandler(BaseHandler[Update, CCT]):
         return all_nodes_dict
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess):
-        edit_callback_node = EditCallbackNode(telegram_service, data_access)
+        edit_user_states = [UserState.EDIT_GAMES, UserState.EDIT_TRAININGS, UserState.EDIT_TIMEKEEPINGS]
+        edit_callback_node = EditCallbackNode(telegram_service, data_access, edit_user_states)
 
-        callback_nodes_dict = {
-            UserState.EDIT: edit_callback_node
-        }
-
-        return callback_nodes_dict
+        callback_nodes = [
+            edit_callback_node
+        ]
+        return callback_nodes
 
     def do_checks(self, api_config: configparser.RawConfigParser):
         check_all_user_states_have_node(self.nodes)
@@ -249,8 +249,13 @@ class NodeHandler(BaseHandler[Update, CCT]):
         callback_message = CallbackUtils.try_parse_callback_message(query.data)
         if callback_message is None:
             # TODO What if parse failed
+            # TODO send message to admin
             raise Exception('Parsing of Callback message failed: ', query.data)
 
         user_state, _, _ = callback_message
-        # TODO What if node not found?
-        return self.callback_nodes[user_state]
+
+        applicable_nodes = list(filter(lambda cn: cn.can_handle(user_state), self.callback_nodes))
+        if len(applicable_nodes) != 1:
+            # TODO What if node not found?
+            raise Exception('No callback-node found for user_state: ', user_state)
+        return applicable_nodes[0]

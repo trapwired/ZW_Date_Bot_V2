@@ -19,7 +19,7 @@ class EditNode(Node):
                               document_id: str, event_type: Event):
         game = self.data_access.get_game(document_id)
         message = PrintUtils.pretty_print(game)
-        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, document_id)
+        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT_GAMES, document_id)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
@@ -30,7 +30,7 @@ class EditNode(Node):
                               document_id: str, event_type: Event):
         training = self.data_access.get_training(document_id)
         message = PrintUtils.pretty_print(training)
-        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, document_id)
+        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT_TRAININGS, document_id)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
@@ -39,9 +39,9 @@ class EditNode(Node):
 
     async def handle_timekeeping_id(self, update: Update, user_to_state: UsersToState, new_state: UserState,
                               document_id: str, event_type: Event):
-        training = self.data_access.get_timekeeping(document_id)
-        message = PrintUtils.pretty_print(training)
-        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, document_id)
+        timekeeping = self.data_access.get_timekeeping(document_id)
+        message = PrintUtils.pretty_print(timekeeping)
+        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT_TIMEKEEPINGS, document_id)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),

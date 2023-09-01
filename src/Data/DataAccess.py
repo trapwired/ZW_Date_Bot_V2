@@ -126,6 +126,9 @@ class DataAccess(object):
         user = self.firebase_repository.get_user(telegram_id)
         return self.firebase_repository.get_user_state(user)
 
+    def get_user(self, telegram_id: int) -> TelegramUser:
+        return self.firebase_repository.get_user(telegram_id)
+
     def get_ordered_games(self) -> [Game]:
         event_list = self.firebase_repository.get_future_events(Table.GAMES_TABLE)
         game_list = []
