@@ -8,7 +8,7 @@ class Attendance(DatabaseEntity):
         super().__init__(doc_id)
         self.user_id = user_id
         self.event_id = event_id
-        if type(state) is str:
+        if type(state) is str or int:
             state = AttendanceState(int(state))
         self.state = state
 
@@ -22,4 +22,4 @@ class Attendance(DatabaseEntity):
                 'state': self.state}
 
     def __repr__(self):
-        return f"GameAttendance(userId={self.user_id}, eventId={self.event_id}, state={self.state}, doc_id={self.doc_id})"
+        return f"Attendance(userId={self.user_id}, eventId={self.event_id}, state={self.state}, doc_id={self.doc_id})"

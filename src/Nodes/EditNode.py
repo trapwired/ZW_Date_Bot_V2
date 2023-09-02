@@ -24,7 +24,8 @@ class EditNode(Node):
             case Event.TIMEKEEPING:
                 event = self.data_access.get_timekeeping(document_id)
 
-        message = PrintUtils.pretty_print(event)
+        attendance = self.data_access.get_attendance(update.effective_user.id, document_id, event_type)
+        message = PrintUtils.pretty_print(event, attendance)
         reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, event_type, document_id)
         await self.telegram_service.send_message(
             update=update,

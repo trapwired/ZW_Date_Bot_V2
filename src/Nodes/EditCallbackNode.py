@@ -3,7 +3,9 @@ from telegram import Update
 from Nodes.CallbackNode import CallbackNode
 
 from Utils import CallbackUtils
+from Utils import PrintUtils
 
+from Enums.Event import Event
 from Enums.UserState import UserState
 
 from databaseEntities.Attendance import Attendance
@@ -19,11 +21,15 @@ class EditCallbackNode(CallbackNode):
 
         attendance = self.data_access.update_attendance(new_attendance, event_type)
 
-        # TODO get event + prettyPrint
+        match event_type:
+            case Event.GAME:
+                event = self.data_access.get_game(doc_id)
+            case Event.TRAINING:
+                event = self.data_access.get_training(doc_id)
+            case Event.TIMEKEEPING:
+                event = self.data_access.get_timekeeping(doc_id)
 
-        # TODO adjust message (prettyPrint + newAttendanceState)
-
-        # TODO send keyboard again
-
+        message = PrintUtils.pretty_print(event, attendance)
+        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, event_type, doc_id)
         await query.answer()
-        await query.edit_message_text(text=f"{attendance}")
+        await query.edit_message_text(text=message, reply_markup=reply_markup)

@@ -18,6 +18,8 @@ from databaseEntities.Attendance import Attendance
 
 from Utils.CustomExceptions import DocumentIdNotPresentException, NoEventFoundException
 
+from Utils.CustomExceptions import ObjectNotFoundException
+
 TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
           Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
           Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}
@@ -39,7 +41,7 @@ class DataAccess(object):
         user_doc_id = doc_ref[1].id
         user_to_state = UsersToState(user_doc_id, UserState.INIT)
         doc_id = self.firebase_repository.add(user_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
-        # TODO Add Unsure for each game
+        # TODO Add Unsure for each game?
         return user_to_state.add_document_id(doc_id[1].id)
 
     @dispatch(Game)
@@ -59,11 +61,6 @@ class DataAccess(object):
         doc_ref = self.firebase_repository.add(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
         # TODO add unsure for each player
         return timekeeping_event.add_document_id(doc_ref[1].id)
-
-    @dispatch(Attendance)
-    def add(self, attendance: Attendance) -> Attendance:
-        doc_ref = self.firebase_repository.add(attendance, self.tables.get(Table.GAME_ATTENDANCE_TABLE))
-        return attendance.add_document_id(doc_ref[1].id)
 
     ##########
     # UPDATE #
@@ -104,16 +101,18 @@ class DataAccess(object):
             raise DocumentIdNotPresentException()
         self.firebase_repository.update(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
 
-    def update_attendance(self, attendance: Attendance, eventy_type: Event):
+    def update_attendance(self, attendance: Attendance, eventy_type: Event) -> Attendance:
         table = TABLES[eventy_type]
         doc_id = self.firebase_repository.get_event_attendance_doc_id(attendance, table)
         if doc_id is None:
-            # TODO what exactly do I get back + parse to Attendance?
-            return self.firebase_repository.add(attendance, table)
+            doc_ref = self.firebase_repository.add(attendance, table)
+            doc_id = doc_ref[1].id
+            return attendance.add_document_id(doc_id)
         else:
             attendance.add_document_id(doc_id)
-            # TODO what exactly do I get back + parse to Attendance?
-            return self.firebase_repository.update(attendance, table)
+            # TODO what if update fails?
+            self.firebase_repository.update(attendance, table)
+            return attendance
 
     #######
     # GET #
@@ -127,6 +126,14 @@ class DataAccess(object):
 
     def get_timekeeping(self, doc_id: str):
         return self.firebase_repository.get_timekeeping(doc_id)
+
+    def get_attendance(self, telegram_id: str, event_doc_id: str, event_type: Event) -> Attendance:
+        user = self.firebase_repository.get_user(telegram_id)
+        table = TABLES[event_type]
+        try:
+            return self.firebase_repository.get_attendance(user, event_doc_id, table)
+        except ObjectNotFoundException:
+            return Attendance(user.doc_id, event_doc_id, AttendanceState.UNSURE)
 
     def get_user_state(self, telegram_id: int) -> UsersToState:
         user = self.firebase_repository.get_user(telegram_id)

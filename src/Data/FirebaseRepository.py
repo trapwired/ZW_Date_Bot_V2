@@ -97,6 +97,18 @@ class FirebaseRepository(object):
         entries = query_ref.get()
         return entries
 
+    def get_attendance(self, user: TelegramUser, event_doc_id: str, table: Table):
+        query_ref = self.db.collection(self.tables.get(table)) \
+            .where(filter=FieldFilter("userId", "==", user.doc_id)) \
+            .where(filter=FieldFilter("eventId", "==", event_doc_id))
+        result = query_ref.get()
+        if len(result) == 0:
+            raise ObjectNotFoundException()
+        if len(result) > 1:
+            raise MoreThanOneObjectFoundException()
+        attendance = result[0]
+        return Attendance.from_dict(attendance.id, attendance.to_dict())
+
     def get_all_players_to_state(self):
         query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
             filter=FieldFilter("role", "in", RoleSet.PLAYERS))
