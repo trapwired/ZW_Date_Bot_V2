@@ -200,20 +200,20 @@ class NodeHandler(BaseHandler[Update, CCT]):
         edit_games_node = EditNode(UserState.EDIT_GAMES, telegram_service, user_state_service, data_access)
         edit_games_node.add_continue_later()
         edit_games_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
-        NodeUtils.add_event_transitions_to_node(Event.GAME, edit_games_node, edit_games_node.handle_game_id)
+        NodeUtils.add_event_transitions_to_node(Event.GAME, edit_games_node, edit_games_node.handle_event_id)
 
         edit_trainings_node = EditNode(UserState.EDIT_TRAININGS, telegram_service, user_state_service, data_access)
         edit_trainings_node.add_continue_later()
         edit_trainings_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
         NodeUtils.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
-                                                edit_trainings_node.handle_training_id)
+                                                edit_trainings_node.handle_event_id)
 
         edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
                                           data_access)
         edit_timekeepings_node.add_continue_later()
         edit_timekeepings_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
         NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
-                                                edit_timekeepings_node.handle_timekeeping_id)
+                                                edit_timekeepings_node.handle_event_id)
 
         all_nodes_dict = {
             UserState.INIT: init_node,
@@ -232,13 +232,12 @@ class NodeHandler(BaseHandler[Update, CCT]):
         return all_nodes_dict
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess):
-        edit_user_states = [UserState.EDIT_GAMES, UserState.EDIT_TRAININGS, UserState.EDIT_TIMEKEEPINGS]
-        edit_callback_node = EditCallbackNode(telegram_service, data_access, edit_user_states)
+        edit_callback_node = EditCallbackNode(telegram_service, data_access)
 
-        callback_nodes = [
-            edit_callback_node
-        ]
-        return callback_nodes
+        callback_nodes_dict = {
+            UserState.EDIT: edit_callback_node
+        }
+        return callback_nodes_dict
 
     def do_checks(self, api_config: configparser.RawConfigParser):
         check_all_user_states_have_node(self.nodes)
@@ -252,10 +251,9 @@ class NodeHandler(BaseHandler[Update, CCT]):
             # TODO send message to admin
             raise Exception('Parsing of Callback message failed: ', query.data)
 
-        user_state, _, _ = callback_message
+        user_state, _, _, _ = callback_message
 
-        applicable_nodes = list(filter(lambda cn: cn.can_handle(user_state), self.callback_nodes))
-        if len(applicable_nodes) != 1:
+        if not self.callback_nodes[user_state]:
             # TODO What if node not found?
             raise Exception('No callback-node found for user_state: ', user_state)
-        return applicable_nodes[0]
+        return self.callback_nodes[user_state]

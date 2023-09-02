@@ -1,10 +1,12 @@
 import datetime
 
+from databaseEntities.DatabaseEntity import DatabaseEntity
 
-class TimekeepingEvent(object):
+
+class TimekeepingEvent(DatabaseEntity):
 
     def __init__(self, timestamp: datetime, location: str, people_required: int = 2, doc_id: str = None):
-        self.doc_id = doc_id
+        super().__init__(doc_id)
         self.timestamp = timestamp
         self.location = location
         if type(people_required) is str:
@@ -14,10 +16,6 @@ class TimekeepingEvent(object):
     @staticmethod
     def from_dict(doc_id: str, source: dict):
         return TimekeepingEvent(source['timestamp'], source['location'], source['people_required'], doc_id)
-
-    def add_document_id(self, doc_id: str):
-        self.doc_id = doc_id
-        return self
 
     def to_dict(self):
         return {'timestamp': self.timestamp,

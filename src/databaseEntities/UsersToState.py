@@ -1,11 +1,13 @@
 from Enums.Role import Role
 from Enums.UserState import UserState
 
+from databaseEntities.DatabaseEntity import DatabaseEntity
 
-class UsersToState(object):
+
+class UsersToState(DatabaseEntity):
     def __init__(self, user_id: str, state: UserState, additional_info: str = '', role: Role = Role.INIT,
                  doc_id: str = None):
-        self.doc_id = doc_id
+        super().__init__(doc_id)
         self.user_id = user_id
         if type(state) is str:
             state = UserState(int(state))
@@ -26,10 +28,6 @@ class UsersToState(object):
 
     def add_role(self, role: Role):
         self.role = role
-        return self
-
-    def add_document_id(self, doc_id: str):
-        self.doc_id = doc_id
         return self
 
     def to_dict(self):

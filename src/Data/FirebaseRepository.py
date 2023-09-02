@@ -1,22 +1,24 @@
 import datetime
+from multipledispatch import dispatch
 
-import firebase_admin
 import configparser
 
-from google.cloud.firestore_v1 import FieldFilter
-
+import firebase_admin
 from firebase_admin import firestore
+from google.cloud.firestore_v1 import FieldFilter
 
 from Data.Tables import Tables
 
 from Enums.Table import Table
 from Enums.RoleSet import RoleSet
 
+from databaseEntities.DatabaseEntity import DatabaseEntity
 from databaseEntities.Game import Game
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
+from databaseEntities.Attendance import Attendance
 
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException
 from Utils import PathUtils
@@ -101,16 +103,41 @@ class FirebaseRepository(object):
         entries = query_ref.get()
         return entries
 
+    def get_event_attendance_doc_id(self, attendance: Attendance, table: Table):
+        query_ref = self.db.collection(self.tables.get(table)) \
+            .where(filter=FieldFilter("userId", "==", attendance.user_id)) \
+            .where(filter=FieldFilter("eventId", "==", attendance.event_id))
+        result = query_ref.get()
+        if len(result) == 0:
+            return None
+        if len(result) > 1:
+            raise MoreThanOneObjectFoundException(attendance)
+        return result[0].id
+
     ################
     # ADD / UPDATE #
     ################
 
-    def add(self, new_object, collection: str):
+    @dispatch(DatabaseEntity, Table)
+    def add(self, new_object: DatabaseEntity, table: Table):
+        collection = self.tables.get(table)
+        return self.add(new_object, collection)
+
+    @dispatch(DatabaseEntity, str)
+    def add(self, new_object: DatabaseEntity, collection: str):
         return self.db.collection(collection).add(new_object.to_dict())
 
-    def update(self, db_object, collection: str):
+    @dispatch(DatabaseEntity, Table)
+    def update(self, db_object: DatabaseEntity, table: Table):
+        collection = self.tables.get(table)
+        return self.update(db_object, collection)
+
+    @dispatch(DatabaseEntity, str)
+    def update(self, db_object: DatabaseEntity, collection: str):
         self.raise_exception_if_document_not_exists(collection, db_object.doc_id)
-        self.db.collection(collection).document(db_object.doc_id).update(db_object.to_dict())
+        return self.db.collection(collection).document(db_object.doc_id).update(db_object.to_dict())
+
+    # TODO db_object, Table
 
     def update_user_state(self, user_to_state: UsersToState):
         db_table = self.tables.get(Table.USERS_TO_STATE_TABLE)

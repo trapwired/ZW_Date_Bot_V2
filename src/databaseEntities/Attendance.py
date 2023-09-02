@@ -1,9 +1,11 @@
 from Enums.AttendanceState import AttendanceState
 
+from databaseEntities.DatabaseEntity import DatabaseEntity
 
-class Attendance(object):
+
+class Attendance(DatabaseEntity):
     def __init__(self, user_id: str, event_id: str, state: AttendanceState | str, doc_id: str = None):
-        self.doc_id = doc_id
+        super().__init__(doc_id)
         self.user_id = user_id
         self.event_id = event_id
         if type(state) is str:
@@ -13,10 +15,6 @@ class Attendance(object):
     @staticmethod
     def from_dict(doc_id: str, source: dict):
         return Attendance(source['userId'], source['eventId'], source['state'], doc_id)
-
-    def add_document_id(self, doc_id: str):
-        self.doc_id = doc_id
-        return self
 
     def to_dict(self):
         return {'userId': self.user_id,

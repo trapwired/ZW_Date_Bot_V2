@@ -1,10 +1,12 @@
 from datetime import datetime
 
+from databaseEntities.DatabaseEntity import DatabaseEntity
 
-class Game(object):
+
+class Game(DatabaseEntity):
 
     def __init__(self, timestamp: datetime | str, location: str, opponent: str, doc_id: str = None):
-        self.doc_id = doc_id
+        super().__init__(doc_id)
         self.timestamp = timestamp
         self.location = location
         self.opponent = opponent
@@ -12,10 +14,6 @@ class Game(object):
     @staticmethod
     def from_dict(doc_id: str, source: dict):
         return Game(source['timestamp'], source['location'], source['opponent'], doc_id)
-
-    def add_document_id(self, doc_id: str):
-        self.doc_id = doc_id
-        return self
 
     def to_dict(self):
         return {'timestamp': self.timestamp,

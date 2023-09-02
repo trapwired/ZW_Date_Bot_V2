@@ -1,6 +1,9 @@
-class TelegramUser(object):
+from databaseEntities.DatabaseEntity import DatabaseEntity
+
+
+class TelegramUser(DatabaseEntity):
     def __init__(self, telegram_id: int, firstname: str, lastname: str, doc_id: str = None):
-        self.doc_id = doc_id
+        super().__init__(doc_id)
         self.lastname = str(lastname or '')
         self.firstname = str(firstname or '')
         if type(telegram_id) is str:
@@ -10,10 +13,6 @@ class TelegramUser(object):
     @staticmethod
     def from_dict(doc_id: str, source: dict):
         return TelegramUser(source['telegramId'], source['firstname'], source['lastname'], doc_id)
-
-    def add_document_id(self, doc_id: str):
-        self.doc_id = doc_id
-        return self
 
     def to_dict(self):
         return {'telegramId': self.telegramId,

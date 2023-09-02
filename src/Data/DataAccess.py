@@ -18,6 +18,10 @@ from databaseEntities.Attendance import Attendance
 
 from Utils.CustomExceptions import DocumentIdNotPresentException, NoEventFoundException
 
+TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
+          Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
+          Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}
+
 
 class DataAccess(object):
 
@@ -97,17 +101,19 @@ class DataAccess(object):
     def update(self, timekeeping_event: TimekeepingEvent):
         if timekeeping_event.doc_id is None:
             # TODO: Find / Match / AddDocId
-            # TODO is already a entry for this player and tke present? yes, update, no, create
             raise DocumentIdNotPresentException()
         self.firebase_repository.update(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
 
-    @dispatch(Attendance)
-    def update(self, attendance: Attendance):
-        if attendance.doc_id is None:
-            # TODO / AddDocId
-            # TODO is already a entry for this player and game present? yes, update, no, create
-            raise DocumentIdNotPresentException()
-        self.firebase_repository.update(attendance, self.tables.get(Table.GAME_ATTENDANCE_TABLE))
+    def update_attendance(self, attendance: Attendance, eventy_type: Event):
+        table = TABLES[eventy_type]
+        doc_id = self.firebase_repository.get_event_attendance_doc_id(attendance, table)
+        if doc_id is None:
+            # TODO what exactly do I get back + parse to Attendance?
+            return self.firebase_repository.add(attendance, table)
+        else:
+            attendance.add_document_id(doc_id)
+            # TODO what exactly do I get back + parse to Attendance?
+            return self.firebase_repository.update(attendance, table)
 
     #######
     # GET #
@@ -158,11 +164,7 @@ class DataAccess(object):
         no = []
         unsure = []
 
-        tables = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
-                  Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
-                  Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}
-
-        event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=tables[event_type])
+        event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=TABLES[event_type])
         for attendance in event_attendance_list:
             new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
             match new_attendance.state:
