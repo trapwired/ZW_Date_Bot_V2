@@ -165,7 +165,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
         stats_node.add_transition(
             '/timekeepings', stats_node.handle_timekeepings,
-            new_state=UserState.STATS_TIMEKEEPINGS,
+            new_state=UserState.STATS_TIMEKEEPINGS, allowed_roles=RoleSet.PLAYERS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
 
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
