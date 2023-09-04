@@ -12,7 +12,7 @@ from Utils import PrintUtils
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
     match message_type:
         case MessageType.ERROR:
-            return 'An Exception was raised:    \n' + extra_text
+            return 'Something went wrong - please try again, the maintainer has been notified :)'
         case MessageType.HELP:
             return 'Help is on its way (' + extra_text + ')'
         case MessageType.WRONG_START_COMMAND:
@@ -53,7 +53,7 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
 def generate_keyboard(all_commands: [str]) -> [[str]]:
     all_commands.sort()
     result = []
-    max_line_length = 25
+    max_line_length = 15
     current_line_length = 0
     current_line = []
     for c in all_commands:

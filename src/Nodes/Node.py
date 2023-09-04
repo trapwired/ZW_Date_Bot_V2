@@ -57,7 +57,7 @@ class Node(ABC):
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
                 message_type=MessageType.ERROR,
                 message_extra_text=str(e))
-            traceback.print_exception(*sys.exc_info())
+            await self.telegram_service.send_maintainer_message('Error caught in Node.handle()', update, e)
 
     ###############
     # TRANSITIONS #
