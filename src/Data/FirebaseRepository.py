@@ -64,12 +64,13 @@ class FirebaseRepository(object):
 
     def get_user_state(self, user: TelegramUser) -> UsersToState | None:
         user_id = user.doc_id
-        query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
+        collection = self.tables.get(Table.USERS_TO_STATE_TABLE)
+        query_ref = self.db.collection(collection).where(
             filter=FieldFilter("userId", "==", user_id))
         res = query_ref.get()
         if len(res) == 1:
             return UsersToState.from_dict(res[0].id, res[0].to_dict())
-        raise ObjectNotFoundException
+        raise ObjectNotFoundException(collection, res[0].id)
 
     def get_game(self, doc_id: str) -> Game | None:
         res = self.get_document(doc_id, Table.GAMES_TABLE)
@@ -103,7 +104,7 @@ class FirebaseRepository(object):
             .where(filter=FieldFilter("eventId", "==", event_doc_id))
         result = query_ref.get()
         if len(result) == 0:
-            raise ObjectNotFoundException()
+            raise ObjectNotFoundException(self.tables.get(table), user.doc_id)
         if len(result) > 1:
             raise MoreThanOneObjectFoundException()
         attendance = result[0]
@@ -156,14 +157,15 @@ class FirebaseRepository(object):
             {'state': int(user_to_state.state)})
 
     def update_user_state_via_user_id(self, user_to_state: UsersToState):
-        query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
+        collection = self.tables.get(Table.USERS_TO_STATE_TABLE)
+        query_ref = self.db.collection(collection).where(
             filter=FieldFilter("userId", "==", user_to_state.user_id))
         res = query_ref.get()
         if len(res) == 1:
             updated_user_to_state = user_to_state.add_document_id(res[0].id)
             self.update_user_state(updated_user_to_state)
         else:
-            return ObjectNotFoundException
+            return ObjectNotFoundException(collection, res[0].id)
 
     def update_user_via_telegram_id(self, user: TelegramUser):
         user_id = self.get_user(user.telegramId).doc_id
