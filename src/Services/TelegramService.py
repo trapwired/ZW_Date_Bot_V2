@@ -1,3 +1,6 @@
+import configparser
+import traceback
+
 import telegram
 from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup
 
@@ -75,8 +78,9 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
 
 
 class TelegramService(object):
-    def __init__(self, bot: telegram.Bot):
+    def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser):
         self.bot = bot
+        self.maintainer_chat_id = api_config['Chat_Ids']['MAINTAINER']
 
     async def send_message(self, update: Update, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
@@ -89,3 +93,9 @@ class TelegramService(object):
         message_to_send = PrintUtils.escape_message(message)
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+
+    async def send_maintainer_message(self, description: str, update: Update, error: Exception):
+        error_message = repr(error) + '\n' + traceback.format_exc()
+        text = description + '\n\n' + str(update) + '\n\n' + error_message
+
+        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=text)

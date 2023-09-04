@@ -36,7 +36,7 @@ from Utils import CallbackUtils
 
 def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigParser):
     data_access = DataAccess(api_config)
-    telegram_service = TelegramService(bot)
+    telegram_service = TelegramService(bot, api_config)
     user_state_service = UserStateService(data_access)
     admin_service = AdminService(data_access)
     ics_service = IcsService(data_access)
@@ -85,6 +85,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         self.user_state_service = user_state_service
         self.admin_service = admin_service
         self.data_access = data_access
+        self.telegram_service = telegram_service
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
         self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access)
@@ -98,24 +99,27 @@ class NodeHandler(BaseHandler[Update, CCT]):
         return None
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        logging.info(update)
-        chat_type = update.effective_chat.type
+        try:
+            logging.info(update)
+            chat_type = update.effective_chat.type
 
-        if chat_type in self.GROUP_TYPES:
-            # Handle group messages
-            return
+            if chat_type in self.GROUP_TYPES:
+                # Handle group messages
+                return
 
-        if update.callback_query:
-            callback_node = self.get_callback_node(update)
-            await callback_node.handle(update)
-            return
+            if update.callback_query:
+                callback_node = self.get_callback_node(update)
+                await callback_node.handle(update)
+                return
 
-        if not update.message or not update.message.text:
-            # Handle pictures and co
-            return
+            if not update.message or not update.message.text:
+                # Handle pictures and else
+                return
 
-        users_to_state, node = self.get_user_state_and_node(update)
-        await node.handle(update, users_to_state)
+            users_to_state, node = self.get_user_state_and_node(update)
+            await node.handle(update, users_to_state)
+        except Exception as e:
+            await self.telegram_service.send_maintainer_message('Exception caught in NodeHandler.handle()', update, e)
 
     def get_user_state_and_node(self, update):
         telegram_id = update.effective_chat.id
@@ -247,13 +251,10 @@ class NodeHandler(BaseHandler[Update, CCT]):
         query = update.callback_query
         callback_message = CallbackUtils.try_parse_callback_message(query.data)
         if callback_message is None:
-            # TODO What if parse failed
-            # TODO send message to admin
             raise Exception('Parsing of Callback message failed: ', query.data)
 
         user_state, _, _, _ = callback_message
 
         if not self.callback_nodes[user_state]:
-            # TODO What if node not found?
             raise Exception('No callback-node found for user_state: ', user_state)
         return self.callback_nodes[user_state]
