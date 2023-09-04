@@ -120,7 +120,6 @@ class FirebaseRepository(object):
             .where(filter=FieldFilter("userId", "==", attendance.user_id)) \
             .where(filter=FieldFilter("eventId", "==", attendance.event_id))
         result = query_ref.get()
-        raise MoreThanOneObjectFoundException(attendance)
         if len(result) == 0:
             return None
         if len(result) > 1:
