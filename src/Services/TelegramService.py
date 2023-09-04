@@ -2,7 +2,7 @@ import configparser
 import traceback
 
 import telegram
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton
 
 from Enums.MessageType import MessageType
 
@@ -21,6 +21,9 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
             return 'Hi ' + first_name + ', welcome to the Züri west manager'
         case MessageType.CONTINUE_LATER:
             return 'Cheerio ' + first_name + '!'
+        case MessageType.WEBSITE:
+            return 'Here you go :)'
+
         case MessageType.REJECTED:
             return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \
                    'you got the bot recommended from... :)'
@@ -47,17 +50,6 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
             return message_type.name + ' ' + extra_text
 
 
-def get_reply_keyboard(message_type: MessageType, all_commands: [str]):
-    match message_type:
-        case MessageType.WRONG_START_COMMAND:
-            keyboard = [['/start']]
-            return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-        case MessageType.REJECTED:
-            return None
-    keyboard = generate_keyboard(all_commands)
-    return ReplyKeyboardMarkup(keyboard, one_time_keyboard=False)
-
-
 def generate_keyboard(all_commands: [str]) -> [[str]]:
     all_commands.sort()
     result = []
@@ -81,6 +73,7 @@ class TelegramService(object):
     def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser):
         self.bot = bot
         self.maintainer_chat_id = api_config['Chat_Ids']['MAINTAINER']
+        self.website = api_config['Additional_Data']['WEBSITE']
 
     async def send_message(self, update: Update, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
@@ -89,7 +82,7 @@ class TelegramService(object):
         if message is None:
             message = get_text(message_type, first_name=first_name, extra_text=message_extra_text)
         if reply_markup is None:
-            reply_markup = get_reply_keyboard(message_type, all_buttons)
+            reply_markup = self.get_reply_keyboard(message_type, all_buttons)
         message_to_send = PrintUtils.escape_message(message)
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
@@ -99,3 +92,16 @@ class TelegramService(object):
         text = description + '\n\n' + str(update) + '\n\n' + error_message
 
         await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=text)
+
+    def get_reply_keyboard(self, message_type: MessageType, all_commands: [str]):
+        match message_type:
+            case MessageType.WRONG_START_COMMAND:
+                keyboard = [['/start']]
+                return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
+            case MessageType.WEBSITE:
+                return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="handball.ch/Züri West 1",
+                                                                                   url=self.website)]])
+            case MessageType.REJECTED:
+                return None
+        keyboard = generate_keyboard(all_commands)
+        return ReplyKeyboardMarkup(keyboard, one_time_keyboard=False)
