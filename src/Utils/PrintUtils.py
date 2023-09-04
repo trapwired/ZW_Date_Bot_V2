@@ -5,6 +5,8 @@ from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.Game import Game
 
+from databaseEntities.TelegramUser import TelegramUser
+
 
 def pretty_print_game_stats(game_stats: (list, list, list)):
     yes, no, unsure = game_stats
@@ -48,18 +50,26 @@ def pretty_print_event_summary(stats: (list, list, list), game_string: str) -> s
     if len(yes) > 0:
         result += f'*\tTeam / Yes ({len(yes)}/{total_players})*\n'
         for player in yes:
-            result += f'\t\t{player.firstname} {player.lastname[0]}.\n'
+            result += pretty_print_player_name(player)
         result += '\n'
     if len(no) > 0:
         result += f'*\tNo ({len(no)}/{total_players})*\n'
         for player in no:
-            result += f'\t\t{player.firstname} {player.lastname[0]}.\n'
+            result += pretty_print_player_name(player)
         result += '\n'
     if len(unsure) > 0:
         result += f'*\tUnsure ({len(unsure)}/{total_players})*\n'
         for player in unsure:
-            result += f'\t\t{player.firstname} {player.lastname[0]}.\n'
+            result += pretty_print_player_name(player)
     return result
+
+
+def pretty_print_player_name(player: TelegramUser) -> str:
+    res = f'\t\t{player.firstname.capitalize()}'
+    if player.lastname:
+        res += f' {player.lastname[0].capitalize()}.'
+    res += '\n'
+    return res
 
 
 def escape_message(message: str):
