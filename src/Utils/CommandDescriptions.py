@@ -9,6 +9,9 @@ class CommandDescriptions(object):
         '/trainings': 'Choose training to show or edit',
         '/timekeepings': 'Choose timekeeping-event to show or edit',
         '/game document_id': 'Indicate which game to edit / show',
+        '/admin': 'Admin stuff like adding / updating events',
+        '/add': 'Add a new event (triggers a message to all)',
+        '/update': 'Update / Delete a upcoming event',
         'overview': 'Go back to overview (choose game, training or timekeeping-event)',
         'continue later': 'Go back to main menu'
     }

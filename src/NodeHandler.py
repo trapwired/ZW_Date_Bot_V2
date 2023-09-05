@@ -12,6 +12,7 @@ from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
 from Enums.Table import Table
 from Enums.Event import Event
+from Enums.MessageType import MessageType
 
 from Services.AdminService import AdminService
 from Services.IcsService import IcsService
@@ -150,80 +151,91 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)
-        default_node.add_transition('/stats', default_node.handle_stats, new_state=UserState.STATS)
-        default_node.add_transition('/edit', default_node.handle_edit, new_state=UserState.EDIT,
-                                    allowed_roles=RoleSet.PLAYERS)
-        default_node.add_transition('/admin', default_node.handle_admin, new_state=UserState.ADMIN,
-                                    allowed_roles=RoleSet.ADMINS)
+        default_node.add_transition('/stats', new_state=UserState.STATS, message_type=MessageType.STATS_OVERVIEW)
+        default_node.add_transition('/edit', new_state=UserState.EDIT, allowed_roles=RoleSet.PLAYERS,
+                                    message_type=MessageType.EDIT_OVERVIEW)
+        default_node.add_transition('/admin', new_state=UserState.ADMIN, allowed_roles=RoleSet.ADMINS,
+                                    message_type=MessageType.ADMIN)
 
         stats_node = StatsNode(UserState.STATS, telegram_service, user_state_service, data_access)
         stats_node.add_continue_later()
         stats_node.add_transition(
-            '/games', stats_node.handle_games,
+            '/games', message_type=MessageType.STATS_TO_GAMES,
             new_state=UserState.STATS_GAMES,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
         stats_node.add_transition(
-            '/trainings', stats_node.handle_trainings,
+            '/trainings', message_type=MessageType.STATS_TO_TRAININGS,
             new_state=UserState.STATS_TRAININGS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
         stats_node.add_transition(
-            '/timekeepings', stats_node.handle_timekeepings,
+            '/timekeepings', message_type=MessageType.STATS_TO_TIMEKEEPINGS,
             new_state=UserState.STATS_TIMEKEEPINGS, allowed_roles=RoleSet.PLAYERS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
 
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
         stats_games_node.add_continue_later()
-        stats_games_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
+        stats_games_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW, new_state=UserState.STATS)
         NodeUtils.add_event_transitions_to_node(Event.GAME, stats_games_node, stats_games_node.handle_event_id)
 
         stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access)
         stats_trainings_node.add_continue_later()
-        stats_trainings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
+        stats_trainings_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW,
+                                            new_state=UserState.STATS)
         NodeUtils.add_event_transitions_to_node(Event.TRAINING, stats_trainings_node,
                                                 stats_trainings_node.handle_event_id)
 
         stats_timekeepings_node = StatsNode(UserState.STATS_TIMEKEEPINGS, telegram_service, user_state_service,
                                             data_access)
         stats_timekeepings_node.add_continue_later()
-        stats_timekeepings_node.add_transition('Overview', stats_node.handle_overview, new_state=UserState.STATS)
+        stats_timekeepings_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW,
+                                               new_state=UserState.STATS)
         NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, stats_timekeepings_node,
                                                 stats_timekeepings_node.handle_event_id)
 
         edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access)
         edit_node.add_continue_later()
         edit_node.add_transition(
-            '/games', edit_node.handle_games,
+            '/games', message_type=MessageType.EDIT_TO_GAMES,
             new_state=UserState.EDIT_GAMES,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
         edit_node.add_transition(
-            '/trainings', edit_node.handle_trainings,
+            '/trainings', message_type=MessageType.EDIT_TO_TRAININGS,
             new_state=UserState.EDIT_TRAININGS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
         edit_node.add_transition(
-            '/timekeepings', edit_node.handle_timekeepings,
+            '/timekeepings', message_type=MessageType.EDIT_TO_TIMEKEEPINGS,
             new_state=UserState.EDIT_TIMEKEEPINGS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
 
         edit_games_node = EditNode(UserState.EDIT_GAMES, telegram_service, user_state_service, data_access)
         edit_games_node.add_continue_later()
-        edit_games_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
+        edit_games_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
         NodeUtils.add_event_transitions_to_node(Event.GAME, edit_games_node, edit_games_node.handle_event_id)
 
         edit_trainings_node = EditNode(UserState.EDIT_TRAININGS, telegram_service, user_state_service, data_access)
         edit_trainings_node.add_continue_later()
-        edit_trainings_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
+        edit_trainings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
         NodeUtils.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
                                                 edit_trainings_node.handle_event_id)
 
-        edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
-                                          data_access)
+        edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service, data_access)
         edit_timekeepings_node.add_continue_later()
-        edit_timekeepings_node.add_transition('Overview', edit_node.handle_overview, new_state=UserState.EDIT)
+        edit_timekeepings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
         NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
                                                 edit_timekeepings_node.handle_event_id)
 
         admin_node = AdminNode(UserState.ADMIN, telegram_service, user_state_service, data_access)
         admin_node.add_continue_later()
+        admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
+        admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
+
+        admin_add_node = AdminNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
+        admin_add_node.add_continue_later()
+        admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
+
+        admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access)
+        admin_update_node.add_continue_later()
+        admin_update_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
 
         all_nodes_dict = {
             UserState.INIT: init_node,
@@ -237,7 +249,9 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.EDIT_GAMES: edit_games_node,
             UserState.EDIT_TRAININGS: edit_trainings_node,
             UserState.EDIT_TIMEKEEPINGS: edit_timekeepings_node,
-            UserState.ADMIN: admin_node
+            UserState.ADMIN: admin_node,
+            UserState.ADMIN_ADD: admin_add_node,
+            UserState.ADMIN_UPDATE: admin_update_node,
         }
 
         return all_nodes_dict

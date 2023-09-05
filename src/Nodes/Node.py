@@ -76,10 +76,8 @@ class Node(ABC):
                        event_type: Event = None, message_type: MessageType = None) -> Transition:
         if action is None:
             action = partial(self.handle_default, message_type=message_type)
-            # TODO use this new way
-            # TODO maybe refactor add transition
             # TODO Add defaultNode-transition to adminNode
-            # TODO add check that no transition exists for which action AND message_type is null (maybe solve with dispatch)
+            # refactor - use message_type
         if document_id is not None:
             new_transition = EventTransition(command, action, document_id, event_type, allowed_roles,
                                              new_state=new_state,

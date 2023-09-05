@@ -46,6 +46,13 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.EDIT_TO_TIMEKEEPINGS:
             return 'Click on the timekeeping-event you want to change your attendance-status'
 
+        case MessageType.ADMIN:
+            return 'Welcome to the admin-center - here you can add, update and delete upcoming events...'
+        case MessageType.ADMIN_ADD:
+            return 'What kind of event do you want to add?'
+        case MessageType.ADMIN_UPDATE:
+            return 'Which kind of event do you want to update (or delete)?'
+
         case _:
             return message_type.name + ' ' + extra_text
 

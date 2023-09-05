@@ -27,4 +27,8 @@ class MessageType(IntEnum):
     ADD = 50
     UPDATE = 51
 
+    ADMIN = 100
+    ADMIN_ADD = 101
+    ADMIN_UPDATE = 102
+
     REJECTED = 999
