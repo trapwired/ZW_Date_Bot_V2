@@ -23,6 +23,7 @@ from Nodes.InitNode import InitNode
 from Nodes.RejectedNode import RejectedNode
 from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
+from Nodes.AdminNode import AdminNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 
@@ -152,6 +153,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
         default_node.add_transition('/stats', default_node.handle_stats, new_state=UserState.STATS)
         default_node.add_transition('/edit', default_node.handle_edit, new_state=UserState.EDIT,
                                     allowed_roles=RoleSet.PLAYERS)
+        default_node.add_transition('/admin', default_node.handle_admin, new_state=UserState.ADMIN,
+                                    allowed_roles=RoleSet.ADMINS)
 
         stats_node = StatsNode(UserState.STATS, telegram_service, user_state_service, data_access)
         stats_node.add_continue_later()
@@ -219,6 +222,9 @@ class NodeHandler(BaseHandler[Update, CCT]):
         NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
                                                 edit_timekeepings_node.handle_event_id)
 
+        admin_node = AdminNode(UserState.ADMIN, telegram_service, user_state_service, data_access)
+        admin_node.add_continue_later()
+
         all_nodes_dict = {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
@@ -231,6 +237,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.EDIT_GAMES: edit_games_node,
             UserState.EDIT_TRAININGS: edit_trainings_node,
             UserState.EDIT_TIMEKEEPINGS: edit_timekeepings_node,
+            UserState.ADMIN: admin_node
         }
 
         return all_nodes_dict

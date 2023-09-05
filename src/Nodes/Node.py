@@ -1,5 +1,4 @@
-import sys
-import traceback
+from functools import partial
 from abc import ABC
 from telegram import Update
 from typing import Callable
@@ -71,12 +70,19 @@ class Node(ABC):
             transition = transitions[0]
         return transition
 
-    def add_transition(self, command: str, action: Callable, allowed_roles: RoleSet = RoleSet.EVERYONE,
+    def add_transition(self, command: str, action: Callable = None, allowed_roles: RoleSet = RoleSet.EVERYONE,
                        new_state: UserState = None, needs_description: bool = True,
                        document_id: str = None, is_active_function: Callable = None,
-                       event_type: Event = None) -> Transition:
+                       event_type: Event = None, message_type: MessageType = None) -> Transition:
+        if action is None:
+            action = partial(self.handle_default, message_type=message_type)
+            # TODO use this new way
+            # TODO maybe refactor add transition
+            # TODO Add defaultNode-transition to adminNode
+            # TODO add check that no transition exists for which action AND message_type is null (maybe solve with dispatch)
         if document_id is not None:
-            new_transition = EventTransition(command, action, document_id, event_type, allowed_roles, new_state=new_state,
+            new_transition = EventTransition(command, action, document_id, event_type, allowed_roles,
+                                             new_state=new_state,
                                              needs_description=needs_description)
         else:
             new_transition = Transition(command, action, allowed_roles, new_state=new_state,
@@ -105,6 +111,13 @@ class Node(ABC):
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
             message_type=MessageType.CONTINUE_LATER)
+
+    async def handle_default(self, update: Update, user_to_state: UsersToState, new_state: UserState,
+                             message_type: MessageType):
+        await self.telegram_service.send_message(
+            update=update,
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            message_type=message_type)
 
     #############
     # UTILITIES #

@@ -24,4 +24,7 @@ class MessageType(IntEnum):
     CONTINUE_LATER = 42
     UNKNOWN_COMMAND = 43
 
+    ADD = 50
+    UPDATE = 51
+
     REJECTED = 999

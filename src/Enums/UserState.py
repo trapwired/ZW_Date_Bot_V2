@@ -15,4 +15,8 @@ class UserState(IntEnum):
     EDIT_TRAININGS = 12
     EDIT_GAMES = 13
 
+    ADMIN = 50
+    ADMIN_ADD = 51
+    ADMIN_UPDATE = 52
+
     REJECTED = 999
