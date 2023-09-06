@@ -36,15 +36,6 @@ from Utils import NodeUtils
 from Utils import CallbackUtils
 
 
-def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigParser):
-    data_access = DataAccess(api_config)
-    telegram_service = TelegramService(bot, api_config)
-    user_state_service = UserStateService(data_access)
-    admin_service = AdminService(data_access)
-    ics_service = IcsService(data_access)
-    return telegram_service, user_state_service, admin_service, ics_service, data_access
-
-
 def add_nodes_reference_to_all_nodes(nodes: dict):
     for node in nodes.values():
         node.add_nodes(nodes)
@@ -79,11 +70,11 @@ def check_all_commands_have_description(nodes: dict, api_config: configparser.Ra
 class NodeHandler(BaseHandler[Update, CCT]):
     GROUP_TYPES = [ChatType.GROUP, ChatType.SUPERGROUP]
 
-    def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser):
+    def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser, telegram_service: TelegramService,
+                 user_state_service: UserStateService, admin_service: AdminService, ics_service: IcsService,
+                 data_access: DataAccess):
         super().__init__(self.handle_message)
         self.bot = bot
-        telegram_service, user_state_service, admin_service, ics_service, data_access = \
-            initialize_services(bot, api_config)
         self.user_state_service = user_state_service
         self.admin_service = admin_service
         self.data_access = data_access
@@ -218,9 +209,11 @@ class NodeHandler(BaseHandler[Update, CCT]):
         NodeUtils.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
                                                 edit_trainings_node.handle_event_id)
 
-        edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service, data_access)
+        edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
+                                          data_access)
         edit_timekeepings_node.add_continue_later()
-        edit_timekeepings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
+        edit_timekeepings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW,
+                                              new_state=UserState.EDIT)
         NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
                                                 edit_timekeepings_node.handle_event_id)
 
