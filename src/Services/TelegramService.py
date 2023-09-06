@@ -81,6 +81,7 @@ class TelegramService(object):
         self.bot = bot
         self.maintainer_chat_id = api_config['Chat_Ids']['MAINTAINER']
         self.website = api_config['Additional_Data']['WEBSITE']
+        self.send_maintainer_hi('Bot was restarted :)')
 
     async def send_message(self, update: Update, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
@@ -99,6 +100,9 @@ class TelegramService(object):
         text = description + '\n\n' + str(update) + '\n\n' + error_message
 
         await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=text)
+
+    async def send_maintainer_hi(self, hi: str):
+        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=hi)
 
     def get_reply_keyboard(self, message_type: MessageType, all_commands: [str]):
         match message_type:
