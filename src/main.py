@@ -3,7 +3,7 @@ import logging
 import asyncio
 
 import telegram
-from telegram.ext import ApplicationBuilder
+from telegram.ext import ApplicationBuilder, ContextTypes
 
 from Utils import PathUtils
 from NodeHandler import NodeHandler
@@ -31,7 +31,7 @@ def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigPar
     return telegram_service, user_state_service, admin_service, ics_service, data_access
 
 
-async def send_hi(telegram_service):
+async def send_hi(context: ContextTypes.DEFAULT_TYPE):
     await telegram_service.send_maintainer_hi('Bot was restarted')
 
 
@@ -50,6 +50,7 @@ if __name__ == "__main__":
                                ics_service, data_access)
     application.add_handler(node_handler)
 
-    application.run_polling()
+    job_queue = application.job_queue
+    job_queue.run_once(send_hi, 1)
 
-    application.job_queue.run_once(send_hi, 0.0)
+    application.run_polling()
