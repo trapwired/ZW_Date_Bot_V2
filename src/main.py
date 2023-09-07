@@ -50,7 +50,6 @@ if __name__ == "__main__":
                                ics_service, data_access)
     application.add_handler(node_handler)
 
-
     job_queue = application.job_queue
     job_queue.run_once(send_hi, 1)
 
