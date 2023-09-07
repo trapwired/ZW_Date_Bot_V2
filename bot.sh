@@ -21,7 +21,14 @@ restart_bot_if_necessary() {
 }
 
 git_pull() {
-	git pull
+	OUTPUT=$(git pull)
+	NUM_LINES="$(echo "$OUTPUT" | wc -l)"
+	
+	if [ $NUM_LINES -gt 1 ];
+	then
+		stop_bot
+		echo 'Stopping bot due to pull'
+	fi
 }
 
 
@@ -42,6 +49,5 @@ alwaysOn)
 	;;
 pull)
 	git_pull
-	stop_bot
 	;;
 esac
