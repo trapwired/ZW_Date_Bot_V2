@@ -1,6 +1,5 @@
 import configparser
 import logging
-import asyncio
 
 import telegram
 from telegram.ext import ApplicationBuilder, ContextTypes

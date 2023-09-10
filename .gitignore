@@ -206,3 +206,4 @@ fabric.properties
 /dataSources/
 /dataSources.local.xml
 
+/src/data.txt

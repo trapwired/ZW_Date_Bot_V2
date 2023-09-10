@@ -31,8 +31,6 @@ class FirebaseRepository(object):
         cred_object = firebase_admin.credentials.Certificate(api_config_path)
         default_app = firebase_admin.initialize_app(cred_object)
         self.db = firestore.client(default_app)
-        doc = self.get_document('V5JU7HfNuoHSc6SYzeG6', Table.GAMES_TABLE)
-        Game.from_dict(doc.id, doc.to_dict())
 
     def raise_exception_if_document_not_exists(self, collection: str, document_ref: str):
         doc = self.db.collection(collection).document(document_ref)
