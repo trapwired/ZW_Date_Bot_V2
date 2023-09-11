@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Callable
 
 from Enums.Event import Event
@@ -26,5 +27,8 @@ def add_event_transitions_to_node(event_type: Event, node: Node, event_function:
 
     for event in events:
         event_string = PrintUtils.pretty_print(event)
-        node.add_transition(command=event_string, action=event_function, allowed_roles=role_set,
-                            needs_description=False, document_id=event.doc_id, event_type=event_type)
+        # TODO add other func? or make self.state fat / mark somehow??
+        additional_data_func = partial(node.data_access.get_stats_event, event_id=event.doc_id, event_type=event_type)
+        node.add_event_transition(command=event_string, action=event_function, allowed_roles=role_set,
+                                  needs_description=False, document_id=event.doc_id, event_type=event_type,
+                                  additional_data_func=additional_data_func)

@@ -20,6 +20,7 @@ from Utils.CustomExceptions import DocumentIdNotPresentException, NoEventFoundEx
 
 from Utils.CustomExceptions import ObjectNotFoundException
 
+
 TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
           Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
           Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}

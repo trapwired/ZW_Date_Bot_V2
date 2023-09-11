@@ -12,15 +12,15 @@ from Enums.MessageType import MessageType
 from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
 from Enums.Role import Role
+from Enums.Event import Event
 
 from databaseEntities.UsersToState import UsersToState
 
 from Utils.CommandDescriptions import CommandDescriptions
+from Utils import PrintUtils
 
 from Transitions.Transition import Transition
 from Transitions.EventTransition import EventTransition
-
-from Enums.Event import Event
 
 
 class Node(ABC):
@@ -70,21 +70,25 @@ class Node(ABC):
             transition = transitions[0]
         return transition
 
+    def add_event_transition(self, command: str, action: Callable = None, allowed_roles: RoleSet = RoleSet.EVERYONE,
+                             new_state: UserState = None, needs_description: bool = True, document_id: str = None,
+                             event_type: Event = None, additional_data_func: Callable = None) -> Transition:
+        new_transition = EventTransition(command, action, document_id, event_type, allowed_roles,
+                                         new_state=new_state, needs_description=needs_description,
+                                         additional_data_func=additional_data_func)
+        self.transitions.append(new_transition)
+        return new_transition
+
     def add_transition(self, command: str, action: Callable = None, allowed_roles: RoleSet = RoleSet.EVERYONE,
-                       new_state: UserState = None, needs_description: bool = True,
-                       document_id: str = None, is_active_function: Callable = None,
-                       event_type: Event = None, message_type: MessageType = None) -> Transition:
+                       new_state: UserState = None, needs_description: bool = True, is_active_function: Callable = None,
+                       message_type: MessageType = None) -> Transition:
         if action is None:
             action = partial(self.handle_default, message_type=message_type)
             # TODO Add defaultNode-transition to adminNode
             # refactor - use message_type
-        if document_id is not None:
-            new_transition = EventTransition(command, action, document_id, event_type, allowed_roles,
-                                             new_state=new_state,
-                                             needs_description=needs_description)
-        else:
-            new_transition = Transition(command, action, allowed_roles, new_state=new_state,
-                                        needs_description=needs_description, is_active_function=is_active_function)
+
+        new_transition = Transition(command, action, allowed_roles, new_state=new_state,
+                                    needs_description=needs_description, is_active_function=is_active_function)
         self.transitions.append(new_transition)
         return new_transition
 
@@ -143,4 +147,15 @@ class Node(ABC):
             filter(lambda t:
                    t.is_for_role(role) and t.is_active(),
                    new_node.transitions))
-        return [x.command for x in all_commands]
+
+        result = []
+        for command in all_commands:
+            button_description = command.command
+            if isinstance(command, EventTransition) and command.additional_data_func:
+                data = command.additional_data_func()
+                pretty_print = PrintUtils.pretty_print_game_stats(data)
+                button_description += f" | {pretty_print}"
+            result.append(button_description)
+
+        # TODO question: can I send new keyboard without sending message? (If yes: new send keyboard on callback answer)
+        return result
