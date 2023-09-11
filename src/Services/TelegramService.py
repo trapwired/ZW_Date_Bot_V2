@@ -58,12 +58,25 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
 
 
 def generate_keyboard(all_commands: [str]) -> [[str]]:
-    all_commands.sort()
-    result = []
+    first_cmds = ['overview', 'continue later']
+    firsts = []
+    events = []
+    commands = []
+    for cmd in all_commands:
+        if cmd[0].isdigit():
+            events.append(cmd)
+        elif cmd in first_cmds:
+            firsts.append(cmd)
+        elif cmd != '/help':
+            commands.append(cmd)
+
+    result = [firsts]
+    result.extend([e] for e in events)
+
     max_line_length = 15
     current_line_length = 0
     current_line = []
-    for c in all_commands:
+    for c in commands:
         if current_line_length + len(c) < max_line_length:
             current_line.append(c)
             current_line_length += len(c)
@@ -73,6 +86,7 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
             current_line = [c]
     if len(current_line) > 0:
         result.append(current_line)
+    result.append(['/help'])
     return result
 
 
