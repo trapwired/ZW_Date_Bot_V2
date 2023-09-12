@@ -10,6 +10,9 @@ __pycache__/
 # C extensions
 *.so
 
+# logs
+nohup.out
+
 #secrets
 secrets/api_config.ini
 secrets/zw-date-bot-firebase-adminsdk.json

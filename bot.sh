@@ -14,7 +14,7 @@ restart_bot_if_necessary() {
 	then
     		exit
 	else
-    		start_bot
+		start_bot
 	fi
 
 	exit
