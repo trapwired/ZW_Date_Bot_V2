@@ -15,7 +15,7 @@ def pretty_print_game_stats(game_stats: (list, list, list)):
 
 @dispatch(Game)
 def pretty_print(game: Game) -> str:
-    return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location.capitalize()}'
+    return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location.title()}'
 
 
 @dispatch(Game, Attendance)
@@ -25,7 +25,7 @@ def pretty_print(game: Game, attendance: Attendance) -> str:
 
 @dispatch(Training)
 def pretty_print(training: Training) -> str:
-    return f'{training.timestamp.strftime("%d.%m.%Y %H:%M")} | {training.location.capitalize()}'
+    return f'{training.timestamp.strftime("%d.%m.%Y %H:%M")} | {training.location.title()}'
 
 
 @dispatch(Training, Attendance)
@@ -35,7 +35,7 @@ def pretty_print(training: Training, attendance: Attendance) -> str:
 
 @dispatch(TimekeepingEvent)
 def pretty_print(tke: TimekeepingEvent) -> str:
-    return f'{tke.timestamp.strftime("%d.%m.%Y %H:%M")} | {tke.location.capitalize()}'
+    return f'{tke.timestamp.strftime("%d.%m.%Y %H:%M")} | {tke.location.title()}'
 
 
 @dispatch(TimekeepingEvent, Attendance)

@@ -152,6 +152,7 @@ class Node(ABC):
         for command in all_commands:
             button_description = command.command
             if isinstance(command, EventTransition) and command.additional_data_func:
+                button_description = button_description.title()
                 data = command.additional_data_func()
                 pretty_print = PrintUtils.pretty_print_game_stats(data)
                 button_description += f" | {pretty_print}"
