@@ -27,6 +27,7 @@ class EventTransition(Transition):
         super().__init__(command, partial_func, allowed_roles, new_state, needs_description)
         self.document_id = document_id
         self.additional_data_func = additional_data_func
+        self.event_type = event_type
 
     def can_be_taken(self, command: str, role: Role) -> bool:
         return command.startswith(self.command) and self.is_for_role(role) and self.is_active()

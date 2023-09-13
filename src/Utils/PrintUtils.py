@@ -5,12 +5,32 @@ from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.Game import Game
 
+from Enums.Event import Event
+
 from databaseEntities.TelegramUser import TelegramUser
 
 
 def pretty_print_game_stats(game_stats: (list, list, list)):
     yes, no, unsure = game_stats
     return f'{len(yes)}Y / {len(no)}N / {len(unsure)}U'
+
+
+def pretty_print_timekeeping_stats(tke_stats: (list, list, list)):
+    yes, no, unsure = tke_stats
+    result = f'{len(yes)}Y'
+    if len(yes) >= 2:
+        result += ' (Enough)'
+    return result
+
+
+def pretty_print_event_stats(event_stats: (list, list, list), event_type: Event):
+    match event_type:
+        case Event.GAME:
+            return pretty_print_game_stats(event_stats)
+        case Event.TRAINING:
+            return pretty_print_game_stats(event_stats)
+        case Event.TIMEKEEPING:
+            return pretty_print_timekeeping_stats(event_stats)
 
 
 @dispatch(Game)

@@ -4,8 +4,8 @@ from Nodes.Node import Node
 
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
-from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
+from Enums.AttendanceState import AttendanceState
 
 from databaseEntities.UsersToState import UsersToState
 
@@ -23,8 +23,20 @@ class EditNode(Node):
                 event = self.data_access.get_training(document_id)
             case Event.TIMEKEEPING:
                 event = self.data_access.get_timekeeping(document_id)
+                yes, _, _ = self.data_access.get_stats_event(document_id, Event.TIMEKEEPING)
 
         attendance = self.data_access.get_attendance(update.effective_user.id, document_id, event_type)
+
+        if attendance.state != AttendanceState.YES and \
+                event_type == Event.TIMEKEEPING and \
+                event.people_required <= len(yes):
+            await self.telegram_service.send_message(
+                update=update,
+                all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+                message_type=MessageType.TKE_ALREADY_FULL
+            )
+            return
+
         message = PrintUtils.pretty_print(event, attendance)
         reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, event_type, document_id)
         await self.telegram_service.send_message(

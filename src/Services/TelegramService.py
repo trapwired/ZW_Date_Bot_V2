@@ -53,6 +53,9 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.ADMIN_UPDATE:
             return 'Which kind of event do you want to update (or delete)?'
 
+        case MessageType.TKE_ALREADY_FULL:
+            return 'For the chosen timekeeping event already enough people have registered'
+
         case _:
             return message_type.name + ' ' + extra_text
 

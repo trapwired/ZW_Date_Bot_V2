@@ -31,4 +31,6 @@ class MessageType(IntEnum):
     ADMIN_ADD = 101
     ADMIN_UPDATE = 102
 
+    TKE_ALREADY_FULL = 200
+
     REJECTED = 999
