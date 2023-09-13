@@ -13,6 +13,8 @@ from Services.IcsService import IcsService
 from Services.TelegramService import TelegramService
 from Services.UserStateService import UserStateService
 
+from OneTimeSetup import OneTimeSetup
+
 
 def initialize_logging():
     logging.basicConfig(
@@ -34,6 +36,11 @@ async def send_hi(context: ContextTypes.DEFAULT_TYPE):
     await telegram_service.send_maintainer_hi('Bot was restarted')
 
 
+def use_one_time_setup(data_access: DataAccess):
+    one_time_setup = OneTimeSetup(data_access)
+    # one_time_setup.add_timekeepings()
+
+
 if __name__ == "__main__":
     initialize_logging()
 
@@ -44,6 +51,7 @@ if __name__ == "__main__":
 
     telegram_service, user_state_service, admin_service, ics_service, data_access = initialize_services(application.bot,
                                                                                                         api_config)
+    # use_one_time_setup(data_access)
 
     node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service, admin_service,
                                ics_service, data_access)

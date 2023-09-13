@@ -6,6 +6,7 @@ from databaseEntities.Training import Training
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.Game import Game
 from databaseEntities.Attendance import Attendance
+from databaseEntities.TimekeepingEvent import TimekeepingEvent
 
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
@@ -98,3 +99,18 @@ class OneTimeSetup():
         # Add trainings to DB
         for training in trainings:
             self.data_access.add(training)
+
+    def add_timekeepings(self):
+        timekeepings = []
+        new_timekeeping = TimekeepingEvent(datetime(2023, 10, 29, 16, 30), 'Zürich Utogrund')
+        timekeepings.append(new_timekeeping)
+        new_timekeeping = TimekeepingEvent(datetime(2023, 11, 4, 16, 00), 'Zürich Utogrund')
+        timekeepings.append(new_timekeeping)
+        new_timekeeping = TimekeepingEvent(datetime(2023, 11, 18, 20, 00), 'Zürich Utogrund')
+        timekeepings.append(new_timekeeping)
+        new_timekeeping = TimekeepingEvent(datetime(2023, 12, 9, 18, 00), 'Zürich Saalsporthalle')
+        timekeepings.append(new_timekeeping)
+
+        # Add timekeepings to DB
+        for tke in timekeepings:
+            self.data_access.add(tke)
