@@ -2,11 +2,14 @@ import configparser
 import traceback
 
 import telegram
+from multipledispatch import dispatch
 from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton
 
 from Enums.MessageType import MessageType
 
 from Utils import PrintUtils
+
+from databaseEntities.TelegramUser import TelegramUser
 
 
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
@@ -56,6 +59,9 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.TKE_ALREADY_FULL:
             return 'For the chosen timekeeping event already enough people have registered'
 
+        case MessageType.ENROLLMENT_REMINDER:
+            return 'Hey ' + first_name + ', please quickly take your time to update your attendance for the following upcoming games:'
+
         case _:
             return message_type.name + ' ' + extra_text
 
@@ -99,10 +105,10 @@ class TelegramService(object):
         self.maintainer_chat_id = api_config['Chat_Ids']['MAINTAINER']
         self.website = api_config['Additional_Data']['WEBSITE']
 
-    async def send_message(self, update: Update, all_buttons: [str], message_type: MessageType = None,
+    async def send_message(self, update: Update | TelegramUser, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
-        chat_id = update.effective_chat.id
-        first_name = update.effective_user.first_name
+        chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
+        first_name = update.effective_user.first_name if type(update) is Update else update.firstname
         if message is None:
             message = get_text(message_type, first_name=first_name, extra_text=message_extra_text)
         if reply_markup is None:
@@ -111,6 +117,14 @@ class TelegramService(object):
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
+    @dispatch(str, Exception)
+    async def send_maintainer_message(self, description: str, error: Exception):
+        error_message = repr(error) + '\n' + traceback.format_exc()
+        text = description + '\n\n' + error_message
+
+        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=text)
+
+    @dispatch(str, Update, Exception)
     async def send_maintainer_message(self, description: str, update: Update, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
         text = description + '\n\n' + str(update) + '\n\n' + error_message
@@ -130,5 +144,8 @@ class TelegramService(object):
                                                                                    url=self.website)]])
             case MessageType.REJECTED:
                 return None
+
+        if all_commands is None or len(all_commands) == 0:
+            return None
         keyboard = generate_keyboard(all_commands)
         return ReplyKeyboardMarkup(keyboard, one_time_keyboard=False)

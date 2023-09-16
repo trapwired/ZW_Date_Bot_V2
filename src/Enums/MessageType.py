@@ -33,4 +33,6 @@ class MessageType(IntEnum):
 
     TKE_ALREADY_FULL = 200
 
+    ENROLLMENT_REMINDER = 300
+
     REJECTED = 999

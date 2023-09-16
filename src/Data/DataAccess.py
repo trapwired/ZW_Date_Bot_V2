@@ -20,7 +20,6 @@ from Utils.CustomExceptions import DocumentIdNotPresentException, NoEventFoundEx
 
 from Utils.CustomExceptions import ObjectNotFoundException
 
-
 TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
           Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
           Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}
@@ -166,6 +165,15 @@ class DataAccess(object):
             new_timekeeping = TimekeepingEvent.from_dict(timekeeping.id, timekeeping.to_dict())
             timekeepings_list.append(new_timekeeping)
         return sorted(timekeepings_list, key=lambda t: t.timestamp)
+
+    def get_all_players(self) -> [TelegramUser]:
+        all_users_to_state = self.firebase_repository.get_all_players_to_state()
+        all_players = []
+        for uts_ref in all_users_to_state:
+            uts = UsersToState.from_dict(uts_ref.id, uts_ref.to_dict())
+            player = self.firebase_repository.get_user(uts.user_id)
+            all_players.append(player)
+        return all_players
 
     def get_stats_event(self, event_id: str, event_type: Event) -> (list, list, list):
         yes = []

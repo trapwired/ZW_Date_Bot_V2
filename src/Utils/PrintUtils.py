@@ -6,6 +6,7 @@ from databaseEntities.Attendance import Attendance
 from databaseEntities.Game import Game
 
 from Enums.Event import Event
+from Enums.AttendanceState import AttendanceState
 
 from databaseEntities.TelegramUser import TelegramUser
 
@@ -41,6 +42,11 @@ def pretty_print(game: Game) -> str:
 @dispatch(Game, Attendance)
 def pretty_print(game: Game, attendance: Attendance) -> str:
     return pretty_print(game) + f' | {attendance.state.name}'
+
+
+@dispatch(Game, AttendanceState)
+def pretty_print(game: Game, attendance: AttendanceState) -> str:
+    return pretty_print(game) + f' | {attendance.name}'
 
 
 @dispatch(Training)

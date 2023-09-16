@@ -48,6 +48,7 @@ class FirebaseRepository(object):
         query_ref = self.db.collection(db_table).document(doc_id)
         return query_ref.get()
 
+    @dispatch(int)
     def get_user(self, telegram_id: int) -> TelegramUser | None:
         table = self.tables.get(Table.USERS_TABLE)
         user_ref = self.db.collection(table)
@@ -59,6 +60,11 @@ class FirebaseRepository(object):
             return TelegramUser.from_dict(res[0].id, res[0].to_dict())
         else:
             raise MoreThanOneObjectFoundException
+
+    @dispatch(str)
+    def get_user(self, doc_id: str) -> TelegramUser | None:
+        res = self.get_document(doc_id, Table.USERS_TABLE)
+        return TelegramUser.from_dict(res.id, res.to_dict())
 
     def get_user_state(self, user: TelegramUser) -> UsersToState | None:
         user_id = user.doc_id

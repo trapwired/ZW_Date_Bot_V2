@@ -44,13 +44,11 @@ def use_one_time_setup(data_access: DataAccess):
     # one_time_setup.add_timekeepings()
 
 
-def init_job_queue():
+def run_job_queue():
     job_queue = application.job_queue
-    # TODO 2x uncomment
-    # job_queue.run_once(send_hi, 1)
-    # job_queue.run_daily(scheduling_service.send_individual_game_reminders, datetime.time(7, 0, 0))
+    job_queue.run_once(send_hi, 1)
 
-    job_queue.run_once(scheduling_service.send_individual_game_reminders, 1)  # TODO Delete
+    job_queue.run_daily(scheduling_service.send_individual_game_reminders, datetime.time(9, 59, 0))  # 11:59
 
 
 if __name__ == "__main__":
@@ -70,6 +68,6 @@ if __name__ == "__main__":
                                ics_service, data_access)
     application.add_handler(node_handler)
 
-    init_job_queue()
+    run_job_queue()
 
     application.run_polling()
