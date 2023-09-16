@@ -119,20 +119,21 @@ class TelegramService(object):
 
     @dispatch(str)
     async def send_maintainer_message(self, message: str):
+        message += 'INFO: '
         await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message)
 
 
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
-        text = description + '\n\n' + error_message
+        text = 'ERROR: ' + description + '\n\n' + error_message
 
         await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=text)
 
     @dispatch(str, Update, Exception)
     async def send_maintainer_message(self, description: str, update: Update, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
-        text = description + '\n\n' + str(update) + '\n\n' + error_message
+        text = 'ERROR: ' + description + '\n\n' + str(update) + '\n\n' + error_message
 
         await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=text)
 
