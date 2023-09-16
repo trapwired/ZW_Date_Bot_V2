@@ -36,6 +36,7 @@ class SchedulingService:
         self.telegram_service = telegram_service
         self.individual_game_reminder_frequency = initialize_reminder_frequency(
             api_config['Scheduling']['GAME_INDIVIDUAL'])
+        self.trainer_id = 43 # TODO
 
     async def send_individual_game_reminders(self, context: ContextTypes.DEFAULT_TYPE):
         try:
@@ -93,3 +94,17 @@ class SchedulingService:
             messages_sent_count += 1
 
         return messages_sent_count
+
+    async def send_game_summary(self, context: ContextTypes.DEFAULT_TYPE):
+        all_future_games = self.data_access.get_ordered_games()
+        games_in_27_days = get_events_in_x_days(all_future_games, [27])
+
+        for game in games_in_27_days:
+            stats = self.data_access.get_stats_event(game.doc_id, Event.GAME)
+            stats_with_names = self.data_access.get_names(stats)
+            pretty_print_game = PrintUtils.pretty_print(game)
+            message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_game)
+            message = 'Hey, just a short summary for the game in 4 weeks: \n\n' + message
+            await self.telegram_service.send_info_message(self, self.trainer_id, message)
+        # pretty print
+        # send to trainer

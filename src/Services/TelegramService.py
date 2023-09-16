@@ -117,6 +117,10 @@ class TelegramService(object):
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
+    async def send_info_message(self, chat_id: int, message: str):
+        await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=None,
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+
     @dispatch(str)
     async def send_maintainer_message(self, message: str):
         message += 'INFO: '
