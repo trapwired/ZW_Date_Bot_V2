@@ -63,15 +63,20 @@ class SchedulingService:
                     if len(unsure_player_to_games[player]) <= 3:
                         unsure_player_to_games[player].append(game)
 
+            message_sent_count = 0
             for player, game_list in unsure_player_to_games.items():
-                await self.send_game_enroll_reminder(player, game_list)
+                message_sent_count += await self.send_game_enroll_reminder(player, game_list)
+
+            message = f'Sent out a total of {message_sent_count} game reminders to {len(unsure_player_to_games)} Player(s)'
+            await self.telegram_service.send_maintainer_message(message)
 
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
                 'Exception caught in SchedulingService.send_individual_game_reminders()',
                 e)
 
-    async def send_game_enroll_reminder(self, player, game_list):
+    async def send_game_enroll_reminder(self, player, game_list) -> int:
+        messages_sent_count = 0
         await self.telegram_service.send_message(
             update=player,
             all_buttons=None,
@@ -85,3 +90,6 @@ class SchedulingService:
                 all_buttons=None,
                 message=pretty_print_game,
                 reply_markup=reply_markup)
+            messages_sent_count += 1
+
+        return messages_sent_count

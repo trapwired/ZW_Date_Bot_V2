@@ -117,6 +117,11 @@ class TelegramService(object):
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
+    @dispatch(str)
+    async def send_maintainer_message(self, message: str):
+        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message)
+
+
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
