@@ -1,6 +1,6 @@
 import configparser
 
-from src.Utils import PathUtils
+from Utils import PathUtils
 
 
 class ApiConfig:
