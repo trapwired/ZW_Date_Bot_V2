@@ -8,6 +8,7 @@ from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKe
 from Enums.MessageType import MessageType
 
 from Utils import PrintUtils
+from Utils.ApiConfig import ApiConfig
 
 from databaseEntities.TelegramUser import TelegramUser
 
@@ -100,10 +101,10 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
 
 
 class TelegramService(object):
-    def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser):
+    def __init__(self, bot: telegram.Bot, api_config: ApiConfig):
         self.bot = bot
-        self.maintainer_chat_id = api_config['Chat_Ids']['MAINTAINER']
-        self.website = api_config['Additional_Data']['WEBSITE']
+        self.maintainer_chat_id = api_config.get_key('Chat_Ids', 'MAINTAINER')
+        self.website = api_config.get_key('Additional_Data', 'WEBSITE')
 
     async def send_message(self, update: Update | TelegramUser, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
@@ -118,14 +119,14 @@ class TelegramService(object):
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_info_message(self, chat_id: int, message: str):
-        await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=None,
+        message_to_send = PrintUtils.escape_message(message)
+        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=None,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str)
     async def send_maintainer_message(self, message: str):
         message += 'INFO: '
         await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message)
-
 
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):

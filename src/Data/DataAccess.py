@@ -16,9 +16,8 @@ from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 
-from Utils.CustomExceptions import DocumentIdNotPresentException, NoEventFoundException
-
-from Utils.CustomExceptions import ObjectNotFoundException
+from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException, NoEventFoundException
+from Utils.ApiConfig import ApiConfig
 
 TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
           Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
@@ -27,7 +26,7 @@ TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
 
 class DataAccess(object):
 
-    def __init__(self, api_config: configparser.RawConfigParser):
+    def __init__(self, api_config: ApiConfig):
         self.tables = Tables(api_config)
         self.firebase_repository = FirebaseRepository(api_config, self.tables)
 

@@ -5,7 +5,8 @@ import logging
 import telegram
 from telegram.ext import ApplicationBuilder, ContextTypes
 
-from Utils import PathUtils
+from Utils.ApiConfig import ApiConfig
+
 from NodeHandler import NodeHandler
 from Data.DataAccess import DataAccess
 
@@ -25,7 +26,7 @@ def initialize_logging():
     )
 
 
-def initialize_services(bot: telegram.Bot, api_config: configparser.RawConfigParser):
+def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _data_access = DataAccess(api_config)
     _telegram_service = TelegramService(bot, api_config)
     _user_state_service = UserStateService(_data_access)
@@ -49,15 +50,15 @@ def run_job_queue():
     job_queue.run_once(send_hi, 1)
 
     job_queue.run_daily(scheduling_service.send_individual_game_reminders, datetime.time(9, 59, 0))  # 11:59
+    job_queue.run_daily(scheduling_service.send_game_summary, datetime.time(5, 59, 0))  # 7:59
 
 
 if __name__ == "__main__":
     initialize_logging()
 
-    api_config = configparser.RawConfigParser()
-    api_config.read(PathUtils.get_secrets_file_path('api_config.ini'), encoding='utf8')
+    api_config = ApiConfig()
 
-    application = ApplicationBuilder().token(api_config.get('Telegram', 'api_token')).build()
+    application = ApplicationBuilder().token(api_config.get_key('Telegram', 'api_token')).build()
 
     telegram_service, user_state_service, admin_service, ics_service, data_access, scheduling_service = \
         initialize_services(application.bot, api_config)

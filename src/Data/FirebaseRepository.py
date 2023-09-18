@@ -22,12 +22,13 @@ from databaseEntities.Attendance import Attendance
 
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException
 from Utils import PathUtils
+from Utils.ApiConfig import ApiConfig
 
 
 class FirebaseRepository(object):
-    def __init__(self, api_config: configparser.RawConfigParser, tables: Tables):
+    def __init__(self, api_config: ApiConfig, tables: Tables):
         self.tables = tables
-        api_config_path = PathUtils.get_secrets_file_path(api_config['Firebase']['credentialsFileName'])
+        api_config_path = PathUtils.get_secrets_file_path(api_config.get_key('Firebase', 'credentialsFileName'))
         cred_object = firebase_admin.credentials.Certificate(api_config_path)
         default_app = firebase_admin.initialize_app(cred_object)
         self.db = firestore.client(default_app)

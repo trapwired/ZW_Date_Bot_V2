@@ -15,10 +15,7 @@ from Enums.UserState import UserState
 from Utils.CustomExceptions import ObjectNotFoundException
 from Utils import PrintUtils
 from Utils import CallbackUtils
-
-
-def initialize_reminder_frequency(frequencies: str):
-    return [int(x.strip()) for x in frequencies.split(',')]
+from Utils.ApiConfig import ApiConfig
 
 
 def get_events_in_x_days(all_future_events, individual_game_reminder_frequency):
@@ -30,13 +27,11 @@ def get_events_in_x_days(all_future_events, individual_game_reminder_frequency):
 
 
 class SchedulingService:
-    def __init__(self, data_access: DataAccess, telegram_service: TelegramService,
-                 api_config: configparser.RawConfigParser):
+    def __init__(self, data_access: DataAccess, telegram_service: TelegramService, api_config: ApiConfig):
         self.data_access = data_access
         self.telegram_service = telegram_service
-        self.individual_game_reminder_frequency = initialize_reminder_frequency(
-            api_config['Scheduling']['GAME_INDIVIDUAL'])
-        self.trainer_id = 43 # TODO
+        self.individual_game_reminder_frequency = api_config.get_int_list('Scheduling', 'GAME_INDIVIDUAL')
+        self.trainer_ids = api_config.get_int_list('Chat_Ids', 'TRAINERS')
 
     async def send_individual_game_reminders(self, context: ContextTypes.DEFAULT_TYPE):
         try:
@@ -105,6 +100,5 @@ class SchedulingService:
             pretty_print_game = PrintUtils.pretty_print(game)
             message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_game)
             message = 'Hey, just a short summary for the game in 4 weeks: \n\n' + message
-            await self.telegram_service.send_info_message(self, self.trainer_id, message)
-        # pretty print
-        # send to trainer
+            for trainer_id in self.trainer_ids:
+                await self.telegram_service.send_info_message(trainer_id, message)

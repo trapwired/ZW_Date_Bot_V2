@@ -34,6 +34,7 @@ from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundExceptio
 from Utils.CommandDescriptions import CommandDescriptions
 from Utils import NodeUtils
 from Utils import CallbackUtils
+from Utils.ApiConfig import ApiConfig
 
 
 def add_nodes_reference_to_all_nodes(nodes: dict):
@@ -50,7 +51,7 @@ def check_all_user_states_have_node(nodes: dict):
         raise NodesMissingException(missing_states)
 
 
-def check_all_commands_have_description(nodes: dict, api_config: configparser.RawConfigParser):
+def check_all_commands_have_description(nodes: dict):
     missing_commands = []
     command_set = set()
     for node in nodes.values():
@@ -70,7 +71,7 @@ def check_all_commands_have_description(nodes: dict, api_config: configparser.Ra
 class NodeHandler(BaseHandler[Update, CCT]):
     GROUP_TYPES = [ChatType.GROUP, ChatType.SUPERGROUP]
 
-    def __init__(self, bot: telegram.Bot, api_config: configparser.RawConfigParser, telegram_service: TelegramService,
+    def __init__(self, bot: telegram.Bot, api_config: ApiConfig, telegram_service: TelegramService,
                  user_state_service: UserStateService, admin_service: AdminService, ics_service: IcsService,
                  data_access: DataAccess):
         super().__init__(self.handle_message)
@@ -127,14 +128,14 @@ class NodeHandler(BaseHandler[Update, CCT]):
         return users_to_state, node
 
     def initialize_nodes(self, telegram_service: TelegramService, user_state_service: UserStateService,
-                         data_access: DataAccess, api_config: configparser.RawConfigParser):
+                         data_access: DataAccess, api_config: ApiConfig):
 
         init_node = InitNode(UserState.INIT, telegram_service, user_state_service, data_access, api_config, self.bot)
         init_node.add_transition('/start', init_node.handle_start, allowed_roles=RoleSet.REALLY_EVERYONE)
 
         rejected_node = RejectedNode(UserState.INIT, telegram_service, user_state_service, data_access)
         rejected_node.add_transition(
-            api_config['Chats']['SPECTATOR_PASSWORD'],
+            api_config.get_key('Chats', 'SPECTATOR_PASSWORD'),
             rejected_node.handle_correct_password,
             new_state=UserState.DEFAULT,
             allowed_roles=RoleSet.REJECTED,
@@ -257,9 +258,9 @@ class NodeHandler(BaseHandler[Update, CCT]):
         }
         return callback_nodes_dict
 
-    def do_checks(self, api_config: configparser.RawConfigParser):
+    def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)
-        check_all_commands_have_description(self.nodes, api_config)
+        check_all_commands_have_description(self.nodes)
 
     def get_callback_node(self, update):
         query = update.callback_query

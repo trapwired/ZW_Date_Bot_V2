@@ -18,6 +18,7 @@ from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
 
 from Utils.CustomExceptions import ObjectNotFoundException
+from Utils.ApiConfig import ApiConfig
 
 
 def create_user(update: Update) -> TelegramUser:
@@ -27,9 +28,9 @@ def create_user(update: Update) -> TelegramUser:
 class InitNode(Node):
 
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, api_config: configparser.RawConfigParser, bot: telegram.Bot):
+                 data_access: DataAccess, api_config: ApiConfig, bot: telegram.Bot):
         super().__init__(state, telegram_service, user_state_service, data_access)
-        self.group_chat_id = api_config['Telegram']['group_chat_id']
+        self.group_chat_id = api_config.get_key('Telegram', 'group_chat_id')
         self.bot = bot
 
     # Override to add new player
