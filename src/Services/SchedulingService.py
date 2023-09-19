@@ -58,6 +58,9 @@ class SchedulingService:
                     if len(unsure_player_to_games[player]) <= 3:
                         unsure_player_to_games[player].append(game)
 
+            if len(unsure_player_to_games) == 0:
+                return
+
             message_sent_count = 0
             for player, game_list in unsure_player_to_games.items():
                 message_sent_count += await self.send_game_enroll_reminder(player, game_list)
