@@ -5,20 +5,19 @@ from Triggers.TriggerPayload import TriggerPayload
 
 
 class Trigger(ABC):
-    def __init__(self, check_condition: Callable[[TriggerPayload], bool], condition: Callable[[TriggerPayload], bool],
+    def __init__(self, pre_condition: Callable[[TriggerPayload], bool], condition: Callable[[TriggerPayload], bool],
                  notify_action: Callable[[TriggerPayload], None]):
-        self.check_condition = check_condition
+        self.pre_condition = pre_condition
         self.condition = condition
         self.notify_action = notify_action
 
-    def check(self, trigger_payload: TriggerPayload):
-        if not self.is_valid(trigger_payload):
-            return
-        if not self.check_condition(trigger_payload):
-            return
+    def check(self, trigger_payload: TriggerPayload) -> bool:
+        if not self.payload_is_valid(trigger_payload):
+            return False
+        if not self.pre_condition(trigger_payload):
+            return False
 
-        if self.condition(trigger_payload):
-            self.notify_action(trigger_payload)
+        return self.condition(trigger_payload)
 
-    def is_valid(self, trigger_payload: TriggerPayload):
+    def payload_is_valid(self, trigger_payload: TriggerPayload):
         return True

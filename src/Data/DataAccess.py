@@ -200,6 +200,10 @@ class DataAccess(object):
 
         return yes, no, unsure
 
+    def get_num_of_no_of_event(self, event_id: str, event_type: Event) -> int:
+        _, no, unsure = self.get_stats_event(event_id, event_type)
+        return len(no)
+
     def get_names(self, stats: (list, list, list)):
         yes, no, unsure = stats
         yes_with_names = self.add_names(yes)
