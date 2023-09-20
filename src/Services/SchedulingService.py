@@ -90,13 +90,18 @@ class SchedulingService:
         return messages_sent_count
 
     async def send_game_summary(self, context: ContextTypes.DEFAULT_TYPE):
-        all_future_games = self.data_access.get_ordered_games()
-        games_in_27_days = get_events_in_x_days(all_future_games, [27])
+        try:
+            all_future_games = self.data_access.get_ordered_games()
+            games_in_27_days = get_events_in_x_days(all_future_games, [27])
 
-        for game in games_in_27_days:
-            stats = self.data_access.get_stats_event(game.doc_id, Event.GAME)
-            stats_with_names = self.data_access.get_names(stats)
-            pretty_print_game = PrintUtils.pretty_print(game)
-            message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_game)
-            message = 'Hey, just a short summary for the game in 4 weeks: \n\n' + message
-            await self.telegram_service.send_info_message_to_trainers(message)
+            for game in games_in_27_days:
+                stats = self.data_access.get_stats_event(game.doc_id, Event.GAME)
+                stats_with_names = self.data_access.get_names(stats)
+                pretty_print_game = PrintUtils.pretty_print(game)
+                message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_game)
+                message = 'Hey, just a short summary for the game in 4 weeks: \n\n' + message
+                await self.telegram_service.send_info_message_to_trainers(message)
+        except Exception as e:
+            await self.telegram_service.send_maintainer_message(
+                'Exception caught in SchedulingService.send_game_summary()',
+                e)
