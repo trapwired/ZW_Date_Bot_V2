@@ -105,6 +105,7 @@ class TelegramService(object):
         self.bot = bot
         self.maintainer_chat_id = api_config.get_key('Chat_Ids', 'MAINTAINER')
         self.website = api_config.get_key('Additional_Data', 'WEBSITE')
+        self.trainer_ids = api_config.get_int_list('Chat_Ids', 'TRAINERS')
 
     async def send_message(self, update: Update | TelegramUser, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
@@ -118,10 +119,11 @@ class TelegramService(object):
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
-    async def send_info_message(self, chat_id: int, message: str):
+    async def send_info_message_to_trainers(self, message: str):
         message_to_send = PrintUtils.escape_message(message)
-        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=None,
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        for chat_id in self.trainer_ids:
+            await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=None,
+                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str)
     async def send_maintainer_message(self, message: str):

@@ -18,6 +18,7 @@ from Services.AdminService import AdminService
 from Services.IcsService import IcsService
 from Services.UserStateService import UserStateService
 from Services.TelegramService import TelegramService
+from Services.TriggerService import TriggerService
 
 from Nodes.DefaultNode import DefaultNode
 from Nodes.InitNode import InitNode
@@ -73,7 +74,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
     def __init__(self, bot: telegram.Bot, api_config: ApiConfig, telegram_service: TelegramService,
                  user_state_service: UserStateService, admin_service: AdminService, ics_service: IcsService,
-                 data_access: DataAccess):
+                 data_access: DataAccess, trigger_service: TriggerService):
         super().__init__(self.handle_message)
         self.bot = bot
         self.user_state_service = user_state_service
@@ -82,7 +83,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         self.telegram_service = telegram_service
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
-        self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access)
+        self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access, trigger_service)
         add_nodes_reference_to_all_nodes(self.nodes)
 
         self.do_checks(api_config)
@@ -250,8 +251,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         return all_nodes_dict
 
-    def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess):
-        edit_callback_node = EditCallbackNode(telegram_service, data_access)
+    def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService):
+        edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node

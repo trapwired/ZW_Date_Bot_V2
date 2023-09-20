@@ -40,4 +40,4 @@ class EditCallbackNode(CallbackNode):
         await query.edit_message_text(text=message, reply_markup=reply_markup)
 
         trigger_payload = TriggerPayload(new_attendance=new_attendance, doc_id=doc_id, event_type=event_type)
-        self.trigger_service.check_triggers(trigger_payload)
+        await self.trigger_service.check_triggers(trigger_payload)

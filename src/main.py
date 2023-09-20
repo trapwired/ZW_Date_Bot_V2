@@ -34,7 +34,7 @@ def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _admin_service = AdminService(_data_access)
     _ics_service = IcsService(_data_access)
     _scheduling_service = SchedulingService(_data_access, _telegram_service, api_config)
-    _trigger_service = TriggerService(_data_access, telegram_service)
+    _trigger_service = TriggerService(_data_access, _telegram_service)
     return _telegram_service, _user_state_service, _admin_service, _ics_service, _data_access, _scheduling_service, _trigger_service
 
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     # use_one_time_setup(data_access)
 
     node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service, admin_service,
-                               ics_service, data_access)
+                               ics_service, data_access, trigger_service)
     application.add_handler(node_handler)
 
     run_job_queue()
