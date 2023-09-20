@@ -40,5 +40,5 @@ class TriggerService:
     async def send_event_message(self, trigger_payload: TriggerPayload, msg: str):
         game = self.data_access.get_game(trigger_payload.doc_id)
         pretty_game = PrintUtils.pretty_print(game)
-        message = 'FYI: For the following game:\n\n' + pretty_game + '\n\n' + msg
+        message = 'Trigger: For the following game:\n\n' + pretty_game + '\n\n' + msg
         await self.telegram_service.send_info_message_to_trainers(message)
