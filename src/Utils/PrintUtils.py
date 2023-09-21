@@ -98,11 +98,14 @@ def pretty_print_player_name(player: TelegramUser) -> str:
     return res
 
 
-def escape_message(message: str):
+def prepare_message(message: str):
+    # Escape characters for markdownV2
     escape_chars = '.|()#_!-+\\'
     result = ''
     for char in message:
         if char in escape_chars:
             result += "\\"
         result += char
+    # max length is 9500 chars
+    result = result[:9500]
     return result

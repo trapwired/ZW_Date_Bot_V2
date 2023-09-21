@@ -115,12 +115,12 @@ class TelegramService(object):
             message = get_text(message_type, first_name=first_name, extra_text=message_extra_text)
         if reply_markup is None:
             reply_markup = self.get_reply_keyboard(message_type, all_buttons)
-        message_to_send = PrintUtils.escape_message(message)
+        message_to_send = PrintUtils.prepare_message(message)
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_info_message_to_trainers(self, message: str):
-        message_to_send = PrintUtils.escape_message(message)
+        message_to_send = PrintUtils.prepare_message(message)
         for chat_id in self.trainer_ids:
             await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=None,
                                         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
@@ -128,24 +128,30 @@ class TelegramService(object):
     @dispatch(str)
     async def send_maintainer_message(self, message: str):
         message += 'INFO: '
-        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message)
+        message_to_send = PrintUtils.prepare_message(message)
+        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
         text = 'ERROR: ' + description + '\n\n' + error_message
-
-        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=text)
+        message_to_send = PrintUtils.prepare_message(text)
+        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str, Update, Exception)
     async def send_maintainer_message(self, description: str, update: Update, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
         text = 'ERROR: ' + description + '\n\n' + str(update) + '\n\n' + error_message
-
-        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=text)
+        message_to_send = PrintUtils.prepare_message(text)
+        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_maintainer_hi(self, hi: str):
-        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=hi)
+        message_to_send = PrintUtils.prepare_message(hi)
+        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     def get_reply_keyboard(self, message_type: MessageType, all_commands: [str]):
         match message_type:
