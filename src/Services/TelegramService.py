@@ -6,6 +6,7 @@ from multipledispatch import dispatch
 from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton
 
 from Enums.MessageType import MessageType
+from Enums.Event import Event
 
 from Utils import PrintUtils
 from Utils.ApiConfig import ApiConfig
@@ -119,9 +120,10 @@ class TelegramService(object):
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
-    async def send_info_message_to_trainers(self, message: str):
+    async def send_info_message_to_trainers(self, message: str, event_type: Event):
         message_to_send = PrintUtils.prepare_message(message)
-        for chat_id in self.trainer_ids:
+        chat_ids = self.get_chat_ids(event_type)
+        for chat_id in chat_ids:
             await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=None,
                                         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
@@ -168,3 +170,11 @@ class TelegramService(object):
             return None
         keyboard = generate_keyboard(all_commands)
         return ReplyKeyboardMarkup(keyboard, one_time_keyboard=False)
+
+    def get_chat_ids(self, event_type):
+        match event_type:
+            case Event.GAME:
+                return self.trainer_ids
+            case Event.TRAINING:
+                return self.training_trainer_ids # TODO add and rename
+        return []

@@ -84,7 +84,7 @@ class SchedulingService:
 
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService.send_individual_event_reminders()',
+                'Exception caught in SchedulingService._send_individual_event_reminders()',
                 e)
 
     async def send_event_enroll_reminder(self, player, event_list, event_type: Event) -> int:
@@ -107,17 +107,21 @@ class SchedulingService:
         return messages_sent_count
 
     async def send_game_summary(self, context: ContextTypes.DEFAULT_TYPE):
-        try:
-            all_future_games = self.data_access.get_ordered_games()
-            games_in_27_days = get_events_in_x_days(all_future_games, [27])
+        await self._send_event_summary(Event.GAME)
 
-            for game in games_in_27_days:
-                stats = self.data_access.get_stats_event(game.doc_id, Event.GAME)
+    async def _send_event_summary(self, event_type: Event):
+        try:
+            all_future_events = self.get_ordered_event(event_type)
+            reminder_days = self.get_summary_reminder_day(event_type)
+            events_to_remind = get_events_in_x_days(all_future_events, reminder_days)
+
+            for event in events_to_remind:
+                stats = self.data_access.get_stats_event(event.doc_id, event_type)
                 stats_with_names = self.data_access.get_names(stats)
-                pretty_print_game = PrintUtils.pretty_print(game)
-                message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_game)
-                message = 'Hey, just a short summary for the game in 4 weeks: \n\n' + message
-                await self.telegram_service.send_info_message_to_trainers(message)
+                pretty_print_event = PrintUtils.pretty_print(event)
+                message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_event)
+                message = f'Hey, just a short summary for the event in {reminder_days[0]} days: \n\n' + message
+                await self.telegram_service.send_info_message_to_trainers(message, event_type)
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
                 'Exception caught in SchedulingService.send_game_summary()',
@@ -141,4 +145,14 @@ class SchedulingService:
                 return self.individual_training_reminder_frequency
             case Event.TIMEKEEPING:
                 return self.individual_timekeeping_reminder_frequency
+        return []
+
+    def get_summary_reminder_day(self, event_type):
+        match event_type:
+            case Event.GAME:
+                return 27
+            case Event.TRAINING:
+                return 6
+            case Event.TIMEKEEPING:
+                return 13 # TODO
         return []
