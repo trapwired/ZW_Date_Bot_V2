@@ -18,10 +18,10 @@ from Utils import CallbackUtils
 from Utils.ApiConfig import ApiConfig
 
 
-def get_events_in_x_days(all_future_events, individual_game_reminder_frequency):
+def get_events_in_x_days(all_future_events, reminder_frequency):
     relevant_events = []
     for event in all_future_events:
-        if (event.timestamp.date() - datetime.date.today()).days in individual_game_reminder_frequency:
+        if (event.timestamp.date() - datetime.date.today()).days in reminder_frequency:
             relevant_events.append(event)
     return relevant_events
 
@@ -31,62 +31,76 @@ class SchedulingService:
         self.data_access = data_access
         self.telegram_service = telegram_service
         self.individual_game_reminder_frequency = api_config.get_int_list('Scheduling', 'GAME_INDIVIDUAL')
+        self.individual_training_reminder_frequency = api_config.get_int_list('Scheduling', 'TRAINING_INDIVIDUAL')
+        self.individual_timekeeping_reminder_frequency = api_config.get_int_list('Scheduling', 'TIMEKEEPING_INDIVIDUAL')
 
     async def send_individual_game_reminders(self, context: ContextTypes.DEFAULT_TYPE):
+        await self._send_individual_event_reminders(Event.GAME)
+
+    async def send_individual_training_reminders(self, context: ContextTypes.DEFAULT_TYPE):
+        await self._send_individual_event_reminders(Event.TRAINING)
+
+    async def send_individual_tke_reminders(self, context: ContextTypes.DEFAULT_TYPE):
+        # TODO if timekeeping: only remember if not full yet
+        # what if sent already button but already full?
+        await self._send_individual_event_reminders(Event.TIMEKEEPING)
+
+    async def _send_individual_event_reminders(self, event_type: Event):
         try:
-            all_future_games = self.data_access.get_ordered_games()
-            all_relevant_games = get_events_in_x_days(all_future_games, self.individual_game_reminder_frequency)
+            all_future_events = self.get_ordered_event(event_type)
+            reminder_frequency = self.get_reminder_frequency(event_type)
+            all_relevant_events = get_events_in_x_days(all_future_events, reminder_frequency)
 
             all_players = self.data_access.get_all_players()
 
-            game_to_unsure_players = dict()
-            for game in all_relevant_games:
-                _, _, unsure = self.data_access.get_stats_event(game.doc_id, Event.GAME)
+            event_to_unsure_players = dict()
+            for event in all_relevant_events:
+                _, _, unsure = self.data_access.get_stats_event(event.doc_id, event_type)
                 unsure_players = []
                 for player_id in unsure:
                     player = next((x for x in all_players if x.doc_id == player_id), None)
                     if player is None:
                         raise ObjectNotFoundException(player)
                     unsure_players.append(player)
-                game_to_unsure_players[game] = unsure_players
+                event_to_unsure_players[event] = unsure_players
 
-            unsure_player_to_games = dict()
-            for game, player_ids in game_to_unsure_players.items():
+            unsure_player_to_event = dict()
+            for event, player_ids in event_to_unsure_players.items():
                 for player in player_ids:
-                    if player not in unsure_player_to_games:
-                        unsure_player_to_games[player] = []
-                    if len(unsure_player_to_games[player]) <= 3:
-                        unsure_player_to_games[player].append(game)
+                    if player not in unsure_player_to_event:
+                        unsure_player_to_event[player] = []
+                    if len(unsure_player_to_event[player]) <= 3:
+                        unsure_player_to_event[player].append(event)
 
-            if len(unsure_player_to_games) == 0:
+            if len(unsure_player_to_event) == 0:
                 return
 
             message_sent_count = 0
-            for player, game_list in unsure_player_to_games.items():
-                message_sent_count += await self.send_game_enroll_reminder(player, game_list)
+            for player, event_list in unsure_player_to_event.items():
+                message_sent_count += await self.send_event_enroll_reminder(player, event_list, event_type)
 
-            message = f'Sent out a total of {message_sent_count} game reminders to {len(unsure_player_to_games)} Player(s)'
+            message = f'Sent out a total of {message_sent_count} {event_type.name.lower()} reminders to {len(unsure_player_to_event)} Player(s)'
             await self.telegram_service.send_maintainer_message(message)
 
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService.send_individual_game_reminders()',
+                'Exception caught in SchedulingService.send_individual_event_reminders()',
                 e)
 
-    async def send_game_enroll_reminder(self, player, game_list) -> int:
+    async def send_event_enroll_reminder(self, player, event_list, event_type: Event) -> int:
         messages_sent_count = 0
         await self.telegram_service.send_message(
             update=player,
             all_buttons=None,
             message_type=MessageType.ENROLLMENT_REMINDER)
 
-        for game in game_list:
-            pretty_print_game = PrintUtils.pretty_print(game, AttendanceState.UNSURE)
-            reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, Event.GAME, game.doc_id)
+        for event in event_list:
+            pretty_print_event = PrintUtils.pretty_print(event, AttendanceState.UNSURE)
+            reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, event_type, event.doc_id)
             await self.telegram_service.send_message(
                 update=player,
                 all_buttons=None,
-                message=pretty_print_game,
+                message=pretty_print_event,
                 reply_markup=reply_markup)
             messages_sent_count += 1
 
@@ -108,3 +122,23 @@ class SchedulingService:
             await self.telegram_service.send_maintainer_message(
                 'Exception caught in SchedulingService.send_game_summary()',
                 e)
+
+    def get_ordered_event(self, event_type: Event):
+        match event_type:
+            case Event.GAME:
+                return self.data_access.get_ordered_games()
+            case Event.TRAINING:
+                return self.data_access.get_ordered_trainings()
+            case Event.TIMEKEEPING:
+                return self.data_access.get_ordered_timekeepings()
+        return []
+
+    def get_reminder_frequency(self, event_type: Event):
+        match event_type:
+            case Event.GAME:
+                return self.individual_game_reminder_frequency
+            case Event.TRAINING:
+                return self.individual_training_reminder_frequency
+            case Event.TIMEKEEPING:
+                return self.individual_timekeeping_reminder_frequency
+        return []

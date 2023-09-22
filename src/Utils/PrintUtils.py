@@ -59,6 +59,11 @@ def pretty_print(training: Training, attendance: Attendance) -> str:
     return pretty_print(training) + f' | {attendance.state.name}'
 
 
+@dispatch(Training, AttendanceState)
+def pretty_print(training: Training, attendance: AttendanceState) -> str:
+    return pretty_print(training) + f' | {attendance.name}'
+
+
 @dispatch(TimekeepingEvent)
 def pretty_print(tke: TimekeepingEvent) -> str:
     return f'{tke.timestamp.strftime("%d.%m.%Y %H:%M")} | {tke.location.title()}'
@@ -67,6 +72,11 @@ def pretty_print(tke: TimekeepingEvent) -> str:
 @dispatch(TimekeepingEvent, Attendance)
 def pretty_print(tke: TimekeepingEvent, attendance: Attendance = None) -> str:
     return pretty_print(tke) + f' | {attendance.state.name}'
+
+
+@dispatch(TimekeepingEvent, AttendanceState)
+def pretty_print(tke: TimekeepingEvent, attendance: AttendanceState) -> str:
+    return pretty_print(tke) + f' | {attendance.name}'
 
 
 def pretty_print_event_summary(stats: (list, list, list), game_string: str) -> str:
@@ -100,7 +110,7 @@ def pretty_print_player_name(player: TelegramUser) -> str:
 
 def prepare_message(message: str):
     # Escape characters for markdownV2
-    escape_chars = '.|()#_!-+\\'
+    escape_chars = '.|()#_!-+\\><='
     result = ''
     for char in message:
         if char in escape_chars:

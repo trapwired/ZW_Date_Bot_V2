@@ -61,7 +61,7 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
             return 'For the chosen timekeeping event already enough people have registered'
 
         case MessageType.ENROLLMENT_REMINDER:
-            return 'Hey ' + first_name + ', please quickly take your time to update your attendance for the following upcoming games:'
+            return 'Hey ' + first_name + ', please quickly take your time to update your attendance for the following upcoming event(s):'
 
         case _:
             return message_type.name + ' ' + extra_text
@@ -127,7 +127,7 @@ class TelegramService(object):
 
     @dispatch(str)
     async def send_maintainer_message(self, message: str):
-        message += 'INFO: '
+        message = 'INFO: ' + message
         message_to_send = PrintUtils.prepare_message(message)
         await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)

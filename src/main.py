@@ -1,4 +1,3 @@
-import configparser
 import datetime
 import logging
 
@@ -51,7 +50,16 @@ def run_job_queue():
     job_queue = application.job_queue
     job_queue.run_once(send_hi, 1)
 
-    job_queue.run_daily(scheduling_service.send_individual_game_reminders, datetime.time(9, 59, 0))  # 11:59
+    # Individual event reminders
+    job_queue.run_daily(  # Game Reminders, each day at 11:59 local time
+        scheduling_service.send_individual_game_reminders,
+        datetime.time(9, 59, 0))
+
+    job_queue.run_daily(  # Training Reminders, each day at 17:59 local time
+        scheduling_service.send_individual_training_reminders,
+        datetime.time(15, 59, 0))
+
+    # Summary to trainers
     job_queue.run_daily(scheduling_service.send_game_summary, datetime.time(5, 59, 0))  # 7:59
 
 
