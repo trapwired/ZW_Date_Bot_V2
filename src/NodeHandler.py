@@ -197,7 +197,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
         edit_node.add_transition(
             '/timekeepings', message_type=MessageType.EDIT_TO_TIMEKEEPINGS,
-            new_state=UserState.EDIT_TIMEKEEPINGS,
+            new_state=UserState.EDIT_TIMEKEEPINGS, allowed_roles=RoleSet.PLAYERS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
 
         edit_games_node = EditNode(UserState.EDIT_GAMES, telegram_service, user_state_service, data_access)
