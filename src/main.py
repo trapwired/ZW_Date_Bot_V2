@@ -59,6 +59,10 @@ def run_job_queue():
         scheduling_service.send_individual_training_reminders,
         datetime.time(15, 59, 0))
 
+    job_queue.run_daily(  # TKE Reminders, each day at 14:59 local time
+        scheduling_service.send_individual_tke_reminders,
+        datetime.time(12, 59, 0))
+
     # Summary to trainers / organisators
     job_queue.run_daily(  # Game summaries, each day at 7:59 local time
         scheduling_service.send_game_summary,

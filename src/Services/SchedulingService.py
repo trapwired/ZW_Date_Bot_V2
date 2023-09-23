@@ -1,5 +1,5 @@
-import configparser
 import datetime
+import random
 
 from Data.DataAccess import DataAccess
 
@@ -17,6 +17,8 @@ from Utils import PrintUtils
 from Utils import CallbackUtils
 from Utils.ApiConfig import ApiConfig
 
+from databaseEntities.TelegramUser import TelegramUser
+
 
 def get_events_in_x_days(all_future_events, reminder_frequency):
     relevant_events = []
@@ -24,6 +26,16 @@ def get_events_in_x_days(all_future_events, reminder_frequency):
         if (event.timestamp.date() - datetime.date.today()).days in reminder_frequency:
             relevant_events.append(event)
     return relevant_events
+
+
+def get_players_from_doc_ids(id_list: [str], all_players: [TelegramUser]) -> [TelegramUser]:
+    result = []
+    for player_id in id_list:
+        player = next((x for x in all_players if x.doc_id == player_id), None)
+        if player is None:
+            raise ObjectNotFoundException(player)
+        result.append(player)
+    return result
 
 
 class SchedulingService:
@@ -41,9 +53,53 @@ class SchedulingService:
         await self._send_individual_event_reminders(Event.TRAINING)
 
     async def send_individual_tke_reminders(self, context: ContextTypes.DEFAULT_TYPE):
-        # TODO if timekeeping: only remember if not full yet
-        # what if sent already button but already full?
-        await self._send_individual_event_reminders(Event.TIMEKEEPING)
+        try:
+            all_future_events = self.get_ordered_event(Event.TIMEKEEPING)
+            reminder_frequency = self.get_reminder_frequency(Event.TIMEKEEPING)
+            all_relevant_events = get_events_in_x_days(all_future_events, reminder_frequency)
+
+            all_players = self.data_access.get_all_players()
+
+            event_to_unsure_players_and_yes = dict()
+            already_said_yes = set()
+            for event in all_relevant_events:
+                yes_ids, _, unsure_ids = self.data_access.get_stats_event(event.doc_id, Event.TIMEKEEPING)
+                yes = get_players_from_doc_ids(yes_ids, all_players)
+
+                already_said_yes.update(yes)
+
+                if len(yes) < event.people_required:
+                    event_to_unsure_players_and_yes[event] = get_players_from_doc_ids(unsure_ids, all_players), yes
+
+            event_to_unsure_players = dict()
+            for event, (unsure_players, yes) in event_to_unsure_players_and_yes.items():
+                new_unsure_players = list(p for p in unsure_players if p not in already_said_yes)
+                random.shuffle(new_unsure_players)
+                people_needed = max(0, event.people_required - len(yes))
+                event_to_unsure_players[event] = new_unsure_players[:people_needed]
+
+
+            unsure_player_to_event = dict()
+            for event, players in event_to_unsure_players.items():
+                for player in players:
+                    if player not in unsure_player_to_event:
+                        unsure_player_to_event[player] = []
+                    if len(unsure_player_to_event[player]) <= 3:
+                        unsure_player_to_event[player].append(event)
+
+            if len(unsure_player_to_event) == 0:
+                return
+
+            message_sent_count = 0
+            for player, event_list in unsure_player_to_event.items():
+                message_sent_count += await self.send_event_enroll_reminder(player, event_list, Event.TIMEKEEPING)
+
+            message = f'Sent out a total of {message_sent_count} timekeeping reminders to {len(unsure_player_to_event)} Player(s)'
+            await self.telegram_service.send_maintainer_message(message)
+        except Exception as e:
+            await self.telegram_service.send_maintainer_message(
+                'Exception caught in SchedulingService.send_individual_tke_reminders()',
+                e)
 
     async def _send_individual_event_reminders(self, event_type: Event):
         try:
@@ -55,14 +111,8 @@ class SchedulingService:
 
             event_to_unsure_players = dict()
             for event in all_relevant_events:
-                _, _, unsure = self.data_access.get_stats_event(event.doc_id, event_type)
-                unsure_players = []
-                for player_id in unsure:
-                    player = next((x for x in all_players if x.doc_id == player_id), None)
-                    if player is None:
-                        raise ObjectNotFoundException(player)
-                    unsure_players.append(player)
-                event_to_unsure_players[event] = unsure_players
+                _, _, unsure_ids = self.data_access.get_stats_event(event.doc_id, event_type)
+                event_to_unsure_players[event] = get_players_from_doc_ids(unsure_ids, all_players)
 
             unsure_player_to_event = dict()
             for event, player_ids in event_to_unsure_players.items():
@@ -126,7 +176,7 @@ class SchedulingService:
                 stats_with_names = self.data_access.get_names(stats)
                 pretty_print_event = PrintUtils.pretty_print(event)
                 message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_event, event_type)
-                message = f'Hey, just a short summary for the upcoming {event_type.name.lower()} in {reminder_days[0]}'\
+                message = f'Hey, just a short summary for the upcoming {event_type.name.lower()} in {reminder_days[0]}' \
                           f' days: \n\n' + message
                 await self.telegram_service.send_info_message_to_trainers(message, event_type)
 
