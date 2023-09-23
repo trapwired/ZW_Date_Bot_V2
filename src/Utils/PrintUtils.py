@@ -39,6 +39,11 @@ def pretty_print(game: Game) -> str:
     return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location.title()}'
 
 
+@dispatch(Game)
+def pretty_print_long(game: Game) -> str:
+    return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location.title()} | {game.opponent.title()}'
+
+
 @dispatch(Game, Attendance)
 def pretty_print(game: Game, attendance: Attendance) -> str:
     return pretty_print(game) + f' | {attendance.state.name}'
