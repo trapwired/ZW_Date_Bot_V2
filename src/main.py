@@ -59,8 +59,14 @@ def run_job_queue():
         scheduling_service.send_individual_training_reminders,
         datetime.time(15, 59, 0))
 
-    # Summary to trainers
-    job_queue.run_daily(scheduling_service.send_game_summary, datetime.time(5, 59, 0))  # 7:59
+    # Summary to trainers / organisators
+    job_queue.run_daily(  # Game Summaries, each day at 7:59 local time
+        scheduling_service.send_game_summary,
+        datetime.time(5, 59, 0))
+
+    job_queue.run_daily(  # Training Summaries, each day at 18:59 local time
+        scheduling_service.send_training_summary,
+        datetime.time(16, 59, 0))
 
 
 if __name__ == "__main__":

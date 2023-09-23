@@ -106,7 +106,8 @@ class TelegramService(object):
         self.bot = bot
         self.maintainer_chat_id = api_config.get_key('Chat_Ids', 'MAINTAINER')
         self.website = api_config.get_key('Additional_Data', 'WEBSITE')
-        self.trainer_ids = api_config.get_int_list('Chat_Ids', 'TRAINERS')
+        self.trainers_games = api_config.get_int_list('Chat_Ids', 'TRAINERS_GAMES')
+        self.trainers_training = api_config.get_int_list('Chat_Ids', 'TRAINERS_TRAINING')
 
     async def send_message(self, update: Update | TelegramUser, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
@@ -174,7 +175,9 @@ class TelegramService(object):
     def get_chat_ids(self, event_type):
         match event_type:
             case Event.GAME:
-                return self.trainer_ids
+                return self.trainers_games
             case Event.TRAINING:
-                return self.training_trainer_ids # TODO add and rename
+                return self.trainers_training
+            case Event.TIMEKEEPING:
+                return self.trainers_games
         return []

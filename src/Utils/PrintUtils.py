@@ -117,5 +117,5 @@ def prepare_message(message: str):
             result += "\\"
         result += char
     # max length is 9500 chars
-    result = result[:9500]
+    result = result[:9499]
     return result

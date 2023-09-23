@@ -109,6 +109,9 @@ class SchedulingService:
     async def send_game_summary(self, context: ContextTypes.DEFAULT_TYPE):
         await self._send_event_summary(Event.GAME)
 
+    async def send_training_summary(self, context: ContextTypes.DEFAULT_TYPE):
+        await self._send_event_summary(Event.TRAINING)
+
     async def _send_event_summary(self, event_type: Event):
         try:
             all_future_events = self.get_ordered_event(event_type)
@@ -120,11 +123,13 @@ class SchedulingService:
                 stats_with_names = self.data_access.get_names(stats)
                 pretty_print_event = PrintUtils.pretty_print(event)
                 message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_event)
-                message = f'Hey, just a short summary for the event in {reminder_days[0]} days: \n\n' + message
+                message = f'Hey, just a short summary for the upcoming {event_type.name.lower()} in {reminder_days[0]}'\
+                          f' days: \n\n' + message
                 await self.telegram_service.send_info_message_to_trainers(message, event_type)
+
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService.send_game_summary()',
+                'Exception caught in SchedulingService.send_event_summary()',
                 e)
 
     def get_ordered_event(self, event_type: Event):
@@ -150,9 +155,9 @@ class SchedulingService:
     def get_summary_reminder_day(self, event_type):
         match event_type:
             case Event.GAME:
-                return 27
+                return [min(self.individual_game_reminder_frequency) - 1]
             case Event.TRAINING:
-                return 6
+                return [min(self.individual_training_reminder_frequency) - 1]
             case Event.TIMEKEEPING:
-                return 13 # TODO
+                return [min(self.individual_timekeeping_reminder_frequency) - 1]
         return []
