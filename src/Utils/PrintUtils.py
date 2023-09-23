@@ -79,15 +79,21 @@ def pretty_print(tke: TimekeepingEvent, attendance: AttendanceState) -> str:
     return pretty_print(tke) + f' | {attendance.name}'
 
 
-def pretty_print_event_summary(stats: (list, list, list), game_string: str) -> str:
+def pretty_print_event_summary(stats: (list, list, list), game_string: str, event_type: Event) -> str:
     yes, no, unsure = stats
     total_players = len(yes) + len(no) + len(unsure)
     result = game_string + '\n\n'
     if len(yes) > 0:
-        result += f'*\tTeam / Yes ({len(yes)}/{total_players})*\n'
+        result += f'*\tYes ({len(yes)}/{total_players})*\n'
         for player in yes:
             result += pretty_print_player_name(player)
         result += '\n'
+
+    if event_type is Event.TIMEKEEPING:
+        if len(yes) == 0:
+            result += '\t\tNoone indicated yes until now :('
+        return result
+
     if len(no) > 0:
         result += f'*\tNo ({len(no)}/{total_players})*\n'
         for player in no:

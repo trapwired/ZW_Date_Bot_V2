@@ -17,7 +17,7 @@ class StatsNode(Node):
                               event_type: Event):
         stats = self.data_access.get_stats_event(document_id, event_type)
         stats_with_names = self.data_access.get_names(stats)
-        message = PrintUtils.pretty_print_event_summary(stats_with_names, update.message.text)
+        message = PrintUtils.pretty_print_event_summary(stats_with_names, update.message.text, event_type)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),

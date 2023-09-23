@@ -122,7 +122,7 @@ class SchedulingService:
                 stats = self.data_access.get_stats_event(event.doc_id, event_type)
                 stats_with_names = self.data_access.get_names(stats)
                 pretty_print_event = PrintUtils.pretty_print(event)
-                message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_event)
+                message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_event, event_type)
                 message = f'Hey, just a short summary for the upcoming {event_type.name.lower()} in {reminder_days[0]}'\
                           f' days: \n\n' + message
                 await self.telegram_service.send_info_message_to_trainers(message, event_type)
