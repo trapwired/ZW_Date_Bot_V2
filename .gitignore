@@ -12,6 +12,7 @@ __pycache__/
 
 # logs
 nohup.out
+logs/
 
 #secrets
 secrets/api_config.ini
