@@ -5,6 +5,7 @@ stop_bot () {
 }
 
 start_bot () {
+	mv /root/ZW_Date_Bot_V2/nohup.out /root/ZW_Date_Bot_V2/logs/log_`date +"%Y-%m-%d_%H-%M-%S:%N"`.out
 	nohup /usr/bin/python3 /root/ZW_Date_Bot_V2/src/main.py &	
 }
 
