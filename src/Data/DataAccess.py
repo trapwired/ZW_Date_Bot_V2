@@ -166,7 +166,7 @@ class DataAccess(object):
         return sorted(timekeepings_list, key=lambda t: t.timestamp)
 
     def get_all_players(self) -> [TelegramUser]:
-        all_users_to_state = self.firebase_repository.get_all_players_to_state()
+        all_users_to_state = self.firebase_repository.get_all_active_players_to_state()
         all_players = []
         for uts_ref in all_users_to_state:
             uts = UsersToState.from_dict(uts_ref.id, uts_ref.to_dict())
@@ -191,7 +191,7 @@ class DataAccess(object):
                     unsure.append(new_attendance.user_id)
 
         all_added_players = set(yes + no + unsure)
-        all_users_to_state = self.firebase_repository.get_all_players_to_state()
+        all_users_to_state = self.firebase_repository.get_all_active_players_to_state()
         for element in all_users_to_state:
             user_to_state = UsersToState.from_dict(element.id, element.to_dict())
             user_id = user_to_state.user_id

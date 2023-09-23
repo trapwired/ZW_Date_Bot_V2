@@ -115,7 +115,7 @@ class FirebaseRepository(object):
         attendance = result[0]
         return Attendance.from_dict(attendance.id, attendance.to_dict())
 
-    def get_all_players_to_state(self):
+    def get_all_active_players_to_state(self):
         query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
             filter=FieldFilter("role", "in", RoleSet.ACTIVE_PLAYERS))
         entries = query_ref.get()
