@@ -60,12 +60,16 @@ def run_job_queue():
         datetime.time(15, 59, 0))
 
     # Summary to trainers / organisators
-    job_queue.run_daily(  # Game Summaries, each day at 7:59 local time
+    job_queue.run_daily(  # Game summaries, each day at 7:59 local time
         scheduling_service.send_game_summary,
         datetime.time(5, 59, 0))
 
-    job_queue.run_daily(  # Training Summaries, each day at 18:59 local time
+    job_queue.run_daily(  # Training summaries, each day at 18:59 local time
         scheduling_service.send_training_summary,
+        datetime.time(16, 59, 0))
+
+    job_queue.run_daily(  # Timekeeping summaries, each day at 18:59 local time
+        scheduling_service.send_timekeeping_summary,
         datetime.time(16, 59, 0))
 
 

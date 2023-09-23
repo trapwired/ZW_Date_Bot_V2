@@ -112,6 +112,9 @@ class SchedulingService:
     async def send_training_summary(self, context: ContextTypes.DEFAULT_TYPE):
         await self._send_event_summary(Event.TRAINING)
 
+    async def send_timekeeping_summary(self, context: ContextTypes.DEFAULT_TYPE):
+        await self._send_event_summary(Event.TIMEKEEPING)
+
     async def _send_event_summary(self, event_type: Event):
         try:
             all_future_events = self.get_ordered_event(event_type)
