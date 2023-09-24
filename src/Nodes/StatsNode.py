@@ -2,7 +2,6 @@ from telegram import Update
 
 from Nodes.Node import Node
 
-from Enums.MessageType import MessageType
 from Enums.UserState import UserState
 from Enums.Event import Event
 
@@ -17,8 +16,10 @@ class StatsNode(Node):
                               event_type: Event):
         stats = self.data_access.get_stats_event(document_id, event_type)
         stats_with_names = self.data_access.get_names(stats)
-        game_pretty_print = PrintUtils.pretty_print_long(self.data_access.get_game(document_id))
-        message = PrintUtils.pretty_print_event_summary(stats_with_names, game_pretty_print, event_type)
+        event_summary = update.message.text
+        if event_type is Event.GAME:
+            event_summary = PrintUtils.pretty_print_long(self.data_access.get_game(document_id))
+        message = PrintUtils.pretty_print_event_summary(stats_with_names, event_summary, event_type)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
