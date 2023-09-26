@@ -22,9 +22,11 @@ class EventTransition(Transition):
                  allowed_roles: RoleSet = RoleSet.EVERYONE,
                  new_state: UserState = None,
                  needs_description: bool = True,
-                 additional_data_func: Callable = None):
+                 additional_data_func: Callable = None,
+                 is_active_function: partial = None):
         partial_func = partial(action, document_id=document_id, event_type=event_type)
-        super().__init__(command, partial_func, allowed_roles, new_state, needs_description)
+        super().__init__(command=command, action=partial_func, allowed_roles=allowed_roles, new_state=new_state,
+                         needs_description=needs_description, is_active_function=is_active_function)
         self.document_id = document_id
         self.additional_data_func = additional_data_func
         self.event_type = event_type

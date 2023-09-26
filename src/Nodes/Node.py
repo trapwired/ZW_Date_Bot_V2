@@ -72,10 +72,12 @@ class Node(ABC):
 
     def add_event_transition(self, command: str, action: Callable = None, allowed_roles: RoleSet = RoleSet.EVERYONE,
                              new_state: UserState = None, needs_description: bool = True, document_id: str = None,
-                             event_type: Event = None, additional_data_func: Callable = None) -> Transition:
+                             event_type: Event = None, additional_data_func: Callable = None,
+                             is_active_function: partial = None) -> Transition:
         new_transition = EventTransition(command, action, document_id, event_type, allowed_roles,
                                          new_state=new_state, needs_description=needs_description,
-                                         additional_data_func=additional_data_func)
+                                         additional_data_func=additional_data_func,
+                                         is_active_function=is_active_function)
         self.transitions.append(new_transition)
         return new_transition
 
