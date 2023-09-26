@@ -57,6 +57,12 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
             return 'What kind of event do you want to add?'
         case MessageType.ADMIN_UPDATE:
             return 'Which kind of event do you want to update (or delete)?'
+        case MessageType.ADMIN_UPDATE_TO_GAME:
+            return 'Click on the game you want to update or delete'
+        case MessageType.ADMIN_UPDATE_TO_TRAINING:
+            return 'Click on the training you want to update or delete'
+        case MessageType.ADMIN_UPDATE_TO_TIMEKEEPING:
+            return 'Click on the timekeeping-event you want to update or delete'
 
         case MessageType.TKE_ALREADY_FULL:
             return 'For the chosen timekeeping event already enough people have registered'

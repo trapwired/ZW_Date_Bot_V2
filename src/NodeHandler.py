@@ -1,4 +1,3 @@
-import configparser
 import logging
 from functools import partial
 
@@ -26,6 +25,7 @@ from Nodes.RejectedNode import RejectedNode
 from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 from Nodes.AdminNode import AdminNode
+from Nodes.UpdateNode import UpdateNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 
@@ -231,6 +231,40 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access)
         admin_update_node.add_continue_later()
         admin_update_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
+        admin_update_node.add_transition(
+            '/games', message_type=MessageType.ADMIN_UPDATE_TO_GAME,
+            new_state=UserState.ADMIN_UPDATE_GAME,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
+        admin_update_node.add_transition(
+            '/trainings', message_type=MessageType.ADMIN_UPDATE_TO_TRAINING,
+            new_state=UserState.ADMIN_UPDATE_TRAINING,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
+        admin_update_node.add_transition(
+            '/timekeepings', message_type=MessageType.ADMIN_UPDATE_TO_TIMEKEEPING,
+            new_state=UserState.ADMIN_UPDATE_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
+
+        update_games_node = UpdateNode(UserState.ADMIN_UPDATE_GAME, telegram_service, user_state_service, data_access)
+        update_games_node.add_continue_later()
+        update_games_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
+                                         new_state=UserState.ADMIN_UPDATE)
+        NodeUtils.add_event_transitions_to_node(Event.GAME, update_games_node, update_games_node.handle_event_id)
+
+        update_trainings_node = UpdateNode(UserState.ADMIN_UPDATE_TRAINING, telegram_service, user_state_service,
+                                           data_access)
+        update_trainings_node.add_continue_later()
+        update_trainings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
+                                             new_state=UserState.ADMIN_UPDATE)
+        NodeUtils.add_event_transitions_to_node(Event.TRAINING, update_trainings_node,
+                                                update_trainings_node.handle_event_id)
+
+        update_timekeepings_node = UpdateNode(UserState.ADMIN_UPDATE_TIMEKEEPING, telegram_service, user_state_service,
+                                              data_access)
+        update_timekeepings_node.add_continue_later()
+        update_timekeepings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
+                                                new_state=UserState.ADMIN_UPDATE)
+        NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, update_timekeepings_node,
+                                                update_timekeepings_node.handle_event_id)
 
         all_nodes_dict = {
             UserState.INIT: init_node,
@@ -247,11 +281,15 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.ADMIN: admin_node,
             UserState.ADMIN_ADD: admin_add_node,
             UserState.ADMIN_UPDATE: admin_update_node,
+            UserState.ADMIN_UPDATE_GAME: update_games_node,
+            UserState.ADMIN_UPDATE_TRAINING: update_trainings_node,
+            UserState.ADMIN_UPDATE_TIMEKEEPING: update_timekeepings_node,
         }
 
         return all_nodes_dict
 
-    def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService):
+    def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
+                                  trigger_service: TriggerService):
         edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service)
 
         callback_nodes_dict = {
