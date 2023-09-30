@@ -32,7 +32,7 @@ class EditCallbackNode(CallbackNode):
                 event = self.data_access.get_timekeeping(doc_id)
 
         message = PrintUtils.pretty_print(event, attendance)
-        reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, event_type, doc_id)
+        reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, doc_id)
         await query.answer()
 
         if message == query.message.text:
