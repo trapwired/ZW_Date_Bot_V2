@@ -146,7 +146,7 @@ class SchedulingService:
 
         for event in event_list:
             pretty_print_event = PrintUtils.pretty_print(event, AttendanceState.UNSURE)
-            reply_markup = CallbackUtils.get_reply_markup(UserState.EDIT, event_type, event.doc_id)
+            reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, event.doc_id)
             await self.telegram_service.send_message(
                 update=player,
                 all_buttons=None,

@@ -121,7 +121,7 @@ def pretty_print_player_name(player: TelegramUser) -> str:
 
 def prepare_message(message: str):
     # Escape characters for markdownV2
-    escape_chars = '.|()#_!-+\\><='
+    escape_chars = '.|()#_!-+\\><=~'
     result = ''
     for char in message:
         if char in escape_chars:

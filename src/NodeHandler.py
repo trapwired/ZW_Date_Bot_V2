@@ -28,6 +28,7 @@ from Nodes.AdminNode import AdminNode
 from Nodes.UpdateNode import UpdateNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
+from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode
 
 from Data.DataAccess import DataAccess
 
@@ -291,9 +292,11 @@ class NodeHandler(BaseHandler[Update, CCT]):
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
                                   trigger_service: TriggerService):
         edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service)
+        update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service)
 
         callback_nodes_dict = {
-            UserState.EDIT: edit_callback_node
+            UserState.EDIT: edit_callback_node,
+            UserState.ADMIN_UPDATE: update_callback_node
         }
         return callback_nodes_dict
 

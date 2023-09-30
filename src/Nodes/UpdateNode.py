@@ -8,6 +8,7 @@ from Enums.Event import Event
 from databaseEntities.UsersToState import UsersToState
 
 from Utils import PrintUtils
+from Utils import CallbackUtils
 
 
 class UpdateNode(Node):
@@ -16,8 +17,11 @@ class UpdateNode(Node):
         event_summary = update.message.text
         if event_type is Event.GAME:
             event_summary = PrintUtils.pretty_print_long(self.data_access.get_game(document_id))
-        message = 'Update or add ' + event_summary
+        message = 'Update / Delete ' + event_type.name.lower().title() + ': ' + event_summary
+
+        reply_markup = CallbackUtils.get_update_or_delete_reply_markup(event_type, document_id)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
-            message=message)
+            message=message,
+            reply_markup=reply_markup)
