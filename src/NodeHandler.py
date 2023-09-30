@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+from typing import Callable
 
 import telegram
 from telegram import Update
@@ -19,6 +20,7 @@ from Services.UserStateService import UserStateService
 from Services.TelegramService import TelegramService
 from Services.TriggerService import TriggerService
 
+from Nodes.Node import Node
 from Nodes.DefaultNode import DefaultNode
 from Nodes.InitNode import InitNode
 from Nodes.RejectedNode import RejectedNode
@@ -82,6 +84,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
         self.admin_service = admin_service
         self.data_access = data_access
         self.telegram_service = telegram_service
+
+        self.node_transition_arguments = {}
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
         self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access, trigger_service)
@@ -169,13 +173,13 @@ class NodeHandler(BaseHandler[Update, CCT]):
         stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access)
         stats_games_node.add_continue_later()
         stats_games_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW, new_state=UserState.STATS)
-        NodeUtils.add_event_transitions_to_node(Event.GAME, stats_games_node, stats_games_node.handle_event_id)
+        self.add_event_transitions_to_node(Event.GAME, stats_games_node, stats_games_node.handle_event_id)
 
         stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access)
         stats_trainings_node.add_continue_later()
         stats_trainings_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW,
                                             new_state=UserState.STATS)
-        NodeUtils.add_event_transitions_to_node(Event.TRAINING, stats_trainings_node,
+        self.add_event_transitions_to_node(Event.TRAINING, stats_trainings_node,
                                                 stats_trainings_node.handle_event_id)
 
         stats_timekeepings_node = StatsNode(UserState.STATS_TIMEKEEPINGS, telegram_service, user_state_service,
@@ -183,7 +187,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         stats_timekeepings_node.add_continue_later()
         stats_timekeepings_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW,
                                                new_state=UserState.STATS)
-        NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, stats_timekeepings_node,
+        self.add_event_transitions_to_node(Event.TIMEKEEPING, stats_timekeepings_node,
                                                 stats_timekeepings_node.handle_event_id)
 
         edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access)
@@ -204,12 +208,12 @@ class NodeHandler(BaseHandler[Update, CCT]):
         edit_games_node = EditNode(UserState.EDIT_GAMES, telegram_service, user_state_service, data_access)
         edit_games_node.add_continue_later()
         edit_games_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
-        NodeUtils.add_event_transitions_to_node(Event.GAME, edit_games_node, edit_games_node.handle_event_id)
+        self.add_event_transitions_to_node(Event.GAME, edit_games_node, edit_games_node.handle_event_id)
 
         edit_trainings_node = EditNode(UserState.EDIT_TRAININGS, telegram_service, user_state_service, data_access)
         edit_trainings_node.add_continue_later()
         edit_trainings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
-        NodeUtils.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
+        self.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
                                                 edit_trainings_node.handle_event_id)
 
         edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
@@ -217,7 +221,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         edit_timekeepings_node.add_continue_later()
         edit_timekeepings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW,
                                               new_state=UserState.EDIT)
-        NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
+        self.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
                                                 edit_timekeepings_node.handle_event_id)
 
         admin_node = AdminNode(UserState.ADMIN, telegram_service, user_state_service, data_access)
@@ -249,14 +253,14 @@ class NodeHandler(BaseHandler[Update, CCT]):
         update_games_node.add_continue_later()
         update_games_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
                                          new_state=UserState.ADMIN_UPDATE)
-        NodeUtils.add_event_transitions_to_node(Event.GAME, update_games_node, update_games_node.handle_event_id)
+        self.add_event_transitions_to_node(Event.GAME, update_games_node, update_games_node.handle_event_id)
 
         update_trainings_node = UpdateNode(UserState.ADMIN_UPDATE_TRAINING, telegram_service, user_state_service,
                                            data_access)
         update_trainings_node.add_continue_later()
         update_trainings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
                                              new_state=UserState.ADMIN_UPDATE)
-        NodeUtils.add_event_transitions_to_node(Event.TRAINING, update_trainings_node,
+        self.add_event_transitions_to_node(Event.TRAINING, update_trainings_node,
                                                 update_trainings_node.handle_event_id)
 
         update_timekeepings_node = UpdateNode(UserState.ADMIN_UPDATE_TIMEKEEPING, telegram_service, user_state_service,
@@ -264,7 +268,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         update_timekeepings_node.add_continue_later()
         update_timekeepings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
                                                 new_state=UserState.ADMIN_UPDATE)
-        NodeUtils.add_event_transitions_to_node(Event.TIMEKEEPING, update_timekeepings_node,
+        self.add_event_transitions_to_node(Event.TIMEKEEPING, update_timekeepings_node,
                                                 update_timekeepings_node.handle_event_id)
 
         all_nodes_dict = {
@@ -292,13 +296,26 @@ class NodeHandler(BaseHandler[Update, CCT]):
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
                                   trigger_service: TriggerService):
         edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service)
-        update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service)
+        update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node,
             UserState.ADMIN_UPDATE: update_callback_node
         }
         return callback_nodes_dict
+
+    def add_event_transitions_to_node(self, event_type: Event, node: Node, event_function: Callable):
+        if node not in self.node_transition_arguments.keys():
+            self.node_transition_arguments[node] = []
+        self.node_transition_arguments[node].append((event_type, event_function))
+
+        NodeUtils.add_event_transitions_to_node(event_type, node, event_function)
+
+    def recalculate_node_transitions(self):
+        for node, argument_list in self.node_transition_arguments.items():
+            node.clear_event_transitions()
+            for event_type, event_function in argument_list:
+                NodeUtils.add_event_transitions_to_node(event_type, node, event_function)
 
     def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)

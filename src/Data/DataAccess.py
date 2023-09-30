@@ -225,3 +225,14 @@ class DataAccess(object):
         except NoEventFoundException:
             return False
         return True
+
+    # DELETE
+
+    def delete_event(self, event_type: Event, doc_id: str):
+        match event_type:
+            case Event.GAME:
+                self.firebase_repository.delete_game(doc_id)
+            case Event.TRAINING:
+                self.firebase_repository.delete_training(doc_id)
+            case Event.TIMEKEEPING:
+                self.firebase_repository.delete_timekeeping(doc_id)

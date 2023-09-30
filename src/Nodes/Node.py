@@ -97,6 +97,9 @@ class Node(ABC):
     def add_continue_later(self) -> None:
         self.add_transition('continue later', self.handle_continue_later, new_state=UserState.DEFAULT)
 
+    def clear_event_transitions(self):
+        self.transitions = [transition for transition in self.transitions if type(transition) is not EventTransition]
+
     ####################
     # DEFAULT HANDLERS #
     ####################

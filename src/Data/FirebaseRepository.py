@@ -177,6 +177,22 @@ class FirebaseRepository(object):
         user.doc_id = user_id
         self.update(user, self.tables.get(Table.USERS_TABLE))
 
+    ##########
+    # DELETE #
+    ##########
+
+    def delete_game(self, doc_id: str):
+        db_table = self.tables.get(Table.GAMES_TABLE)
+        self.db.collection(db_table).document(doc_id).delete()
+
+    def delete_training(self, doc_id: str):
+        db_table = self.tables.get(Table.TRAININGS_TABLE)
+        self.db.collection(db_table).document(doc_id).delete()
+
+    def delete_timekeeping(self, doc_id: str):
+        db_table = self.tables.get(Table.TIMEKEEPING_TABLE)
+        self.db.collection(db_table).document(doc_id).delete()
+
     ########
     # ELSE #
     ########
