@@ -56,10 +56,13 @@ class UpdateEventCallbackNode(CallbackNode):
                 message = 'Update / Delete ' + event_type_string + ': ' + event_summary
                 reply_markup = CallbackUtils.get_update_or_delete_reply_markup(event_type, doc_id)
             case CallbackOption.YES:
-                message = 'Deleted ' + event_type_string + ' 👍'
+                message = 'Deleting ' + event_type_string + '...'
+                await query.answer()
+                await query.edit_message_text(text=message, reply_markup=reply_markup)
                 self.data_access.delete_event(event_type, doc_id)
                 self.node_handler.recalculate_node_transitions()
-                await self.send_normal_message(update, '👍', new_state)
+                await self.send_normal_message(update, 'Deleted' + event_type_string + ' 👍', new_state)
+                return
 
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=reply_markup)
