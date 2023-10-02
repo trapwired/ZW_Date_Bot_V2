@@ -22,6 +22,6 @@ class UpdateNode(Node):
         reply_markup = CallbackUtils.get_update_or_delete_reply_markup(event_type, document_id)
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
             message=message,
             reply_markup=reply_markup)

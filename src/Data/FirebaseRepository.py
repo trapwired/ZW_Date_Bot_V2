@@ -1,8 +1,6 @@
 import datetime
 from multipledispatch import dispatch
 
-import configparser
-
 import firebase_admin
 from firebase_admin import firestore
 from google.cloud.firestore_v1 import FieldFilter
@@ -11,6 +9,7 @@ from Data.Tables import Tables
 
 from Enums.Table import Table
 from Enums.RoleSet import RoleSet
+from Enums.Event import Event
 
 from databaseEntities.DatabaseEntity import DatabaseEntity
 from databaseEntities.Game import Game
@@ -115,6 +114,12 @@ class FirebaseRepository(object):
         attendance = result[0]
         return Attendance.from_dict(attendance.id, attendance.to_dict())
 
+    def get_all_user_event_attendance(self, user: TelegramUser, event_type: Event):
+        table = self.get_event_table(event_type)
+        query_ref = self.db.collection(table).where(filter=FieldFilter("userId", "==", user.doc_id))
+        entries = query_ref.get()
+        return entries
+
     def get_all_active_players_to_state(self):
         query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
             filter=FieldFilter("role", "in", RoleSet.ACTIVE_PLAYERS))
@@ -203,3 +208,12 @@ class FirebaseRepository(object):
 
         for doc in docs:
             print('{} => {} '.format(doc.id, doc.to_dict()))
+
+    def get_event_table(self, event_type: Event):
+        match event_type:
+            case Event.GAME:
+                return self.tables.get(Table.GAME_ATTENDANCE_TABLE)
+            case Event.TRAINING:
+                return self.tables.get(Table.TRAINING_ATTENDANCE_TABLE)
+            case Event.TIMEKEEPING:
+                return self.tables.get(Table.TIMEKEEPING_ATTENDANCE_TABLE)

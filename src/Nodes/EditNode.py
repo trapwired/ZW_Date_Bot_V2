@@ -32,7 +32,7 @@ class EditNode(Node):
                 event.people_required <= len(yes):
             await self.telegram_service.send_message(
                 update=update,
-                all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+                all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
                 message_type=MessageType.TKE_ALREADY_FULL
             )
             return
@@ -41,6 +41,6 @@ class EditNode(Node):
         reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, document_id)
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
             message=message,
             reply_markup=reply_markup)

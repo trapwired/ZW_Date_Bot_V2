@@ -16,11 +16,11 @@ class RejectedNode(Node):
         self.data_access.update(user_to_state)
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
             message_type=MessageType.WELCOME)
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
             message_type=MessageType.REJECTED)

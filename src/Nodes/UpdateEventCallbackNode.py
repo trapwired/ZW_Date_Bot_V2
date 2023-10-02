@@ -71,5 +71,5 @@ class UpdateEventCallbackNode(CallbackNode):
         node = self.node_handler.nodes[new_state]
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=node.get_commands_for_buttons(Role.ADMIN, new_state),
+            all_buttons=node.get_commands_for_buttons(Role.ADMIN, new_state, update.effective_chat.id),
             message=message)

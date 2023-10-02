@@ -11,27 +11,49 @@ from Enums.AttendanceState import AttendanceState
 from databaseEntities.TelegramUser import TelegramUser
 
 
-def pretty_print_game_stats(game_stats: (list, list, list)):
+def pretty_print_game_stats(game_stats: (list, list, list), attendance: Attendance | None):
     yes, no, unsure = game_stats
-    return f'{len(yes)}Y / {len(no)}N / {len(unsure)}U'
+    yes_string = add_attendance_marks(f'{len(yes)}Y', attendance, AttendanceState.YES)
+    no_string = add_attendance_marks(f'{len(no)}N', attendance, AttendanceState.NO)
+    unsure_string = add_attendance_marks(f'{len(unsure)}U', attendance, AttendanceState.UNSURE)
+    return f'{yes_string} / {no_string} / {unsure_string}'
 
 
-def pretty_print_timekeeping_stats(tke_stats: (list, list, list)):
+def pretty_print_timekeeping_stats(tke_stats: (list, list, list), attendance: Attendance | None):
     yes, no, unsure = tke_stats
-    result = f'{len(yes)}Y'
+    result = add_attendance_marks(f'{len(yes)}Y', attendance, AttendanceState.YES)
     if len(yes) >= 2:
         result += ' (Enough)'
     return result
 
 
-def pretty_print_event_stats(event_stats: (list, list, list), event_type: Event):
+def add_attendance_marks(text: str, attendance: Attendance | None, attendance_state: AttendanceState):
+    if not attendance:
+        return text
+
+    at_bef, at_aft = get_attendance_symbols(attendance)
+    if attendance.state == attendance_state:
+        return at_bef + text + at_aft
+    return text
+
+
+def get_attendance_symbols(attendance: Attendance | None) -> (str, str):
+    attendance_before = ''
+    attendance_after = ''
+    if attendance:
+        attendance_before = '👉'
+        attendance_after = '👈'
+    return attendance_before, attendance_after
+
+
+def pretty_print_event_stats(event_stats: (list, list, list), event_type: Event, attendance: Attendance | None):
     match event_type:
         case Event.GAME:
-            return pretty_print_game_stats(event_stats)
+            return pretty_print_game_stats(event_stats, attendance)
         case Event.TRAINING:
-            return pretty_print_game_stats(event_stats)
+            return pretty_print_game_stats(event_stats, attendance)
         case Event.TIMEKEEPING:
-            return pretty_print_timekeeping_stats(event_stats)
+            return pretty_print_timekeeping_stats(event_stats, attendance)
 
 
 @dispatch(Game)
@@ -121,7 +143,7 @@ def pretty_print_player_name(player: TelegramUser) -> str:
 
 def prepare_message(message: str):
     # Escape characters for markdownV2
-    escape_chars = '.|()#_!-+\\><=~*'
+    escape_chars = '.|()#_!-+\\><=~*{}[]'
     result = ''
     for char in message:
         if char in escape_chars:

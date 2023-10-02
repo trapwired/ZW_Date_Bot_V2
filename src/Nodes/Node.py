@@ -53,7 +53,8 @@ class Node(ABC):
         except Exception as e:
             await self.telegram_service.send_message(
                 update=update,
-                all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
+                all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT,
+                                                          update.effective_chat.id),
                 message_type=MessageType.ERROR,
                 message_extra_text=str(e))
             await self.telegram_service.send_maintainer_message('Error caught in Node.handle()', update, e)
@@ -105,7 +106,7 @@ class Node(ABC):
     ####################
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
-        commands_for_buttons = self.get_commands_for_buttons(user_to_state.role, new_state)
+        commands_for_buttons = self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id)
         commands_for_text = self.get_commands_for_help(user_to_state.role, new_state)
         message = CommandDescriptions.get_descriptions(commands_for_text)
         await self.telegram_service.send_message(
@@ -116,14 +117,14 @@ class Node(ABC):
     async def handle_continue_later(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT, update.effective_chat.id),
             message_type=MessageType.CONTINUE_LATER)
 
     async def handle_default(self, update: Update, user_to_state: UsersToState, new_state: UserState,
                              message_type: MessageType):
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
             message_type=message_type)
 
     #############
@@ -142,7 +143,7 @@ class Node(ABC):
                    new_node.transitions))
         return [x.command for x in all_commands]
 
-    def get_commands_for_buttons(self, role: Role, new_state: UserState) -> [str]:
+    def get_commands_for_buttons(self, role: Role, new_state: UserState, telegram_id: int) -> [str]:
         if new_state is None:
             new_node = self
         else:
@@ -153,15 +154,20 @@ class Node(ABC):
                    t.is_for_role(role) and t.is_active(),
                    new_node.transitions))
 
+        event_transitions = [x for x in all_commands if isinstance(x, EventTransition)]
+        if len(event_transitions) > 0:
+            telegram_user = self.data_access.get_user(telegram_id)
+            all_attendances = self.data_access.get_all_event_attendances(telegram_user)
+
         result = []
         for command in all_commands:
             button_description = command.command
             if isinstance(command, EventTransition) and command.additional_data_func:
                 button_description = button_description.title()
                 data = command.additional_data_func()
-                pretty_print = PrintUtils.pretty_print_event_stats(data, command.event_type)
+                attendance = all_attendances.get(command.document_id)
+                pretty_print = PrintUtils.pretty_print_event_stats(data, command.event_type, attendance)
                 button_description += f" | {pretty_print}"
             result.append(button_description)
 
-        # TODO question: can I send new keyboard without sending message? (If yes: new send keyboard on callback answer)
         return result

@@ -226,8 +226,19 @@ class DataAccess(object):
             return False
         return True
 
-    # DELETE
+    def get_all_event_attendances(self, telegram_user: TelegramUser):
+        attendance_dict = {}
+        all_events = [Event.GAME, Event.TIMEKEEPING, Event.TRAINING]
+        for event in all_events:
+            event_attendance_list = self.firebase_repository.get_all_user_event_attendance(telegram_user, event)
+            for attendance in event_attendance_list:
+                new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
+                attendance_dict[new_attendance.event_id] = new_attendance
+        return attendance_dict
 
+    ##########
+    # DELETE #
+    ##########
     def delete_event(self, event_type: Event, doc_id: str):
         match event_type:
             case Event.GAME:
