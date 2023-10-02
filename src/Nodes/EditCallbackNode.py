@@ -31,7 +31,7 @@ class EditCallbackNode(CallbackNode):
             case Event.TIMEKEEPING:
                 event = self.data_access.get_timekeeping(doc_id)
 
-        message = PrintUtils.pretty_print(event, attendance)
+        message = event_type.name.lower().title() + ': ' + PrintUtils.pretty_print(event, attendance)
         reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, doc_id)
         await query.answer()
 
