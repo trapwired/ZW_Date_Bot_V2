@@ -28,21 +28,21 @@ def pretty_print_timekeeping_stats(tke_stats: (list, list, list), attendance: At
 
 
 def add_attendance_marks(text: str, attendance: Attendance | None, attendance_state: AttendanceState):
-    if not attendance:
-        return text
-
     at_bef, at_aft = get_attendance_symbols(attendance)
+    if not attendance:
+        if attendance_state is AttendanceState.UNSURE:
+            return at_bef + text + at_aft
+        else:
+            return text
+
     if attendance.state == attendance_state:
         return at_bef + text + at_aft
     return text
 
 
 def get_attendance_symbols(attendance: Attendance | None) -> (str, str):
-    attendance_before = ''
-    attendance_after = ''
-    if attendance:
-        attendance_before = '👉'
-        attendance_after = '👈'
+    attendance_before = '👉'
+    attendance_after = '👈'
     return attendance_before, attendance_after
 
 
