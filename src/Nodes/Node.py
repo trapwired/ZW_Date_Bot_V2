@@ -162,7 +162,7 @@ class Node(ABC):
         result = []
         for command in all_commands:
             button_description = command.command
-            if isinstance(command, EventTransition) and command.additional_data_func:
+            if isinstance(command, EventTransition) and command.additional_data_func and role is not Role.SPECTATOR:
                 button_description = button_description.title()
                 data = command.additional_data_func()
                 attendance = all_attendances.get(command.document_id)

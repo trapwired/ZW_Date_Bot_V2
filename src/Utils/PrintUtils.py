@@ -144,11 +144,37 @@ def pretty_print_player_name(player: TelegramUser) -> str:
 def prepare_message(message: str):
     # Escape characters for markdownV2
     escape_chars = '.|()#_!-+\\><=~*{}[]'
+    doubles = '*'
+
     result = ''
-    for char in message:
-        if char in escape_chars:
-            result += "\\"
-        result += char
+    one_line = ''
+    doubles_dict = build_doubles_dict(doubles)
+    line_split = message.splitlines()
+    for line in line_split:
+        for char in line:
+            if char in escape_chars:
+                if char in doubles_dict.keys():
+                    doubles_dict[char] += 1
+        for char in line:
+            if char in escape_chars:
+                if char in doubles_dict.keys():
+                    if doubles_dict[char] % 2 == 1:
+                        one_line += '\\'
+                else:
+                    one_line += '\\'
+            one_line += char
+        result += one_line + '\n'
+        # reset values
+        doubles_dict = build_doubles_dict(doubles)
+        one_line = ''
+
     # max length is 9500 chars
     result = result[:9499]
     return result
+
+
+def build_doubles_dict(doubles: str):
+    res = {}
+    for char in doubles:
+        res[char] = 0
+    return res

@@ -4,6 +4,14 @@ from Enums.UserState import UserState
 from databaseEntities.DatabaseEntity import DatabaseEntity
 
 
+def get_role(role: Role | str | int) -> Role:
+    if type(role) is str:
+        return Role(int(role))
+    if type(role) is int:
+        return Role(role)
+    return role
+
+
 class UsersToState(DatabaseEntity):
     def __init__(self, user_id: str, state: UserState, additional_info: str = '', role: Role = Role.INIT,
                  doc_id: str = None):
@@ -13,9 +21,8 @@ class UsersToState(DatabaseEntity):
             state = UserState(int(state))
         self.state = state
         self.additional_info = additional_info
-        if type(role) is str:
-            role = Role(int(role))
-        self.role = role
+
+        self.role = get_role(role)
 
     @staticmethod
     def from_dict(doc_id: str, source: dict):
