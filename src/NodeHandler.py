@@ -88,7 +88,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
         self.node_transition_arguments = {}
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
-        self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access, trigger_service)
+        self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access, trigger_service,
+                                                             user_state_service)
         add_nodes_reference_to_all_nodes(self.nodes)
 
         self.do_checks(api_config)
@@ -180,7 +181,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         stats_trainings_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW,
                                             new_state=UserState.STATS)
         self.add_event_transitions_to_node(Event.TRAINING, stats_trainings_node,
-                                                stats_trainings_node.handle_event_id)
+                                           stats_trainings_node.handle_event_id)
 
         stats_timekeepings_node = StatsNode(UserState.STATS_TIMEKEEPINGS, telegram_service, user_state_service,
                                             data_access)
@@ -188,7 +189,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         stats_timekeepings_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW,
                                                new_state=UserState.STATS)
         self.add_event_transitions_to_node(Event.TIMEKEEPING, stats_timekeepings_node,
-                                                stats_timekeepings_node.handle_event_id)
+                                           stats_timekeepings_node.handle_event_id)
 
         edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access)
         edit_node.add_continue_later()
@@ -214,7 +215,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         edit_trainings_node.add_continue_later()
         edit_trainings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
         self.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
-                                                edit_trainings_node.handle_event_id)
+                                           edit_trainings_node.handle_event_id)
 
         edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
                                           data_access)
@@ -222,7 +223,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         edit_timekeepings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW,
                                               new_state=UserState.EDIT)
         self.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
-                                                edit_timekeepings_node.handle_event_id)
+                                           edit_timekeepings_node.handle_event_id)
 
         admin_node = AdminNode(UserState.ADMIN, telegram_service, user_state_service, data_access)
         admin_node.add_continue_later()
@@ -261,7 +262,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         update_trainings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
                                              new_state=UserState.ADMIN_UPDATE)
         self.add_event_transitions_to_node(Event.TRAINING, update_trainings_node,
-                                                update_trainings_node.handle_event_id)
+                                           update_trainings_node.handle_event_id)
 
         update_timekeepings_node = UpdateNode(UserState.ADMIN_UPDATE_TIMEKEEPING, telegram_service, user_state_service,
                                               data_access)
@@ -269,7 +270,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         update_timekeepings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
                                                 new_state=UserState.ADMIN_UPDATE)
         self.add_event_transitions_to_node(Event.TIMEKEEPING, update_timekeepings_node,
-                                                update_timekeepings_node.handle_event_id)
+                                           update_timekeepings_node.handle_event_id)
 
         all_nodes_dict = {
             UserState.INIT: init_node,
@@ -294,9 +295,10 @@ class NodeHandler(BaseHandler[Update, CCT]):
         return all_nodes_dict
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
-                                  trigger_service: TriggerService):
+                                  trigger_service: TriggerService, user_state_service: UserStateService):
         edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service)
-        update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self)
+        update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self,
+                                                       user_state_service)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node,

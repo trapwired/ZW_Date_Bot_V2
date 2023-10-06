@@ -1,5 +1,5 @@
-from src.Enums.CallbackOption import CallbackOption
-from src.Enums.Event import Event
+from Enums.CallbackOption import CallbackOption
+from Enums.Event import Event
 
 
 def mark_updating_in_event_string(event_type: Event, event_summary: str, option: CallbackOption):

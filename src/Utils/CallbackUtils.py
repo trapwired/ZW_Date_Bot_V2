@@ -1,5 +1,4 @@
 from Enums.UserState import UserState
-from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
 
@@ -10,7 +9,8 @@ ATTENDANCE_STATE_OPTIONS = [CallbackOption.YES, CallbackOption.NO, CallbackOptio
 YES_OR_NO_OPTIONS = [CallbackOption.YES, CallbackOption.NO]
 UPDATE_OR_DELETE_OPTIONS = [CallbackOption.UPDATE, CallbackOption.DELETE]
 UPDATE_GAME_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
-UPDATE_TRAINING_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
+UPDATE_TRAINING_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT,
+                           CallbackOption.Back]
 UPDATE_TKE_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.Back]
 
 
@@ -64,3 +64,21 @@ def try_parse_callback_message(message: str) -> tuple[UserState, Event, Callback
         return None
 
     return user_state, event, callback_option, doc_id
+
+
+def build_additional_information(inline_message_id: str, event_document_id: str) -> str:
+    return inline_message_id + DELIMITER + event_document_id
+
+
+def try_parse_additional_information(message: str) -> tuple[str, str] | None:
+    split = message.split(DELIMITER)
+    if len(split) != 2:
+        return None
+
+    try:
+        inline_message_id = split[0]
+        doc_id = split[1]
+    except KeyError:
+        return None
+
+    return inline_message_id, doc_id
