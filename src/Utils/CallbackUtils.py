@@ -9,9 +9,19 @@ DELIMITER = '-'
 ATTENDANCE_STATE_OPTIONS = [CallbackOption.YES, CallbackOption.NO, CallbackOption.UNSURE]
 YES_OR_NO_OPTIONS = [CallbackOption.YES, CallbackOption.NO]
 UPDATE_OR_DELETE_OPTIONS = [CallbackOption.UPDATE, CallbackOption.DELETE]
-UPDATE_GAME_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT]
-UPDATE_TRAINING_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT]
-UPDATE_TKE_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION]
+UPDATE_GAME_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
+UPDATE_TRAINING_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
+UPDATE_TKE_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.Back]
+
+
+def get_update_event_options(event_type: Event, document_id: str):
+    match event_type:
+        case Event.GAME:
+            return _get_reply_markup(UPDATE_GAME_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
+        case Event.TRAINING:
+            return _get_reply_markup(UPDATE_TRAINING_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
+        case Event.TIMEKEEPING:
+            return _get_reply_markup(UPDATE_TKE_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
 
 
 def get_edit_event_reply_markup(user_state: UserState, event_type: Event, document_id: str):

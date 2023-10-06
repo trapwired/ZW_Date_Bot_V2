@@ -15,4 +15,6 @@ class CallbackOption(IntEnum):
     OPPONENT = 21
     DATETIME = 22
 
+    Back = 30
+
 

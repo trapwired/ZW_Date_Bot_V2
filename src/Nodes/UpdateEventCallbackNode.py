@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, CallbackQuery
 
 from Nodes.CallbackNode import CallbackNode
 
@@ -14,6 +14,8 @@ from Data.DataAccess import DataAccess
 
 from Services.TelegramService import TelegramService
 from Services.TriggerService import TriggerService
+
+from src.Utils import UpdateEventUtils
 
 
 class UpdateEventCallbackNode(CallbackNode):
@@ -39,22 +41,42 @@ class UpdateEventCallbackNode(CallbackNode):
 
         event_type_string = event_type.name.lower().title()
 
+        if callback_option in [CallbackOption.UPDATE, CallbackOption.DELETE, CallbackOption.NO, CallbackOption.Back]:
+            await self._handle_pure_callback(query, event_type_string, event_summary, event_type, doc_id,
+                                             callback_option)
+        else:
+            await self._handle_callback_with_messages(update, event_type_string, event_summary, event_type, doc_id,
+                                                      callback_option, new_state)
+
+    async def _handle_pure_callback(self, query: CallbackQuery, event_type_string: str, event_summary: str,
+                                    event_type: Event, doc_id: str, callback_option: CallbackOption):
         message = 'Not Implemented'
         reply_markup = None
 
         match callback_option:
             case CallbackOption.UPDATE:
-                # send the 3 options
-                await self.send_normal_message(update, 'Not implemented yet 😼️', new_state)
-                await query.answer()
-                return
+                message = 'Update ' + event_type_string + ' (' + event_summary + ')'
+                reply_markup = CallbackUtils.get_update_event_options(event_type, doc_id)
             case CallbackOption.DELETE:
-                # send yes/no
                 message = 'Delete ' + event_type_string + '? (' + event_summary + ')'
                 reply_markup = CallbackUtils.get_yes_or_no_markup(event_type, doc_id)
             case CallbackOption.NO:
                 message = 'Update / Delete ' + event_type_string + ': ' + event_summary
                 reply_markup = CallbackUtils.get_update_or_delete_reply_markup(event_type, doc_id)
+            case CallbackOption.Back:
+                message = 'Update / Delete ' + event_type_string + ': ' + event_summary
+                reply_markup = CallbackUtils.get_update_or_delete_reply_markup(event_type, doc_id)
+
+        await query.answer()
+        await query.edit_message_text(text=message, reply_markup=reply_markup)
+
+    async def _handle_callback_with_messages(self, update: Update, event_type_string: str, event_summary: str,
+                                             event_type: Event, doc_id: str, callback_option: CallbackOption,
+                                             new_state: UserState):
+        query = update.callback_query
+        message = 'Not Implemented'
+        reply_markup = None
+        match callback_option:
             case CallbackOption.YES:
                 message = 'Deleting ' + event_type_string + '...'
                 await query.answer()
@@ -64,6 +86,18 @@ class UpdateEventCallbackNode(CallbackNode):
                 await self.send_normal_message(update, 'Deleted' + event_type_string + ' 👍', new_state)
                 return
 
+        if callback_option in [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT]:
+            updated_event_summary = UpdateEventUtils.mark_updating_in_event_string(event_type, event_summary,
+                                                                                   callback_option)
+            message = 'Updating ' + event_type_string + ': ' + updated_event_summary
+            reply_markup = CallbackUtils.get_update_event_options(event_type, doc_id)
+            await query.answer()
+            await query.edit_message_text(text=message, reply_markup=reply_markup)
+            await self.send_normal_message_keyboard(update, 'Send me the new ' + callback_option.name.title())
+            # TODO change user State, store callback_query in db? or via telegram?
+            # TODO new callback handler, only for back if user in edit state, to send button-keyboard again
+            return
+
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=reply_markup)
 
@@ -72,4 +106,9 @@ class UpdateEventCallbackNode(CallbackNode):
         await self.telegram_service.send_message(
             update=update,
             all_buttons=node.get_commands_for_buttons(Role.ADMIN, new_state, update.effective_chat.id),
+            message=message)
+
+    async def send_normal_message_keyboard(self, update: Update, message: str):
+        await self.telegram_service.send_message_with_normal_keyboard(
+            update=update,
             message=message)
