@@ -1,4 +1,6 @@
 import configparser
+from datetime import datetime
+
 from multipledispatch import dispatch
 
 from Data.FirebaseRepository import FirebaseRepository
@@ -8,6 +10,7 @@ from Enums.UserState import UserState
 from Enums.Table import Table
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
+from Enums.CallbackOption import CallbackOption
 
 from databaseEntities.Game import Game
 from databaseEntities.TelegramUser import TelegramUser
@@ -64,6 +67,26 @@ class DataAccess(object):
     ##########
     # UPDATE #
     ##########
+
+    def update_event_field(self, event_type: Event, event_id: str, new_value: str | datetime,
+                           field_type: CallbackOption):
+        match event_type:
+            case Event.GAME:
+                event = self.firebase_repository.get_game(event_id)
+            case Event.TRAINING:
+                event = self.firebase_repository.get_training(event_id)
+            case Event.TIMEKEEPING:
+                event = self.firebase_repository.get_timekeeping(event_id)
+
+        match field_type:
+            case CallbackOption.LOCATION:
+                event.location = new_value
+            case CallbackOption.DATETIME:
+                event.timestamp = new_value
+            case CallbackOption.OPPONENT:
+                event.opponent = new_value
+
+        return self.update(event)
 
     @dispatch(UsersToState)
     def update(self, users_to_state: UsersToState):

@@ -4,6 +4,12 @@ import pytz
 from Enums.CallbackOption import CallbackOption
 from Enums.Event import Event
 
+from databaseEntities.Game import Game
+from databaseEntities.TimekeepingEvent import TimekeepingEvent
+from databaseEntities.Training import Training
+
+from Utils import PrintUtils
+
 
 def mark_updating_in_event_string(event_type: Event, event_summary: str, option: CallbackOption):
     split = event_summary.split('|')
@@ -29,6 +35,19 @@ def mark_updating_in_event_string(event_type: Event, event_summary: str, option:
                 case option.DATETIME:
                     split[0] = 'UPDATING'
     return ' | '.join(split)
+
+
+def get_inline_message(prefix_string: str, event_type: Event, event: Game | Training | TimekeepingEvent, middle_string: str = '') -> str:
+    event_type_string = event_type.name.lower().title()
+
+    match event_type:
+        case Event.GAME:
+            event_summary = PrintUtils.pretty_print_long(event)
+        case Event.TRAINING:
+            event_summary = PrintUtils.pretty_print(event)
+        case Event.TIMEKEEPING:
+            event_summary = PrintUtils.pretty_print(event)
+    return f'{prefix_string} {event_type_string} {middle_string}: {event_summary}'
 
 
 def parse_datetime_string(datetime_string: str):

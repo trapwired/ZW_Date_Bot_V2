@@ -79,29 +79,29 @@ class UpdateEventCallbackNode(CallbackNode):
         event_type_string = event_type.name.lower().title()
 
         if callback_option in [CallbackOption.UPDATE, CallbackOption.DELETE, CallbackOption.NO, CallbackOption.Back]:
-            await self._handle_pure_callback(query, event_type_string, event_summary, event_type, doc_id,
+            await self._handle_pure_callback(query, event_summary, event_type, doc_id,
                                              callback_option)
         else:
             await self._handle_callback_with_messages(update, event_type_string, event_summary, event_type, doc_id,
                                                       callback_option, new_state)
 
-    async def _handle_pure_callback(self, query: CallbackQuery, event_type_string: str, event_summary: str,
-                                    event_type: Event, doc_id: str, callback_option: CallbackOption):
+    async def _handle_pure_callback(self, query: CallbackQuery, event_summary: str, event_type: Event, doc_id: str,
+                                    callback_option: CallbackOption):
         message = 'Not Implemented'
         reply_markup = None
 
         match callback_option:
             case CallbackOption.UPDATE:
-                message = 'Update ' + event_type_string + ' (' + event_summary + ')'
+                message = UpdateEventUtils.get_inline_message('Update', event_type, event_summary)
                 reply_markup = CallbackUtils.get_update_event_options(event_type, doc_id)
             case CallbackOption.DELETE:
-                message = 'Delete ' + event_type_string + '? (' + event_summary + ')'
+                message = UpdateEventUtils.get_inline_message('Delete', event_type, event_summary, '?')
                 reply_markup = CallbackUtils.get_yes_or_no_markup(event_type, doc_id)
             case CallbackOption.NO:
-                message = 'Update / Delete ' + event_type_string + ': ' + event_summary
+                message = UpdateEventUtils.get_inline_message('Update / Delete', event_type, event_summary)
                 reply_markup = CallbackUtils.get_update_or_delete_reply_markup(event_type, doc_id)
             case CallbackOption.Back:
-                message = 'Update / Delete ' + event_type_string + ': ' + event_summary
+                message = UpdateEventUtils.get_inline_message('Update / Delete', event_type, event_summary)
                 reply_markup = CallbackUtils.get_update_or_delete_reply_markup(event_type, doc_id)
 
         await query.answer()
