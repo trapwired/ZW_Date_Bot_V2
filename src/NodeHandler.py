@@ -13,6 +13,7 @@ from Enums.RoleSet import RoleSet
 from Enums.Table import Table
 from Enums.Event import Event
 from Enums.MessageType import MessageType
+from Enums.CallbackOption import CallbackOption
 
 from Services.AdminService import AdminService
 from Services.IcsService import IcsService
@@ -28,6 +29,8 @@ from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 from Nodes.AdminNode import AdminNode
 from Nodes.UpdateNode import UpdateNode
+from Nodes.EditEventTimestampNode import EditEventTimestampNode
+from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode
@@ -272,6 +275,33 @@ class NodeHandler(BaseHandler[Update, CCT]):
         self.add_event_transitions_to_node(Event.TIMEKEEPING, update_timekeepings_node,
                                            update_timekeepings_node.handle_event_id)
 
+        admin_update_game_timestamp_node = EditEventTimestampNode(
+            UserState.ADMIN_UPDATE_GAME_TIMESTAMP, telegram_service, user_state_service, data_access, Event.GAME)
+
+        admin_update_training_timestamp_node = EditEventTimestampNode(
+            UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP, telegram_service, user_state_service, data_access,
+            Event.TRAINING)
+
+        admin_update_timekeeping_timestamp_node = EditEventTimestampNode(
+            UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP, telegram_service, user_state_service, data_access,
+            Event.TIMEKEEPING)
+
+        admin_update_game_opponent_node = EditEventLocationOrOpponentNode(
+            UserState.ADMIN_UPDATE_GAME_OPPONENT, telegram_service, user_state_service, data_access, Event.GAME,
+            CallbackOption.OPPONENT)
+
+        admin_update_game_location_node = EditEventLocationOrOpponentNode(
+            UserState.ADMIN_UPDATE_GAME_LOCATION, telegram_service, user_state_service, data_access, Event.GAME,
+            CallbackOption.LOCATION)
+
+        admin_update_training_location_node = EditEventLocationOrOpponentNode(
+            UserState.ADMIN_UPDATE_TRAINING_LOCATION, telegram_service, user_state_service, data_access, Event.TRAINING,
+            CallbackOption.LOCATION)
+
+        admin_update_timekeeping_location_node = EditEventLocationOrOpponentNode(
+            UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION, telegram_service, user_state_service, data_access,
+            Event.TIMEKEEPING, CallbackOption.LOCATION)
+
         all_nodes_dict = {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
@@ -290,6 +320,13 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.ADMIN_UPDATE_GAME: update_games_node,
             UserState.ADMIN_UPDATE_TRAINING: update_trainings_node,
             UserState.ADMIN_UPDATE_TIMEKEEPING: update_timekeepings_node,
+            UserState.ADMIN_UPDATE_GAME_OPPONENT: admin_update_game_opponent_node,
+            UserState.ADMIN_UPDATE_GAME_LOCATION: admin_update_game_location_node,
+            UserState.ADMIN_UPDATE_GAME_TIMESTAMP: admin_update_game_timestamp_node,
+            UserState.ADMIN_UPDATE_TRAINING_LOCATION: admin_update_training_location_node,
+            UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP: admin_update_training_timestamp_node,
+            UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION: admin_update_timekeeping_location_node,
+            UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP: admin_update_timekeeping_timestamp_node
         }
 
         return all_nodes_dict

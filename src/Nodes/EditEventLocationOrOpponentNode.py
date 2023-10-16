@@ -16,10 +16,11 @@ from Services.TelegramService import TelegramService
 from Services.UserStateService import UserStateService
 
 
-class EditEventTimestampNode(Node):
+class EditEventLocationOrOpponentNode(Node):
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, event_type: Event):
+                 data_access: DataAccess, event_type: Event, string_type: CallbackOption):
         super().__init__(state, telegram_service, user_state_service, data_access)
+        self.string_type = string_type
         self.event_type = event_type
         self.add_cancel_transition()
 
@@ -35,7 +36,7 @@ class EditEventTimestampNode(Node):
             message_type=MessageType.ADMIN)
 
     async def handle_event_timestamp(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        # TODO call this function? how is it called?
+        # TODO call this function? how is it called? --> rename, adjust logic, cursor is HERE!!
         message = update.message.text.lower()
 
         parsed_string = UpdateEventUtils.parse_datetime_string(message)
@@ -54,14 +55,16 @@ class EditEventTimestampNode(Node):
 
         doc_id, message_id = try_parse
 
+        # store in db - store response element for pretty print
         updated_event = self.data_access.update_event_field(self.event_type, doc_id, new_datetime, CallbackOption.DATETIME)
 
         # Update inline_message with new string
         new_inline_message = UpdateEventUtils.get_inline_message('Updated', self.event_type, updated_event)
         await self.telegram_service.edit_inline_message_text(new_inline_message, message_id)
 
+        # new user state?
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
-
+        # send response: update ok
         text = "Updated event successfully!"
         await self.telegram_service.send_message_with_normal_keyboard(
             update=update,
