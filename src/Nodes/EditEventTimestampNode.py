@@ -18,10 +18,11 @@ from Services.UserStateService import UserStateService
 
 class EditEventTimestampNode(Node):
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, event_type: Event):
+                 data_access: DataAccess, event_type: Event, node_handler):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.event_type = event_type
         self.add_cancel_transition()
+        self.node_handler = node_handler
 
     def add_cancel_transition(self):
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.ADMIN)
@@ -35,7 +36,6 @@ class EditEventTimestampNode(Node):
             message_type=MessageType.ADMIN)
 
     async def handle_event_timestamp(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        # TODO call this function? how is it called?
         message = update.message.text.lower()
 
         parsed_string = UpdateEventUtils.parse_datetime_string(message)
@@ -52,9 +52,10 @@ class EditEventTimestampNode(Node):
         if not try_parse:
             return await self.handle_parse_additional_info_failed(user_to_state, update)
 
-        doc_id, message_id = try_parse
+        message_id, doc_id = try_parse
 
-        updated_event = self.data_access.update_event_field(self.event_type, doc_id, new_datetime, CallbackOption.DATETIME)
+        updated_event = self.data_access.update_event_field(self.event_type, doc_id, new_datetime,
+                                                            CallbackOption.DATETIME)
 
         # Update inline_message with new string
         new_inline_message = UpdateEventUtils.get_inline_message('Updated', self.event_type, updated_event)
@@ -67,10 +68,12 @@ class EditEventTimestampNode(Node):
             update=update,
             message=text)
 
+        self.node_handler.recalculate_node_transitions()
+
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
 
     async def handle_parse_additional_info_failed(self, user_to_state: UsersToState, update: Update):
-        text = 'Error getting information from the database, please restart updating a event via the menu :)'
+        text = 'Error getting information from the database, please restart updating an event via the menu :)'
         new_state = UserState.ADMIN_UPDATE
         self.user_state_service.update_user_state(user_to_state, new_state)
 
@@ -83,3 +86,6 @@ class EditEventTimestampNode(Node):
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
             message_type=MessageType.ADMIN_UPDATE)
         return
+
+    async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
+        await self.handle_event_timestamp(update, user_to_state, new_state)

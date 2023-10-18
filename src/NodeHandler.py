@@ -276,31 +276,31 @@ class NodeHandler(BaseHandler[Update, CCT]):
                                            update_timekeepings_node.handle_event_id)
 
         admin_update_game_timestamp_node = EditEventTimestampNode(
-            UserState.ADMIN_UPDATE_GAME_TIMESTAMP, telegram_service, user_state_service, data_access, Event.GAME)
+            UserState.ADMIN_UPDATE_GAME_TIMESTAMP, telegram_service, user_state_service, data_access, Event.GAME, self)
 
         admin_update_training_timestamp_node = EditEventTimestampNode(
             UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP, telegram_service, user_state_service, data_access,
-            Event.TRAINING)
+            Event.TRAINING, self)
 
         admin_update_timekeeping_timestamp_node = EditEventTimestampNode(
             UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP, telegram_service, user_state_service, data_access,
-            Event.TIMEKEEPING)
+            Event.TIMEKEEPING, self)
 
         admin_update_game_opponent_node = EditEventLocationOrOpponentNode(
             UserState.ADMIN_UPDATE_GAME_OPPONENT, telegram_service, user_state_service, data_access, Event.GAME,
-            CallbackOption.OPPONENT)
+            CallbackOption.OPPONENT, self)
 
         admin_update_game_location_node = EditEventLocationOrOpponentNode(
             UserState.ADMIN_UPDATE_GAME_LOCATION, telegram_service, user_state_service, data_access, Event.GAME,
-            CallbackOption.LOCATION)
+            CallbackOption.LOCATION, self)
 
         admin_update_training_location_node = EditEventLocationOrOpponentNode(
             UserState.ADMIN_UPDATE_TRAINING_LOCATION, telegram_service, user_state_service, data_access, Event.TRAINING,
-            CallbackOption.LOCATION)
+            CallbackOption.LOCATION, self)
 
         admin_update_timekeeping_location_node = EditEventLocationOrOpponentNode(
             UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION, telegram_service, user_state_service, data_access,
-            Event.TIMEKEEPING, CallbackOption.LOCATION)
+            Event.TIMEKEEPING, CallbackOption.LOCATION, self)
 
         all_nodes_dict = {
             UserState.INIT: init_node,

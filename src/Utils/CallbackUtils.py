@@ -70,13 +70,13 @@ def build_additional_information(inline_message_id: int, event_document_id: str)
     return str(inline_message_id) + DELIMITER + event_document_id
 
 
-def try_parse_additional_information(message: str) -> tuple[str, str] | None:
+def try_parse_additional_information(message: str) -> tuple[int, str] | None:
     split = message.split(DELIMITER)
     if len(split) != 2:
         return None
 
     try:
-        inline_message_id = split[0]
+        inline_message_id = int(split[0])
         doc_id = split[1]
     except KeyError:
         return None

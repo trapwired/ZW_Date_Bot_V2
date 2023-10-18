@@ -158,7 +158,8 @@ class FirebaseRepository(object):
     @dispatch(DatabaseEntity, str)
     def update(self, db_object: DatabaseEntity, collection: str):
         self.raise_exception_if_document_not_exists(collection, db_object.doc_id)
-        return self.db.collection(collection).document(db_object.doc_id).update(db_object.to_dict())
+        self.db.collection(collection).document(db_object.doc_id).update(db_object.to_dict())
+        return db_object
 
     def update_user_state(self, user_to_state: UsersToState):
         db_table = self.tables.get(Table.USERS_TO_STATE_TABLE)

@@ -91,37 +91,37 @@ class DataAccess(object):
     @dispatch(UsersToState)
     def update(self, users_to_state: UsersToState):
         if users_to_state.doc_id is None:
-            self.firebase_repository.update_user_state_via_user_id(users_to_state)
+            return self.firebase_repository.update_user_state_via_user_id(users_to_state)
         else:
-            self.firebase_repository.update(users_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
+            return self.firebase_repository.update(users_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
 
     @dispatch(TelegramUser)
     def update(self, user: TelegramUser):
         if user.doc_id is None:
-            self.firebase_repository.update_user_via_telegram_id(user)
+            return self.firebase_repository.update_user_via_telegram_id(user)
         else:
-            self.firebase_repository.update(user, self.tables.get(Table.USERS_TABLE))
+            return self.firebase_repository.update(user, self.tables.get(Table.USERS_TABLE))
 
     @dispatch(Game)
     def update(self, game: Game):
         if game.doc_id is None:
             # TODO: Find / Match / AddDocId
             raise DocumentIdNotPresentException()
-        self.firebase_repository.update(game, self.tables.get(Table.GAMES_TABLE))
+        return self.firebase_repository.update(game, self.tables.get(Table.GAMES_TABLE))
 
     @dispatch(Training)
     def update(self, training: Training):
         if training.doc_id is None:
             # TODO: Find / Match / AddDocId
             raise DocumentIdNotPresentException()
-        self.firebase_repository.update(training, self.tables.get(Table.TRAININGS_TABLE))
+        return self.firebase_repository.update(training, self.tables.get(Table.TRAININGS_TABLE))
 
     @dispatch(TimekeepingEvent)
     def update(self, timekeeping_event: TimekeepingEvent):
         if timekeeping_event.doc_id is None:
             # TODO: Find / Match / AddDocId
             raise DocumentIdNotPresentException()
-        self.firebase_repository.update(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
+        return self.firebase_repository.update(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
 
     def update_attendance(self, attendance: Attendance, eventy_type: Event) -> Attendance:
         table = TABLES[eventy_type]
