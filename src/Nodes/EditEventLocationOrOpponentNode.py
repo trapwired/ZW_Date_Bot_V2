@@ -45,14 +45,14 @@ class EditEventLocationOrOpponentNode(Node):
         if not try_parse:
             return await self.handle_parse_additional_info_failed(user_to_state, update)
 
-        doc_id, message_id = try_parse
+        message_id, chat_id, doc_id = try_parse
 
         # store in db - store response element for pretty print
         updated_event = self.data_access.update_event_field(self.event_type, doc_id, new_string_value, self.string_type)
 
         # Update inline_message with new string
         new_inline_message = UpdateEventUtils.get_inline_message('Updated', self.event_type, updated_event)
-        await self.telegram_service.edit_inline_message_text(new_inline_message, message_id)
+        await self.telegram_service.edit_inline_message_text(new_inline_message, message_id, chat_id)
 
         # new user state?
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
@@ -63,6 +63,9 @@ class EditEventLocationOrOpponentNode(Node):
             message=text)
 
         self.node_handler.recalculate_node_transitions()
+
+        # TODO Update recalc node transitions work?
+        # TODO udpate: invalidate previous answers + send to all players, that this event was updated - maybe fill it out, still ok
 
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
 

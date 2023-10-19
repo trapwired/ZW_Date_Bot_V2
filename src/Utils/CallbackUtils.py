@@ -4,13 +4,12 @@ from Enums.CallbackOption import CallbackOption
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-DELIMITER = '-'
+DELIMITER = '#'
 ATTENDANCE_STATE_OPTIONS = [CallbackOption.YES, CallbackOption.NO, CallbackOption.UNSURE]
 YES_OR_NO_OPTIONS = [CallbackOption.YES, CallbackOption.NO]
 UPDATE_OR_DELETE_OPTIONS = [CallbackOption.UPDATE, CallbackOption.DELETE]
 UPDATE_GAME_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
-UPDATE_TRAINING_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT,
-                           CallbackOption.Back]
+UPDATE_TRAINING_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.Back]
 UPDATE_TKE_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.Back]
 
 
@@ -66,19 +65,20 @@ def try_parse_callback_message(message: str) -> tuple[UserState, Event, Callback
     return user_state, event, callback_option, doc_id
 
 
-def build_additional_information(inline_message_id: int, event_document_id: str) -> str:
-    return str(inline_message_id) + DELIMITER + event_document_id
+def build_additional_information(message_id: int, chat_id: int, event_document_id: str) -> str:
+    return str(message_id) + DELIMITER + str(chat_id) + DELIMITER + event_document_id
 
 
-def try_parse_additional_information(message: str) -> tuple[int, str] | None:
+def try_parse_additional_information(message: str) -> tuple[int, int, str] | None:
     split = message.split(DELIMITER)
-    if len(split) != 2:
+    if len(split) != 3:
         return None
 
     try:
-        inline_message_id = int(split[0])
-        doc_id = split[1]
+        message_id = int(split[0])
+        chat_id = int(split[1])
+        doc_id = split[2]
     except KeyError:
         return None
 
-    return inline_message_id, doc_id
+    return message_id, chat_id, doc_id

@@ -194,5 +194,5 @@ class TelegramService(object):
                 return self.trainers_games
         return []
 
-    async def edit_inline_message_text(self, message: str, inline_msg_id: str):
-        await self.bot.edit_message_text(text=message, inline_message_id=inline_msg_id)
+    async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int):
+        await self.bot.edit_message_text(text=message, message_id=message_id, chat_id=chat_id)
