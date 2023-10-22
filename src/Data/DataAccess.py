@@ -1,4 +1,3 @@
-import configparser
 from datetime import datetime
 
 from multipledispatch import dispatch

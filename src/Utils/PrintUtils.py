@@ -168,8 +168,8 @@ def prepare_message(message: str):
         doubles_dict = build_doubles_dict(doubles)
         one_line = ''
 
-    # max length is 9500 chars
-    result = result[:9499]
+    # max length is 4096 chars
+    result = result[:4095]
     return result
 
 

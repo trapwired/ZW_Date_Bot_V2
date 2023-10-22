@@ -2,12 +2,14 @@ from datetime import datetime
 
 from databaseEntities.DatabaseEntity import DatabaseEntity
 
+from Utils import DateTimeUtils
+
 
 class Game(DatabaseEntity):
 
     def __init__(self, timestamp: datetime | str, location: str, opponent: str, doc_id: str = None):
         super().__init__(doc_id)
-        self.timestamp = timestamp
+        self.timestamp = DateTimeUtils.utc_to_zurich_timestamp(timestamp)
         self.location = location
         self.opponent = opponent
 

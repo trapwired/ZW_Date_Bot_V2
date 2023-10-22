@@ -138,7 +138,7 @@ class UpdateEventCallbackNode(CallbackNode):
 
             user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
             user_to_state.additional_info = CallbackUtils.build_additional_information(query.message.id, query.message.chat_id, doc_id)
-            # TODO store correct message id, so update_message can be called
+
             self.user_state_service.update_user_state(user_to_state, get_new_user_state(callback_option, event_type))
 
             return

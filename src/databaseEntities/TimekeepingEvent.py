@@ -2,12 +2,14 @@ import datetime
 
 from databaseEntities.DatabaseEntity import DatabaseEntity
 
+from Utils import DateTimeUtils
+
 
 class TimekeepingEvent(DatabaseEntity):
 
     def __init__(self, timestamp: datetime, location: str, people_required: int = 2, doc_id: str = None):
         super().__init__(doc_id)
-        self.timestamp = timestamp
+        self.timestamp = DateTimeUtils.utc_to_zurich_timestamp(timestamp)
         self.location = location
         if type(people_required) is str:
             people_required = int(people_required)

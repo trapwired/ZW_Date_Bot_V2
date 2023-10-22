@@ -1,6 +1,5 @@
 import datetime
 
-import pytz
 from Enums.CallbackOption import CallbackOption
 from Enums.Event import Event
 
@@ -9,6 +8,7 @@ from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 
 from Utils import PrintUtils
+from Utils import DateTimeUtils
 
 
 def mark_updating_in_event_string(event_type: Event, event_summary: str, option: CallbackOption):
@@ -101,4 +101,5 @@ def parse_datetime_string(datetime_string: str):
         return (f'Tried to parse hour / minute into a number - that did not work, please try again (Exception for '
                 f'reference: : {e.args})')
 
-    return datetime.datetime(year, month, day, hour, minute, 0, 0, tzinfo=pytz.timezone('Europe/Zurich'))
+    date_time = datetime.datetime(year, month, day, hour, minute, 0, 0)
+    return DateTimeUtils.add_zurich_timezone(date_time)
