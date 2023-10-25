@@ -1,4 +1,5 @@
 import datetime
+import pandas as pd
 
 from databaseEntities.DatabaseEntity import DatabaseEntity
 
@@ -7,7 +8,7 @@ from Utils import DateTimeUtils
 
 class TimekeepingEvent(DatabaseEntity):
 
-    def __init__(self, timestamp: datetime, location: str, people_required: int = 2, doc_id: str = None):
+    def __init__(self, timestamp: pd.Timestamp, location: str, people_required: int = 2, doc_id: str = None):
         super().__init__(doc_id)
         self.timestamp = DateTimeUtils.utc_to_zurich_timestamp(timestamp)
         self.location = location

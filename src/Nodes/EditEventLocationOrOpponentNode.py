@@ -38,7 +38,6 @@ class EditEventLocationOrOpponentNode(Node):
 
     async def handle_event_location_or_opponent(self, update: Update, user_to_state: UsersToState,
                                                 new_state: UserState):
-        # TODO call this function? how is it called? --> rename, adjust logic, cursor is HERE!!
         new_string_value = update.message.text.lower()
 
         try_parse = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
@@ -63,9 +62,6 @@ class EditEventLocationOrOpponentNode(Node):
             message=text)
 
         self.node_handler.recalculate_node_transitions()
-
-        # TODO Update recalc node transitions work?
-        # TODO udpate: invalidate previous answers + send to all players, that this event was updated - maybe fill it out, still ok
 
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
 

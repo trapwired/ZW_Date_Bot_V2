@@ -70,6 +70,9 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.ENROLLMENT_REMINDER:
             return 'Hey ' + first_name + ', please quickly take your time to update your attendance for the following upcoming event(s):'
 
+        case MessageType.EVENT_TIMESTAMP_CHANGED:
+            return 'Hey ' + first_name + ', the following event was moved by more than 2 hours. I reset your previous answer - please quickly fill out your attendance for the moved event - thanks'
+
         case _:
             return message_type.name + ' ' + extra_text
 

@@ -1,5 +1,4 @@
-from datetime import datetime
-
+import pandas as pd
 from multipledispatch import dispatch
 
 from Data.FirebaseRepository import FirebaseRepository
@@ -67,7 +66,7 @@ class DataAccess(object):
     # UPDATE #
     ##########
 
-    def update_event_field(self, event_type: Event, event_id: str, new_value: str | datetime,
+    def update_event_field(self, event_type: Event, event_id: str, new_value: str | pd.Timestamp,
                            field_type: CallbackOption):
         match event_type:
             case Event.GAME:
@@ -138,6 +137,15 @@ class DataAccess(object):
     #######
     # GET #
     #######
+
+    def get_event(self, event_type: Event, doc_id: str):
+        match event_type:
+            case Event.GAME:
+                return self.get_game(doc_id)
+            case Event.TRAINING:
+                return self.get_training(doc_id)
+            case Event.TIMEKEEPING:
+                return self.get_timekeeping(doc_id)
 
     def get_game(self, doc_id: str):
         return self.firebase_repository.get_game(doc_id)
@@ -261,6 +269,7 @@ class DataAccess(object):
     ##########
     # DELETE #
     ##########
+
     def delete_event(self, event_type: Event, doc_id: str):
         match event_type:
             case Event.GAME:
@@ -269,3 +278,10 @@ class DataAccess(object):
                 self.firebase_repository.delete_training(doc_id)
             case Event.TIMEKEEPING:
                 self.firebase_repository.delete_timekeeping(doc_id)
+
+    ########
+    # ELSE #
+    ########
+
+    def reset_all_player_event_attendance(self, event_type: Event, doc_id: str):
+        self.firebase_repository.reset_all_player_event_attendance(doc_id, TABLES[event_type])

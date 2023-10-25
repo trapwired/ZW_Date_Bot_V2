@@ -1,4 +1,5 @@
 from datetime import datetime
+import pandas as pd
 
 from databaseEntities.DatabaseEntity import DatabaseEntity
 
@@ -7,7 +8,7 @@ from Utils import DateTimeUtils
 
 class Game(DatabaseEntity):
 
-    def __init__(self, timestamp: datetime | str, location: str, opponent: str, doc_id: str = None):
+    def __init__(self, timestamp: pd.Timestamp | str, location: str, opponent: str, doc_id: str = None):
         super().__init__(doc_id)
         self.timestamp = DateTimeUtils.utc_to_zurich_timestamp(timestamp)
         self.location = location

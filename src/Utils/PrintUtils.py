@@ -169,7 +169,7 @@ def prepare_message(message: str):
         one_line = ''
 
     # max length is 4096 chars
-    result = result[:4095]
+    result = result[len(result)-4095:]
     return result
 
 

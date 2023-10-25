@@ -1,5 +1,4 @@
-import datetime
-
+import pandas as pd
 from Enums.CallbackOption import CallbackOption
 from Enums.Event import Event
 
@@ -101,5 +100,5 @@ def parse_datetime_string(datetime_string: str):
         return (f'Tried to parse hour / minute into a number - that did not work, please try again (Exception for '
                 f'reference: : {e.args})')
 
-    date_time = datetime.datetime(year, month, day, hour, minute, 0, 0)
+    date_time = pd.Timestamp(year, month, day, hour, minute, 0, 0)
     return DateTimeUtils.add_zurich_timezone(date_time)

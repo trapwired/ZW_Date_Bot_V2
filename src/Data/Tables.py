@@ -1,6 +1,8 @@
 import configparser
 
+from Enums.Event import Event
 from Enums.Table import Table
+
 from Utils.ApiConfig import ApiConfig
 
 

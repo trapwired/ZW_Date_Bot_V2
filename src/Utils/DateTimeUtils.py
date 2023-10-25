@@ -1,14 +1,14 @@
-import datetime
+import pandas as pd
 
 import pytz
-
 
 ZURICH_TIMEZONE = pytz.timezone('Europe/Zurich')
 
 
-def add_zurich_timezone(local_datetime: datetime):
-     return ZURICH_TIMEZONE.localize(local_datetime)
+def add_zurich_timezone(local_datetime: pd.Timestamp):
+    return local_datetime.tz_localize(ZURICH_TIMEZONE)
 
 
-def utc_to_zurich_timestamp(utc_datetime: datetime):
-    return utc_datetime.astimezone(ZURICH_TIMEZONE)
+def utc_to_zurich_timestamp(utc_datetime: pd.Timestamp):
+    result = utc_datetime.astimezone(ZURICH_TIMEZONE)
+    return pd.Timestamp(result)

@@ -1,15 +1,18 @@
 from Nodes.Node import Node
 from telegram import Update
+import pandas as pd
 
 from Enums.UserState import UserState
 from Enums.MessageType import MessageType
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
+from Enums.AttendanceState import AttendanceState
 
 from databaseEntities.UsersToState import UsersToState
 
 from Utils import UpdateEventUtils
 from Utils import CallbackUtils
+from Utils import PrintUtils
 
 from Data.DataAccess import DataAccess
 from Services.TelegramService import TelegramService
@@ -38,21 +41,23 @@ class EditEventTimestampNode(Node):
     async def handle_event_timestamp(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         message = update.message.text.lower()
 
-        parsed_string = UpdateEventUtils.parse_datetime_string(message)
-        if type(parsed_string) is str:
+        parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
+        if type(parsed_datetime) is str:
             # Error case, send message without changing anything
             await self.telegram_service.send_message_with_normal_keyboard(
                 update=update,
-                message=parsed_string)
+                message=parsed_datetime)
             return
 
-        new_datetime = parsed_string
+        new_datetime = parsed_datetime
 
         try_parse = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
         if not try_parse:
             return await self.handle_parse_additional_info_failed(user_to_state, update)
 
         message_id, chat_id, doc_id = try_parse
+
+        old_event = self.data_access.get_event(self.event_type, doc_id)
 
         updated_event = self.data_access.update_event_field(self.event_type, doc_id, new_datetime,
                                                             CallbackOption.DATETIME)
@@ -70,11 +75,38 @@ class EditEventTimestampNode(Node):
 
         self.node_handler.recalculate_node_transitions()
 
-        # TODO Update recalc node transitions work?
-        # TODO udpate: invalidate previous answers + send to all players, that this event was updated - maybe fill it out, still ok
-
+        if abs(old_event.timestamp - updated_event.timestamp) > pd.Timedelta(hours=2):
+            await self.notify_all_players(doc_id, updated_event)
+            text = 'Since the event was moved by more than 2 hours, I invalidated all previous answers and let all players know...'
+            await self.telegram_service.send_message_with_normal_keyboard(
+                update=update,
+                message=text)
 
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
+
+    async def notify_all_players(self, doc_id: str, updated_event: Event):
+        self.data_access.reset_all_player_event_attendance(self.event_type, doc_id)
+        # notify all players, give option to vote again
+
+        all_players = self.data_access.get_all_players()
+
+        for player in all_players:
+            await self.telegram_service.send_message(
+                update=player,
+                all_buttons=None,
+                message_type=MessageType.EVENT_TIMESTAMP_CHANGED)
+
+            pretty_print_event = PrintUtils.pretty_print(updated_event, AttendanceState.UNSURE)
+            reply_markup = CallbackUtils.get_edit_event_reply_markup(
+                UserState.EDIT,
+                self.event_type,
+                doc_id)
+            message_text = self.event_type.name.lower().title() + ' | ' + pretty_print_event
+            await self.telegram_service.send_message(
+                update=player,
+                all_buttons=None,
+                message=message_text,
+                reply_markup=reply_markup)
 
     async def handle_parse_additional_info_failed(self, user_to_state: UsersToState, update: Update):
         text = 'Error getting information from the database, please restart updating an event via the menu :)'

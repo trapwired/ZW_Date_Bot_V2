@@ -218,3 +218,12 @@ class FirebaseRepository(object):
                 return self.tables.get(Table.TRAINING_ATTENDANCE_TABLE)
             case Event.TIMEKEEPING:
                 return self.tables.get(Table.TIMEKEEPING_ATTENDANCE_TABLE)
+
+    def reset_all_player_event_attendance(self, doc_id: str, table: Table):
+        collection_reference = self.db.collection(self.tables.get(table))
+        attendance_rows = collection_reference.where(filter=FieldFilter("eventId", "==", doc_id)).get()
+        field_update = {"state": 0}
+        for row in attendance_rows:
+            doc = collection_reference.document(row.id)
+            doc.update(field_update)
+
