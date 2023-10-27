@@ -28,6 +28,7 @@ from Nodes.RejectedNode import RejectedNode
 from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 from Nodes.AdminNode import AdminNode
+from Nodes.AdminAddNode import AdminAddNode
 from Nodes.UpdateNode import UpdateNode
 from Nodes.EditEventTimestampNode import EditEventTimestampNode
 from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNode
@@ -233,9 +234,27 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
         admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
 
-        admin_add_node = AdminNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
+        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
         admin_add_node.add_continue_later()
         admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
+        admin_add_node.add_transition(
+            '/games', admin_add_node.handle_add_game,
+            new_state=UserState.ADMIN_ADD_GAME,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
+        admin_add_node.add_transition(
+            '/trainings', admin_add_node.handle_add_training,
+            new_state=UserState.ADMIN_ADD_TRAINING,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
+        admin_add_node.add_transition(
+            '/timekeepings', admin_add_node.handle_add_timekeeping,
+            new_state=UserState.ADMIN_ADD_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS,
+            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
+
+        admin_add_game_node = AdminAddNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service, data_access)
+        admin_add_training_node = AdminAddNode(UserState.ADMIN_ADD_TRAINING, telegram_service, user_state_service,
+                                               data_access)
+        admin_add_timekeeping_node = AdminAddNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service, user_state_service,
+                                                  data_access)
 
         admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access)
         admin_update_node.add_continue_later()
@@ -326,7 +345,10 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.ADMIN_UPDATE_TRAINING_LOCATION: admin_update_training_location_node,
             UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP: admin_update_training_timestamp_node,
             UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION: admin_update_timekeeping_location_node,
-            UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP: admin_update_timekeeping_timestamp_node
+            UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP: admin_update_timekeeping_timestamp_node,
+            UserState.ADMIN_ADD_GAME: admin_add_game_node,
+            UserState.ADMIN_ADD_TRAINING: admin_add_training_node,
+            UserState.ADMIN_ADD_TIMEKEEPING: admin_add_timekeeping_node
         }
 
         return all_nodes_dict
