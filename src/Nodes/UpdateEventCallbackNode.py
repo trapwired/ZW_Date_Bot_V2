@@ -44,16 +44,6 @@ def get_new_user_state(callback_option: CallbackOption, event_type: Event):
     raise Exception(f'No userState found for: {callback_option} and {event_type}')
 
 
-def get_input_format_string(callback_option: CallbackOption):
-    match callback_option:
-        case CallbackOption.OPPONENT:
-            return 'freetext, spaces allowed, no max length, but end will be trimmed'
-        case CallbackOption.LOCATION:
-            return 'freetext, spaces allowed, no max length, but end will be trimmed'
-        case CallbackOption.DATETIME:
-            return 'numbers and symbols, format: 20.03.2023 19:38'
-
-
 class UpdateEventCallbackNode(CallbackNode):
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  node_handler, user_state_service: UserStateService):
@@ -132,12 +122,13 @@ class UpdateEventCallbackNode(CallbackNode):
             await query.edit_message_text(text=callback_message, reply_markup=reply_markup)
 
             normal_message = f'Send me the new {callback_option.name.title()} in the following form:\n'
-            normal_message += f'{get_input_format_string(callback_option)}\n'
+            normal_message += f'{UpdateEventUtils.get_input_format_string(callback_option)}\n'
             normal_message += 'To cancel updating, just send me /cancel'
             await self.send_normal_message_keyboard(update, normal_message)
 
             user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
-            user_to_state.additional_info = CallbackUtils.build_additional_information(query.message.id, query.message.chat_id, doc_id)
+            user_to_state.additional_info = CallbackUtils.build_additional_information(query.message.id,
+                                                                                       query.message.chat_id, doc_id)
 
             self.user_state_service.update_user_state(user_to_state, get_new_user_state(callback_option, event_type))
 

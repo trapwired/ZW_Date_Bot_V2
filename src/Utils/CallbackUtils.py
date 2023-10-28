@@ -43,9 +43,8 @@ def get_yes_or_no_markup(event_type: Event, document_id: str):
 def _get_reply_markup(options: [CallbackOption], user_state: UserState, event_type: Event, document_id: str):
     button_list = []
     for option in options:
-        new_button = InlineKeyboardButton(option.name,
-                                          callback_data=get_callback_message(user_state, event_type, option,
-                                                                             document_id))
+        callback_data = get_callback_message(user_state, event_type, option, document_id)
+        new_button = InlineKeyboardButton(option.name, callback_data=callback_data)
         button_list.append(new_button)
     return InlineKeyboardMarkup([button_list])
 

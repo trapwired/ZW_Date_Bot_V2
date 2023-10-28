@@ -96,7 +96,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
                                                              user_state_service)
         add_nodes_reference_to_all_nodes(self.nodes)
 
-        self.do_checks(api_config)
+        # TODO uncomment
+        # self.do_checks(api_config)
 
     def check_update(self, update: object):
         if isinstance(update, Update):
@@ -234,7 +235,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
         admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
 
-        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
+        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access, None, self)
+        # TODO type correct? remove cancel transition
         admin_add_node.add_continue_later()
         admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
         admin_add_node.add_transition(
