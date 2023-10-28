@@ -106,6 +106,17 @@ def pretty_print(tke: TimekeepingEvent, attendance: AttendanceState) -> str:
     return pretty_print(tke) + f' | {attendance.name}'
 
 
+@dispatch(Event)
+def pretty_print(event_type: Event) -> str:
+    match event_type:
+        case Event.GAME:
+            return 'XX.XX.XXXX XX:XX | XXX | XXX'
+        case Event.TRAINING:
+            return 'XX.XX.XXXX XX:XX | XXX'
+        case Event.TIMEKEEPING:
+            return 'XX.XX.XXXX XX:XX | XXX'
+
+
 def pretty_print_event_summary(stats: (list, list, list), game_string: str, event_type: Event) -> str:
     yes, no, unsure = stats
     total_players = len(yes) + len(no) + len(unsure)
@@ -169,7 +180,7 @@ def prepare_message(message: str):
         one_line = ''
 
     # max length is 4096 chars
-    result = result[len(result)-4095:]
+    result = result[len(result) - 4095:]
     return result
 
 

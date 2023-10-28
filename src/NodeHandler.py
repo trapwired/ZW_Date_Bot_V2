@@ -250,11 +250,12 @@ class NodeHandler(BaseHandler[Update, CCT]):
             new_state=UserState.ADMIN_ADD_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
 
-        admin_add_game_node = AdminAddNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service, data_access)
+        admin_add_game_node = AdminAddNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service, data_access,
+                                           Event.GAME, self)
         admin_add_training_node = AdminAddNode(UserState.ADMIN_ADD_TRAINING, telegram_service, user_state_service,
-                                               data_access)
+                                               data_access, Event.TRAINING, self)
         admin_add_timekeeping_node = AdminAddNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service, user_state_service,
-                                                  data_access)
+                                                  data_access, Event.TIMEKEEPING, self)
 
         admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access)
         admin_update_node.add_continue_later()

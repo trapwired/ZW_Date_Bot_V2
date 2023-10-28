@@ -11,6 +11,7 @@ UPDATE_OR_DELETE_OPTIONS = [CallbackOption.UPDATE, CallbackOption.DELETE]
 UPDATE_GAME_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
 UPDATE_TRAINING_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.Back]
 UPDATE_TKE_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.Back]
+ADD_EVENT_OPTIONS = [CallbackOption.RESTART, CallbackOption.CANCEL]
 
 
 def get_update_event_options(event_type: Event, document_id: str):
@@ -21,6 +22,10 @@ def get_update_event_options(event_type: Event, document_id: str):
             return _get_reply_markup(UPDATE_TRAINING_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
         case Event.TIMEKEEPING:
             return _get_reply_markup(UPDATE_TKE_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
+
+
+def get_add_event_reply_markup(user_state: UserState, event_type: Event):
+    return _get_reply_markup(ADD_EVENT_OPTIONS, user_state, event_type, 'docId42')
 
 
 def get_edit_event_reply_markup(user_state: UserState, event_type: Event, document_id: str):
