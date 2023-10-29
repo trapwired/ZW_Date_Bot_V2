@@ -143,9 +143,9 @@ def create_game_summary(game: Game) -> str:
     maps_link = f'https://www.google.com/maps/search/{maps_search_part}'
 
     summary = (f'Just a quick reminder for the game today:\n'
-               f'_When:_ {when_str}\n'
-               f'_Meeting time:_ *We meet {meeting_time_str} ready in the changing room*\n'
-               f'_Where:_ {game.location.title()} \\([Google Maps Link]({maps_link})\\)\n'
+               f'_When:_ {when_str} Uhr\n'
+               f'_Meeting time:_ *{meeting_time_str}, ready in the changing room*\n'
+               f'_Where:_ {game.location.title()} \\([Google Maps]({maps_link})\\)\n'
                f'_Opponent:_ {game.opponent.title()}\n'
                f'_Jerseys:_ Don\'t forget to bring them, \\(whoever has them\\.\\.\\.\\)')
     return summary
