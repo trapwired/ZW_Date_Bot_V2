@@ -199,3 +199,22 @@ class TelegramService(object):
 
     async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int):
         await self.bot.edit_message_text(text=message, message_id=message_id, chat_id=chat_id)
+
+    async def delete_next_message(self, update: Update):
+        if update.message:
+            chat_id = update.message.chat_id
+            message_id = update.message.id
+        elif update.callback_query:
+            chat_id = update.callback_query.message.chat_id
+            message_id = update.callback_query.id
+        else:
+            return
+        next_msg_id = int(message_id) + 1
+        # TODO is this possible to delete without knowing next id?
+        await self.bot.deleteMessage(message_id=next_msg_id, chat_id=chat_id)
+
+    async def delete_message(self, update: Update):
+        if update.message:
+            await update.message.delete()
+        elif update.callback_query:
+            await update.callback_query.delete_message()

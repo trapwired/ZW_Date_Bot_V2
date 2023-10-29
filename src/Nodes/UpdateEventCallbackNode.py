@@ -66,14 +66,12 @@ class UpdateEventCallbackNode(CallbackNode):
                 event_summary = PrintUtils.pretty_print(self.data_access.get_timekeeping(doc_id))
                 new_state = UserState.ADMIN_UPDATE_TIMEKEEPING
 
-        event_type_string = event_type.name.lower().title()
-
         if callback_option in [CallbackOption.UPDATE, CallbackOption.DELETE, CallbackOption.NO, CallbackOption.Back]:
             await self._handle_pure_callback(query, event_summary, event_type, doc_id,
                                              callback_option)
         else:
-            await self._handle_callback_with_messages(update, event_type_string, event_summary, event_type, doc_id,
-                                                      callback_option, new_state)
+            await self._handle_callback_with_messages(update, event_summary, event_type, doc_id, callback_option,
+                                                      new_state)
 
     async def _handle_pure_callback(self, query: CallbackQuery, event_summary: str, event_type: Event, doc_id: str,
                                     callback_option: CallbackOption):
@@ -97,9 +95,9 @@ class UpdateEventCallbackNode(CallbackNode):
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=reply_markup)
 
-    async def _handle_callback_with_messages(self, update: Update, event_type_string: str, event_summary: str,
-                                             event_type: Event, doc_id: str, callback_option: CallbackOption,
-                                             new_state: UserState):
+    async def _handle_callback_with_messages(self, update: Update, event_summary: str, event_type: Event, doc_id: str,
+                                             callback_option: CallbackOption, new_state: UserState):
+        event_type_string = event_type.name.lower().title()
         query = update.callback_query
         message = 'Not Implemented'
         reply_markup = None

@@ -397,3 +397,6 @@ class NodeHandler(BaseHandler[Update, CCT]):
         if not self.callback_nodes[user_state]:
             raise Exception('No callback-node found for user_state: ', user_state)
         return self.callback_nodes[user_state]
+
+    def get_node(self, user_state: UserState) -> Node:
+        return self.nodes[user_state]
