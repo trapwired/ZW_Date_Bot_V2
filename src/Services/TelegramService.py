@@ -127,8 +127,8 @@ class TelegramService(object):
         if reply_markup is None:
             reply_markup = self.get_reply_keyboard(message_type, all_buttons)
         message_to_send = PrintUtils.prepare_message(message)
-        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        return await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
+                                           parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_message_with_normal_keyboard(self, update: Update | TelegramUser, message: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId

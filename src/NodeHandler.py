@@ -29,9 +29,11 @@ from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 from Nodes.AdminNode import AdminNode
 from Nodes.AdminAddNode import AdminAddNode
+from Nodes.AdminAddDateTimeOrStringNode import AdminAddDateTimeOrStringNode
 from Nodes.UpdateNode import UpdateNode
 from Nodes.EditEventTimestampNode import EditEventTimestampNode
 from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNode
+from Nodes.AddEventCallbackNode import AddEventCallbackNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode
@@ -235,29 +237,22 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
         admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
 
-        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access, None, self)
-        # TODO type correct? remove cancel transition
+        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
         admin_add_node.add_continue_later()
         admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
-        admin_add_node.add_transition(
-            '/games', admin_add_node.handle_add_game,
-            new_state=UserState.ADMIN_ADD_GAME,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
-        admin_add_node.add_transition(
-            '/trainings', admin_add_node.handle_add_training,
-            new_state=UserState.ADMIN_ADD_TRAINING,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
-        admin_add_node.add_transition(
-            '/timekeepings', admin_add_node.handle_add_timekeeping,
-            new_state=UserState.ADMIN_ADD_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
+        admin_add_node.add_transition('/game', admin_add_node.handle_add_game, new_state=UserState.ADMIN_ADD_GAME)
+        admin_add_node.add_transition('/training', admin_add_node.handle_add_training,
+                                      new_state=UserState.ADMIN_ADD_TRAINING)
+        admin_add_node.add_transition('/timekeeping', admin_add_node.handle_add_timekeeping,
+                                      new_state=UserState.ADMIN_ADD_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS)
 
-        admin_add_game_node = AdminAddNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service, data_access,
-                                           Event.GAME, self)
-        admin_add_training_node = AdminAddNode(UserState.ADMIN_ADD_TRAINING, telegram_service, user_state_service,
-                                               data_access, Event.TRAINING, self)
-        admin_add_timekeeping_node = AdminAddNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service, user_state_service,
-                                                  data_access, Event.TIMEKEEPING, self)
+        admin_add_game_node = AdminAddDateTimeOrStringNode(UserState.ADMIN_ADD_GAME, telegram_service,
+                                                           user_state_service, data_access, Event.GAME, self)
+        admin_add_training_node = AdminAddDateTimeOrStringNode(UserState.ADMIN_ADD_TRAINING, telegram_service,
+                                                               user_state_service, data_access, Event.TRAINING, self)
+        admin_add_timekeeping_node = AdminAddDateTimeOrStringNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service,
+                                                                  user_state_service, data_access, Event.TIMEKEEPING,
+                                                                  self)
 
         admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access)
         admin_update_node.add_continue_later()
@@ -361,11 +356,17 @@ class NodeHandler(BaseHandler[Update, CCT]):
         edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service)
         update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self,
                                                        user_state_service)
+        add_callback_node = AddEventCallbackNode(telegram_service, data_access, trigger_service, self,
+                                                 user_state_service)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node,
-            UserState.ADMIN_UPDATE: update_callback_node
+            UserState.ADMIN_UPDATE: update_callback_node,
+            UserState.ADMIN_ADD_GAME: add_callback_node,
+            UserState.ADMIN_ADD_TRAINING: add_callback_node,
+            UserState.ADMIN_ADD_TIMEKEEPING: add_callback_node
         }
+        # TODO correct, one callback node for 3 states?
         return callback_nodes_dict
 
     def add_event_transitions_to_node(self, event_type: Event, node: Node, event_function: Callable):

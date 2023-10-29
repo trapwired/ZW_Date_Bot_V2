@@ -7,8 +7,11 @@ from databaseEntities.Game import Game
 
 from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState
+from Enums.CallbackOption import CallbackOption
 
 from databaseEntities.TelegramUser import TelegramUser
+
+from Utils import UpdateEventUtils
 
 
 def pretty_print_game_stats(game_stats: (list, list, list), attendance: Attendance | None):
@@ -44,6 +47,13 @@ def get_attendance_symbols(attendance: Attendance | None) -> (str, str):
     attendance_before = '👉'
     attendance_after = '👈'
     return attendance_before, attendance_after
+
+
+def get_update_attribute_message(attribute: CallbackOption) -> str:
+    message = f'Send me the new {attribute.name.title()} in the following form:\n'
+    message += f'{UpdateEventUtils.get_input_format_string(attribute)}\n'
+    message += 'To cancel updating, just send me /cancel'
+    return message
 
 
 def pretty_print_event_stats(event_stats: (list, list, list), event_type: Event, attendance: Attendance | None):

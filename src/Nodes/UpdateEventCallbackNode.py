@@ -121,9 +121,7 @@ class UpdateEventCallbackNode(CallbackNode):
             await query.answer()
             await query.edit_message_text(text=callback_message, reply_markup=reply_markup)
 
-            normal_message = f'Send me the new {callback_option.name.title()} in the following form:\n'
-            normal_message += f'{UpdateEventUtils.get_input_format_string(callback_option)}\n'
-            normal_message += 'To cancel updating, just send me /cancel'
+            normal_message = PrintUtils.get_update_attribute_message(callback_option)
             await self.send_normal_message_keyboard(update, normal_message)
 
             user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)

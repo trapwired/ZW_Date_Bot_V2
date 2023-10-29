@@ -14,7 +14,10 @@ class CommandDescriptions(object):
         '/update': 'Update / Delete a upcoming event',
         'overview': 'Go back to overview (choose game, training or timekeeping-event)',
         'continue later': 'Go back to main menu',
-        '/cancel': 'Go Back to main admin menu'
+        '/cancel': 'Go Back to main admin menu',
+        '/game': 'Add a new game',
+        '/training': 'Add a new training',
+        '/timekeeping': 'Add a new timekeeping-event',
     }
 
     @classmethod
