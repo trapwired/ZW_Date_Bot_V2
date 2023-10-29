@@ -117,6 +117,7 @@ class TelegramService(object):
         self.website = api_config.get_key('Additional_Data', 'WEBSITE')
         self.trainers_games = api_config.get_int_list('Chat_Ids', 'TRAINERS_GAMES')
         self.trainers_training = api_config.get_int_list('Chat_Ids', 'TRAINERS_TRAINING')
+        self.group_chat_id = api_config.get_key('Chat_Ids', 'GROUP_CHAT')
 
     async def send_message(self, update: Update | TelegramUser, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
@@ -169,6 +170,10 @@ class TelegramService(object):
     async def send_maintainer_hi(self, hi: str):
         message_to_send = PrintUtils.prepare_message(hi)
         await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+
+    async def send_group_message(self, message: str):
+        await self.bot.send_message(chat_id=int(self.group_chat_id), text=message,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     def get_reply_keyboard(self, message_type: MessageType, all_commands: [str]):

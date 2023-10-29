@@ -1,3 +1,5 @@
+import datetime
+
 from multipledispatch import dispatch
 
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
@@ -133,6 +135,22 @@ def pretty_print_event_summary(stats: (list, list, list), game_string: str, even
     return result
 
 
+def create_game_summary(game: Game) -> str:
+    when_str = game.timestamp.strftime('%H:%M')
+    meeting_time = game.timestamp - datetime.timedelta(minutes=45)
+    meeting_time_str = meeting_time.strftime('%H:%M')
+    maps_search_part = '+'.join(game.location.strip().split(' '))
+    maps_link = f'https://www.google.com/maps/search/{maps_search_part}'
+
+    summary = (f'Just a quick reminder for the game today:\n'
+               f'_When:_ {when_str}\n'
+               f'_Meeting time:_ *We meet {meeting_time_str} ready in the changing room*\n'
+               f'_Where:_ {game.location.title()} \\([Google Maps Link]({maps_link})\\)\n'
+               f'_Opponent:_ {game.opponent.title()}\n'
+               f'_Jerseys:_ Don\'t forget to bring them, \\(whoever has them\\.\\.\\.\\)')
+    return summary
+
+
 def pretty_print_player_name(player: TelegramUser) -> str:
     res = f'\t\t{player.firstname.capitalize()}'
     if player.lastname:
@@ -169,7 +187,7 @@ def prepare_message(message: str):
         one_line = ''
 
     # max length is 4096 chars
-    result = result[len(result)-4095:]
+    result = result[len(result) - 4095:]
     return result
 
 

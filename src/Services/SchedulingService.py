@@ -46,6 +46,23 @@ class SchedulingService:
         self.individual_training_reminder_frequency = api_config.get_int_list('Scheduling', 'TRAINING_INDIVIDUAL')
         self.individual_timekeeping_reminder_frequency = api_config.get_int_list('Scheduling', 'TIMEKEEPING_INDIVIDUAL')
 
+    async def send_same_day_game_reminder(self, context: ContextTypes.DEFAULT_TYPE):
+        # find game that takes place today
+        try:
+            all_future_events = self.get_ordered_events(Event.GAME)
+            events_to_remind = get_events_in_x_days(all_future_events, [0])
+            
+            if len(events_to_remind) == 0:
+                return
+
+            message = PrintUtils.create_game_summary(events_to_remind[0])
+
+            await self.telegram_service.send_group_message(message)
+        except Exception as e:
+            await self.telegram_service.send_maintainer_message(
+                'Exception caught in SchedulingService.send_event_summary()',
+                e)
+
     async def send_individual_game_reminders(self, context: ContextTypes.DEFAULT_TYPE):
         await self._send_individual_event_reminders(Event.GAME)
 
@@ -54,7 +71,7 @@ class SchedulingService:
 
     async def send_individual_tke_reminders(self, context: ContextTypes.DEFAULT_TYPE):
         try:
-            all_future_events = self.get_ordered_event(Event.TIMEKEEPING)
+            all_future_events = self.get_ordered_events(Event.TIMEKEEPING)
             reminder_frequency = self.get_reminder_frequency(Event.TIMEKEEPING)
             all_relevant_events = get_events_in_x_days(all_future_events, reminder_frequency)
 
@@ -77,7 +94,6 @@ class SchedulingService:
                 random.shuffle(new_unsure_players)
                 people_needed = max(0, event.people_required - len(yes))
                 event_to_unsure_players[event] = new_unsure_players[:people_needed]
-
 
             unsure_player_to_event = dict()
             for event, players in event_to_unsure_players.items():
@@ -103,7 +119,7 @@ class SchedulingService:
 
     async def _send_individual_event_reminders(self, event_type: Event):
         try:
-            all_future_events = self.get_ordered_event(event_type)
+            all_future_events = self.get_ordered_events(event_type)
             reminder_frequency = self.get_reminder_frequency(event_type)
             all_relevant_events = get_events_in_x_days(all_future_events, reminder_frequency)
 
@@ -168,7 +184,7 @@ class SchedulingService:
 
     async def _send_event_summary(self, event_type: Event):
         try:
-            all_future_events = self.get_ordered_event(event_type)
+            all_future_events = self.get_ordered_events(event_type)
             reminder_days = self.get_summary_reminder_day(event_type)
             events_to_remind = get_events_in_x_days(all_future_events, reminder_days)
 
@@ -186,7 +202,7 @@ class SchedulingService:
                 'Exception caught in SchedulingService.send_event_summary()',
                 e)
 
-    def get_ordered_event(self, event_type: Event):
+    def get_ordered_events(self, event_type: Event):
         match event_type:
             case Event.GAME:
                 return self.data_access.get_ordered_games()
