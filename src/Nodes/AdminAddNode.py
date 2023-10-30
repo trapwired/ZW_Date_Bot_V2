@@ -20,7 +20,7 @@ class AdminAddNode(Node):
         # TODO make generic method, handle_add_event (event_type...)  + call from 3 methods
         event_summary = PrintUtils.pretty_print(Event.GAME)
         pretty_print = UpdateEventUtils.get_inline_message('Adding new', Event.GAME, event_summary)
-        # TODO add new callbackNode for handling Add-callbacks
+
         reply_markup = CallbackUtils.get_add_event_reply_markup(UserState.ADMIN_ADD_GAME, Event.GAME)
         # TODO unclear doc_id? (in get_add_event_reply_markup) + in build_additional_information
         query = await self.telegram_service.send_message(update=update, all_buttons=[], reply_markup=reply_markup,

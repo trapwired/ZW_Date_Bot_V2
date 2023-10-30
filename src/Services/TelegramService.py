@@ -3,7 +3,8 @@ import traceback
 
 import telegram
 from multipledispatch import dispatch
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove, \
+    Message
 
 from Enums.MessageType import MessageType
 from Enums.Event import Event
@@ -133,8 +134,8 @@ class TelegramService(object):
     async def send_message_with_normal_keyboard(self, update: Update | TelegramUser, message: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
         message_to_send = PrintUtils.prepare_message(message)
-        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=ReplyKeyboardRemove(),
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        return await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=ReplyKeyboardRemove(),
+                                           parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_info_message_to_trainers(self, message: str, event_type: Event):
         message_to_send = PrintUtils.prepare_message(message)
@@ -200,18 +201,10 @@ class TelegramService(object):
     async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int):
         await self.bot.edit_message_text(text=message, message_id=message_id, chat_id=chat_id)
 
-    async def delete_next_message(self, update: Update):
-        if update.message:
-            chat_id = update.message.chat_id
-            message_id = update.message.id
-        elif update.callback_query:
-            chat_id = update.callback_query.message.chat_id
-            message_id = update.callback_query.id
-        else:
-            return
-        next_msg_id = int(message_id) + 1
-        # TODO is this possible to delete without knowing next id?
-        await self.bot.deleteMessage(message_id=next_msg_id, chat_id=chat_id)
+    async def delete_previous_message(self, message: Message):
+        previous_message_id = int(message.id) - 1
+        chat_id = message.chat_id
+        await self.bot.deleteMessage(message_id=previous_message_id, chat_id=chat_id)
 
     async def delete_message(self, update: Update):
         if update.message:

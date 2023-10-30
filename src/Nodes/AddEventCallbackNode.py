@@ -44,15 +44,24 @@ class AddEventCallbackNode(CallbackNode):
                 user_to_state.additional_info = ''
                 self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
                 admin_node = self.node_handler.get_node(UserState.ADMIN)
-                await self.telegram_service.send_message(
+                sent_message = await self.telegram_service.send_message(
                     update=update,
                     all_buttons=admin_node.get_commands_for_buttons(user_to_state.role, UserState.ADMIN,
-                                                                         update.effective_chat.id),
+                                                                    update.effective_chat.id),
                     message_type=MessageType.ADMIN)
                 await self.telegram_service.delete_message(update)
-                await self.telegram_service.delete_next_message(update)
+                await self.telegram_service.delete_previous_message(sent_message)
+                return
+
             case CallbackOption.RESTART:
                 await update.callback_query.answer()
+
+                message = 'Sure, let\'s restart...'
+                sent_message = await self.telegram_service.send_message_with_normal_keyboard(update, message)
+
                 await update.callback_query.delete_message()
+                await self.telegram_service.delete_previous_message(sent_message)
+
                 admin_add_node = self.node_handler.get_node(UserState.ADMIN_ADD)
                 await admin_add_node.handle_add_game(update, user_to_state, UserState.ADMIN_ADD_GAME)
+                return
