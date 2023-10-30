@@ -19,7 +19,7 @@ from Utils import PrintUtils
 from Utils import CallbackUtils
 
 
-class AdminAddDateTimeOrStringNode(Node):
+class AddEventFieldsNode(Node):
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
                  data_access: DataAccess, event_type: Event, node_handler):
         super().__init__(state, telegram_service, user_state_service, data_access)
@@ -31,7 +31,6 @@ class AdminAddDateTimeOrStringNode(Node):
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.ADMIN)
 
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        # TODO correctly reset everything
         user_to_state.additional_info = ''
         self.user_state_service.update_user_state(user_to_state, new_state)
         await self.telegram_service.send_message(
@@ -40,12 +39,34 @@ class AdminAddDateTimeOrStringNode(Node):
             message_type=MessageType.ADMIN)
 
     async def handle_user_input(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
-        # Switch on self.state
+        # TODO hier ausrechnen, was in jedem flow gebraucht wird
+        match self.event_type:
+            case Event.GAME:
+                await self.handle_game_flow(update, user_to_state, new_state)
+            case Event.TRAINING:
+                await self.handle_training_flow(update, user_to_state, new_state)
+            case Event.TIMEKEEPING:
+                await self.handle_timekeeping_flow(update, user_to_state, new_state)
+
+    async def handle_game_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         # tryparse date or string
         # how to update user_state?
         # always resend callback (if so, delete old one)
         # send format / expcted + always /cancel
-        pass
+        # TODO set correct states
+        match user_to_state.state:
+            case UserState.ADMIN_ADD_GAME:
+                pass
+
+    async def handle_training_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        match user_to_state.state:
+            case UserState.ADMIN_ADD_TRAINING:
+                pass
+
+    async def handle_timekeeping_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        match user_to_state.state:
+            case UserState.ADMIN_ADD_TIMEKEEPING:
+                pass
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         # use default transition for anything that can't be predicted

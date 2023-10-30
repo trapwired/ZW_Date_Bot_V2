@@ -29,7 +29,7 @@ from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 from Nodes.AdminNode import AdminNode
 from Nodes.AdminAddNode import AdminAddNode
-from Nodes.AdminAddDateTimeOrStringNode import AdminAddDateTimeOrStringNode
+from Nodes.AddEventFieldsNode import AddEventFieldsNode
 from Nodes.UpdateNode import UpdateNode
 from Nodes.EditEventTimestampNode import EditEventTimestampNode
 from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNode
@@ -246,13 +246,12 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_add_node.add_transition('/timekeeping', admin_add_node.handle_add_timekeeping,
                                       new_state=UserState.ADMIN_ADD_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS)
 
-        admin_add_game_node = AdminAddDateTimeOrStringNode(UserState.ADMIN_ADD_GAME, telegram_service,
-                                                           user_state_service, data_access, Event.GAME, self)
-        admin_add_training_node = AdminAddDateTimeOrStringNode(UserState.ADMIN_ADD_TRAINING, telegram_service,
-                                                               user_state_service, data_access, Event.TRAINING, self)
-        admin_add_timekeeping_node = AdminAddDateTimeOrStringNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service,
-                                                                  user_state_service, data_access, Event.TIMEKEEPING,
-                                                                  self)
+        admin_add_game_node = AddEventFieldsNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service,
+                                                 data_access, Event.GAME, self)
+        admin_add_training_node = AddEventFieldsNode(UserState.ADMIN_ADD_TRAINING, telegram_service, user_state_service,
+                                                     data_access, Event.TRAINING, self)
+        admin_add_timekeeping_node = AddEventFieldsNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service,
+                                                        user_state_service, data_access, Event.TIMEKEEPING, self)
 
         admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access)
         admin_update_node.add_continue_later()
