@@ -240,11 +240,13 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
         admin_add_node.add_continue_later()
         admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
-        admin_add_node.add_transition('/game', admin_add_node.handle_add_game, new_state=UserState.ADMIN_ADD_GAME)
+        admin_add_node.add_transition('/game', admin_add_node.handle_add_game,
+                                      new_state=UserState.ADMIN_ADD_GAME_TIMESTAMP)
         admin_add_node.add_transition('/training', admin_add_node.handle_add_training,
-                                      new_state=UserState.ADMIN_ADD_TRAINING)
+                                      new_state=UserState.ADMIN_ADD_TRAINING_TIMESTAMP)
         admin_add_node.add_transition('/timekeeping', admin_add_node.handle_add_timekeeping,
-                                      new_state=UserState.ADMIN_ADD_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS)
+                                      new_state=UserState.ADMIN_ADD_TIMEKEEPING_TIMESTAMP,
+                                      allowed_roles=RoleSet.PLAYERS)
 
         admin_add_game_node = AddEventFieldsNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service,
                                                  data_access, Event.GAME, self)

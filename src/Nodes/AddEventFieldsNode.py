@@ -55,8 +55,31 @@ class AddEventFieldsNode(Node):
         # send format / expcted + always /cancel
         # TODO set correct states
         match user_to_state.state:
-            case UserState.ADMIN_ADD_GAME:
-                pass
+            case UserState.ADMIN_ADD_GAME_TIMESTAMP:
+                # TryParse Datetime
+                message = update.message.text.lower()
+
+                parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
+                if type(parsed_datetime) is str:
+                    # Error case, send message without changing anything
+                    await self.telegram_service.send_message_with_normal_keyboard(
+                        update=update,
+                        message=parsed_datetime)
+                    return
+
+                new_datetime = parsed_datetime
+
+                try_parse = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
+                if not try_parse:
+                    return await self.handle_parse_additional_info_failed(user_to_state, update)
+
+                message_id, chat_id, doc_id = try_parse
+
+                # if ok, update inline message
+
+                # send next anweisung
+
+                # update userState to next one
 
     async def handle_training_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         match user_to_state.state:
@@ -71,3 +94,11 @@ class AddEventFieldsNode(Node):
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         # use default transition for anything that can't be predicted
         await self.handle_user_input(update, user_to_state, new_state)
+
+    async def handle_parse_additional_info_failed(self, user_to_state: UsersToState, update: Update):
+        text = 'Error getting information from the database, please restart adding an event via the menu :)'
+        await self.telegram_service.send_message_with_normal_keyboard(
+            update=update,
+            message=text)
+
+        await self.handle_cancel(update, user_to_state, UserState.ADMIN)
