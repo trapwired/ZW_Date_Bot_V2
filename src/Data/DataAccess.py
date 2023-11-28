@@ -16,6 +16,7 @@ from databaseEntities.UsersToState import UsersToState
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
+from databaseEntities.PlayerMetric import PlayerMetric
 
 from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException, NoEventFoundException
 from Utils.ApiConfig import ApiConfig
@@ -114,6 +115,12 @@ class DataAccess(object):
             raise DocumentIdNotPresentException()
         return self.firebase_repository.update(training, self.tables.get(Table.TRAININGS_TABLE))
 
+    @dispatch(PlayerMetric)
+    def update(self, player_metric: PlayerMetric):
+        if player_metric.doc_id is None:
+            raise DocumentIdNotPresentException()
+        return self.firebase_repository.update(player_metric, self.tables.get(Table.PLAYER_METRIC))
+
     @dispatch(TimekeepingEvent)
     def update(self, timekeeping_event: TimekeepingEvent):
         if timekeeping_event.doc_id is None:
@@ -170,6 +177,10 @@ class DataAccess(object):
 
     def get_user(self, telegram_id: int) -> TelegramUser:
         return self.firebase_repository.get_user(telegram_id)
+
+    def get_player_metric(self, telegram_id: int):
+        user = self.firebase_repository.get_user(telegram_id)
+        return self.firebase_repository.get_player_metric(user)
 
     def get_ordered_games(self) -> [Game]:
         event_list = self.firebase_repository.get_future_events(Table.GAMES_TABLE)

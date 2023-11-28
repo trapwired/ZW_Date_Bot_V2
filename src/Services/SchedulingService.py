@@ -4,6 +4,7 @@ import random
 from Data.DataAccess import DataAccess
 
 from Services.TelegramService import TelegramService
+from Services.StatisticsService import StatisticsService
 
 from telegram.ext import ContextTypes
 
@@ -39,9 +40,11 @@ def get_players_from_doc_ids(id_list: [str], all_players: [TelegramUser]) -> [Te
 
 
 class SchedulingService:
-    def __init__(self, data_access: DataAccess, telegram_service: TelegramService, api_config: ApiConfig):
+    def __init__(self, data_access: DataAccess, telegram_service: TelegramService,
+                 statistics_service: StatisticsService, api_config: ApiConfig):
         self.data_access = data_access
         self.telegram_service = telegram_service
+        self.statistics_service = statistics_service
         self.individual_game_reminder_frequency = api_config.get_int_list('Scheduling', 'GAME_INDIVIDUAL')
         self.individual_training_reminder_frequency = api_config.get_int_list('Scheduling', 'TRAINING_INDIVIDUAL')
         self.individual_timekeeping_reminder_frequency = api_config.get_int_list('Scheduling', 'TIMEKEEPING_INDIVIDUAL')
@@ -51,7 +54,7 @@ class SchedulingService:
         try:
             all_future_events = self.get_ordered_events(Event.GAME)
             events_to_remind = get_events_in_x_days(all_future_events, [0])
-            
+
             if len(events_to_remind) == 0:
                 return
 
@@ -188,6 +191,7 @@ class SchedulingService:
                 reply_markup=reply_markup)
             messages_sent_count += 1
 
+        self.statistics_service.increment_event_reminder_metric(event_type, player, messages_sent_count)
         return messages_sent_count
 
     async def send_game_summary(self, context: ContextTypes.DEFAULT_TYPE):

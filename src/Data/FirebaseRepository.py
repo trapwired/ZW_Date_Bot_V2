@@ -18,10 +18,13 @@ from databaseEntities.UsersToState import UsersToState
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
+from databaseEntities.PlayerMetric import PlayerMetric
 
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException
 from Utils import PathUtils
 from Utils.ApiConfig import ApiConfig
+
+
 
 
 class FirebaseRepository(object):
@@ -87,6 +90,16 @@ class FirebaseRepository(object):
     def get_timekeeping(self, doc_id: str) -> TimekeepingEvent | None:
         res = self.get_document(doc_id, Table.TIMEKEEPING_TABLE)
         return TimekeepingEvent.from_dict(res.id, res.to_dict())
+
+    def get_player_metric(self, user: TelegramUser):
+        query_ref = self.db.collection(self.tables.get(Table.PLAYER_METRIC)).where(
+            filter=FieldFilter("userId", "==", user.doc_id))
+        entries = query_ref.get()
+        if len(entries) > 0:
+            return PlayerMetric.from_dict(entries[0].id, entries[0].to_dict())
+        new_player_metric = PlayerMetric(user.doc_id, 0, 0, 0)
+        doc_ref = self.add(new_player_metric, Table.PLAYER_METRIC)
+        return new_player_metric.add_document_id(doc_ref[1].id)
 
     def get_future_events(self, table: Table) -> list:
         # get all events in table which take place in the future
