@@ -81,6 +81,11 @@ def run_job_queue():
         scheduling_service.send_same_day_game_reminder,
         datetime.time(6, 0, 0)
     )
+    # Training Reminder, on day before training
+    job_queue.run_daily(  # previous day at 20:30
+        scheduling_service.send_previous_day_training_reminder,
+        datetime.time(18, 30, 0)
+    )
 
 
 if __name__ == "__main__":

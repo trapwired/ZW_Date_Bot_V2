@@ -60,7 +60,24 @@ class SchedulingService:
             await self.telegram_service.send_group_message(message)
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService.send_event_summary()',
+                'Exception caught in SchedulingService.send_same_day_game_reminder()',
+                e)
+
+    async def send_previous_day_training_reminder(self, context: ContextTypes.DEFAULT_TYPE):
+        # find training that takes place tomorrow
+        try:
+            all_future_events = self.get_ordered_events(Event.TRAINING)
+            events_to_remind = get_events_in_x_days(all_future_events, [1])
+
+            if len(events_to_remind) == 0:
+                return
+
+            message = PrintUtils.create_training_summary(events_to_remind[0])
+
+            await self.telegram_service.send_group_message(message)
+        except Exception as e:
+            await self.telegram_service.send_maintainer_message(
+                'Exception caught in SchedulingService.send_previous_day_training_reminder()',
                 e)
 
     async def send_individual_game_reminders(self, context: ContextTypes.DEFAULT_TYPE):
