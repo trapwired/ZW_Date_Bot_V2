@@ -41,4 +41,4 @@ class TriggerService:
         game = self.data_access.get_game(trigger_payload.doc_id)
         pretty_game = PrintUtils.pretty_print(game)
         message = 'Trigger: For the following game:\n\n' + pretty_game + '\n\n' + msg
-        await self.telegram_service.send_info_message_to_trainers(message)
+        await self.telegram_service.send_info_message_to_trainers(message, Event.GAME)
