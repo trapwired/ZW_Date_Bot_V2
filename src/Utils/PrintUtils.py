@@ -159,7 +159,7 @@ def create_training_summary(training: Training) -> str:
     summary = (f'Just a quick reminder for the training tomorrow:\n'
                f'_When:_ {when_str} o\'clock\n'
                f'_Where:_ {training.location.title()} \\([Google Maps]({maps_link})\\)\n'
-               f'Please be there on time so we can use the full 90min to train...')
+               f'Please be there on time, so we can use the full 90min to train\\.\\.\\.\\')
     return summary
 
 
