@@ -15,3 +15,6 @@ class ApiConfig:
 
     def get_key(self, section: str, identifier: str):
         return self.api_config.get(section, identifier)
+
+    def get_bool(self, section: str, identifier: str):
+        return bool(self.get_key(section, identifier))

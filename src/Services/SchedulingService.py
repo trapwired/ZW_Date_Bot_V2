@@ -48,6 +48,7 @@ class SchedulingService:
         self.individual_game_reminder_frequency = api_config.get_int_list('Scheduling', 'GAME_INDIVIDUAL')
         self.individual_training_reminder_frequency = api_config.get_int_list('Scheduling', 'TRAINING_INDIVIDUAL')
         self.individual_timekeeping_reminder_frequency = api_config.get_int_list('Scheduling', 'TIMEKEEPING_INDIVIDUAL')
+        self.is_test_system = api_config.get_bool('Flags', 'TEST_SYSTEM')
 
     async def send_same_day_game_reminder(self, context: ContextTypes.DEFAULT_TYPE):
         # find game that takes place today
@@ -130,8 +131,9 @@ class SchedulingService:
             for player, event_list in unsure_player_to_event.items():
                 message_sent_count += await self.send_event_enroll_reminder(player, event_list, Event.TIMEKEEPING)
 
-            message = f'Sent out a total of {message_sent_count} timekeeping reminders to {len(unsure_player_to_event)} Player(s)'
-            await self.telegram_service.send_maintainer_message(message)
+            if self.is_test_system:
+                message = f'Sent out a total of {message_sent_count} timekeeping reminders to {len(unsure_player_to_event)} Player(s)'
+                await self.telegram_service.send_maintainer_message(message)
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
                 'Exception caught in SchedulingService.send_individual_tke_reminders()',
@@ -165,8 +167,9 @@ class SchedulingService:
             for player, event_list in unsure_player_to_event.items():
                 message_sent_count += await self.send_event_enroll_reminder(player, event_list, event_type)
 
-            message = f'Sent out a total of {message_sent_count} {event_type.name.lower()} reminders to {len(unsure_player_to_event)} Player(s)'
-            await self.telegram_service.send_maintainer_message(message)
+            if self.is_test_system:
+                message = f'Sent out a total of {message_sent_count} {event_type.name.lower()} reminders to {len(unsure_player_to_event)} Player(s)'
+                await self.telegram_service.send_maintainer_message(message)
 
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
