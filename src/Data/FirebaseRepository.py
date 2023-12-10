@@ -20,7 +20,7 @@ from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.PlayerMetric import PlayerMetric
 
-from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException
+from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException
 from Utils import PathUtils
 from Utils.ApiConfig import ApiConfig
 
@@ -107,7 +107,7 @@ class FirebaseRepository(object):
         query_ref = self.db.collection(self.tables.get(table)).where(filter=FieldFilter("timestamp", ">", now))
         event_list = query_ref.get()
         if len(event_list) == 0:
-            raise NoEventFoundException()
+            return []
         return event_list
 
     def get_attendance_list(self, doc_id: str, table: Table):

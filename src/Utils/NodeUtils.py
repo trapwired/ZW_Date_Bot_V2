@@ -8,7 +8,6 @@ from Enums.RoleSet import RoleSet
 
 from Nodes.Node import Node
 
-from Utils.CustomExceptions import NoEventFoundException
 from Utils import PrintUtils
 
 

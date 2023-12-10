@@ -18,7 +18,7 @@ from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.PlayerMetric import PlayerMetric
 
-from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException, NoEventFoundException
+from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException
 from Utils.ApiConfig import ApiConfig
 
 TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
@@ -261,11 +261,8 @@ class DataAccess(object):
         return result
 
     def any_events_in_future(self, event_table: Table, x=42):
-        try:
-            self.firebase_repository.get_future_events(event_table)
-        except NoEventFoundException:
-            return False
-        return True
+        events = self.firebase_repository.get_future_events(event_table)
+        return len(events) > 0
 
     def get_all_event_attendances(self, telegram_user: TelegramUser):
         attendance_dict = {}
