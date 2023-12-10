@@ -185,7 +185,7 @@ def pretty_print_statistics(user_to_player_metrics_dict: dict):
     for key, value in user_to_player_metrics_dict.items():
         player_name = pretty_print_player_name(key)[0:-1]
         statistics = pretty_print_player_metric(value)
-        space = (15 - len(player_name)) * ' '
+        space = ((15 - len(player_name)) * 2) * ' '
         result += '\t\t' + player_name + space + statistics + '\n'
     return result
 
