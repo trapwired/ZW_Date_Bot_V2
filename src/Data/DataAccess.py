@@ -277,6 +277,17 @@ class DataAccess(object):
                 attendance_dict[new_attendance.event_id] = new_attendance
         return attendance_dict
 
+    def get_user_to_player_metric(self) -> dict:
+        all_player_metrics = self.firebase_repository.get_all_player_metrics()
+        users_to_player_metric_dict = dict()
+
+        for row in all_player_metrics:
+            player_metric = PlayerMetric.from_dict(row.id, row.to_dict())
+            user = self.firebase_repository.get_user(player_metric.user_id)
+            users_to_player_metric_dict[user] = player_metric
+
+        return users_to_player_metric_dict
+
     ##########
     # DELETE #
     ##########

@@ -12,6 +12,8 @@ from Enums.AttendanceState import AttendanceState
 
 from databaseEntities.TelegramUser import TelegramUser
 
+from databaseEntities.PlayerMetric import PlayerMetric
+
 
 def pretty_print_game_stats(game_stats: (list, list, list), attendance: Attendance | None):
     yes, no, unsure = game_stats
@@ -169,6 +171,21 @@ def pretty_print_player_name(player: TelegramUser) -> str:
         res += f' {player.lastname[0].capitalize()}.'
     res += '\n'
     return res
+
+
+def pretty_print_player_metric(player_metric: PlayerMetric) -> str:
+    return (f'G:{player_metric.game_reminders_sent}, T:{player_metric.training_reminders_sent}, '
+            f'TKE: {player_metric.timekeeping_reminders_sent}')
+
+
+def pretty_print_statistics(user_to_player_metrics_dict: dict):
+    result = 'Statistics:\n\n'
+    result += '\tReminders sent (Game, Training, Tke):\n'
+    for key, value in user_to_player_metrics_dict.items():
+        player_name = pretty_print_player_name(key)[0:-1]
+        statistics = pretty_print_player_metric(value)
+        result += '\t\t' + player_name + ': ' + statistics
+    return result
 
 
 def prepare_message(message: str):

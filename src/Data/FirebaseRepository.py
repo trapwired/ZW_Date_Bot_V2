@@ -133,6 +133,12 @@ class FirebaseRepository(object):
         entries = query_ref.get()
         return entries
 
+    def get_all_player_metrics(self):
+        table = self.tables.get(Table.PLAYER_METRIC)
+        query_ref = self.db.collection(table)
+        entries = query_ref.get()
+        return entries
+
     def get_all_active_players_to_state(self):
         query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
             filter=FieldFilter("role", "in", RoleSet.ACTIVE_PLAYERS))
