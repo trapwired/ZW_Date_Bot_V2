@@ -178,15 +178,25 @@ def pretty_print_player_metric(player_metric: PlayerMetric) -> str:
             f'TKE: {player_metric.timekeeping_reminders_sent}')
 
 
+def create_sorted_dict(user_to_player_metrics_dict) -> dict:
+    result_dict = dict()
+    for key, value in user_to_player_metrics_dict.items():
+        total_reminders = value.sum_values()
+        result_dict[(key, value)] = total_reminders
+    sorted(result_dict.values()).reverse()
+    return result_dict
+
+
 def pretty_print_statistics(user_to_player_metrics_dict: dict):
     result = 'Statistics:\n\n'
-    result += '\tReminders sent (Game, Training, Tke):\n'
+    result += '\tReminders sent (Game, Training, Timekeeping-Event):\n'
     border = 17
-    for key, value in user_to_player_metrics_dict.items():
-        player_name = pretty_print_player_name(key)[0:-1]
-        statistics = pretty_print_player_metric(value)
-        space = ((15 - len(player_name)) * 2) * ' '
-        result += '\t\t' + player_name + space + statistics + '\n'
+    sorted_dict = create_sorted_dict(user_to_player_metrics_dict)
+    for key, value in sorted_dict.items():
+        player_name = pretty_print_player_name(key[0])[0:-1]
+        statistics = pretty_print_player_metric(key[1])
+        space = ((border - len(player_name)) * 2) * ' '
+        result += f'\t\t{player_name} ({str(value)}){space}{statistics}\n'
     return result
 
 
