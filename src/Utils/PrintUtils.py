@@ -181,10 +181,12 @@ def pretty_print_player_metric(player_metric: PlayerMetric) -> str:
 def pretty_print_statistics(user_to_player_metrics_dict: dict):
     result = 'Statistics:\n\n'
     result += '\tReminders sent (Game, Training, Tke):\n'
+    border = 17
     for key, value in user_to_player_metrics_dict.items():
         player_name = pretty_print_player_name(key)[0:-1]
         statistics = pretty_print_player_metric(value)
-        result += '\t\t' + player_name + ': ' + statistics + '\n'
+        space = (15 - len(player_name)) * ' '
+        result += '\t\t' + player_name + space + statistics + '\n'
     return result
 
 
