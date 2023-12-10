@@ -1,6 +1,7 @@
 import datetime
 
 from multipledispatch import dispatch
+from collections import OrderedDict
 
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
@@ -183,8 +184,7 @@ def create_sorted_dict(user_to_player_metrics_dict) -> dict:
     for key, value in user_to_player_metrics_dict.items():
         total_reminders = value.sum_values()
         result_dict[(key, value)] = total_reminders
-    sorted(result_dict.values()).reverse()
-    return result_dict
+    return OrderedDict(sorted(result_dict.items()))
 
 
 def pretty_print_statistics(user_to_player_metrics_dict: dict):
