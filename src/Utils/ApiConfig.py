@@ -3,6 +3,10 @@ import configparser
 from Utils import PathUtils
 
 
+def str2bool(v):
+    return v.lower() in ("True", "true", "t", "1", "T")
+
+
 class ApiConfig:
     def __init__(self):
         api_config = configparser.RawConfigParser()
@@ -17,4 +21,4 @@ class ApiConfig:
         return self.api_config.get(section, identifier)
 
     def get_bool(self, section: str, identifier: str):
-        return bool(self.get_key(section, identifier))
+        return str2bool(self.get_key(section, identifier))
