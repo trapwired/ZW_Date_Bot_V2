@@ -60,6 +60,10 @@ def pretty_print_event_stats(event_stats: (list, list, list), event_type: Event,
             return pretty_print_timekeeping_stats(event_stats, attendance)
 
 
+def pretty_print_event_datetime(event: Game | Training | TimekeepingEvent):
+    return f'{event.__class__.__name__.title()} - {event.timestamp.strftime("%d.%m.%Y %H:%M")}'
+
+
 @dispatch(Game)
 def pretty_print(game: Game) -> str:
     return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location.title()}'

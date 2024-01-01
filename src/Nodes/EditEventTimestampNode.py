@@ -76,7 +76,7 @@ class EditEventTimestampNode(Node):
         self.node_handler.recalculate_node_transitions()
 
         if abs(old_event.timestamp - updated_event.timestamp) > pd.Timedelta(hours=2):
-            await self.notify_all_players(doc_id, updated_event)
+            await self.notify_all_players(doc_id, updated_event, old_event)
             text = 'Since the event was moved by more than 2 hours, I invalidated all previous answers and let all players know...'
             await self.telegram_service.send_message_with_normal_keyboard(
                 update=update,
@@ -84,17 +84,20 @@ class EditEventTimestampNode(Node):
 
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
 
-    async def notify_all_players(self, doc_id: str, updated_event: Event):
+    async def notify_all_players(self, doc_id: str, updated_event: Event, old_event: Event):
         self.data_access.reset_all_player_event_attendance(self.event_type, doc_id)
         # notify all players, give option to vote again
 
         all_players = self.data_access.get_all_players()
 
+        pretty_print_old_event = PrintUtils.pretty_print_event_datetime(old_event)
+
         for player in all_players:
             await self.telegram_service.send_message(
                 update=player,
                 all_buttons=None,
-                message_type=MessageType.EVENT_TIMESTAMP_CHANGED)
+                message_type=MessageType.EVENT_TIMESTAMP_CHANGED,
+                message_extra_text=pretty_print_old_event)
 
             pretty_print_event = PrintUtils.pretty_print(updated_event, AttendanceState.UNSURE)
             reply_markup = CallbackUtils.get_edit_event_reply_markup(
