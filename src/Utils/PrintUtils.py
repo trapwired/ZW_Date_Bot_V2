@@ -191,6 +191,15 @@ def create_sorted_dict(user_to_player_metrics_dict) -> []:
     return result_list
 
 
+def create_sorted_event_attendance_dict(user_to_event_attendances_dict) -> []:
+    result_list = []
+    for key, value in user_to_event_attendances_dict.items():
+        total_attendances = len(value)
+        result_list.append((total_attendances, key, value))
+    result_list.sort(key=lambda x: x[0])
+    return result_list
+
+
 def pretty_print_statistics(user_to_player_metrics_dict: dict):
     result = 'Statistics:\n\n'
     result += '\tReminders sent (Game, Training, Timekeeping-Event):\n'
@@ -200,6 +209,19 @@ def pretty_print_statistics(user_to_player_metrics_dict: dict):
         player_name = pretty_print_player_name(key)[0:-1]
         statistics = pretty_print_player_metric(value)
         result += f'\t\t{player_name} ({str(total_reminders)})\t\t{statistics}\n'
+    return result
+
+
+def pretty_print_event_statistics(game_statistics: dict, event_type: Event):
+    event_type_string = event_type.name.lower().title()
+    result = f'{event_type_string}-Statistics:\n\n'
+    result += f'\tPlayer attendance for all {event_type_string}s this season:\n'
+    sorted_list = create_sorted_event_attendance_dict(game_statistics)
+
+    for element in sorted_list:
+        total_attendances, key, value = element
+        player_name = pretty_print_player_name(key)[0:-1]
+        result += f'\t\t{player_name}: {str(total_attendances)}\n'
     return result
 
 

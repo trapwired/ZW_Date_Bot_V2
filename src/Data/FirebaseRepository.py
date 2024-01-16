@@ -133,6 +133,12 @@ class FirebaseRepository(object):
         entries = query_ref.get()
         return entries
 
+    def get_all_event_attendances(self, event_type: Event):
+        table = self.get_event_table(event_type)
+        query_ref = self.db.collection(table)
+        entries = query_ref.get()
+        return entries
+
     def get_all_player_metrics(self):
         table = self.tables.get(Table.PLAYER_METRIC)
         query_ref = self.db.collection(table)

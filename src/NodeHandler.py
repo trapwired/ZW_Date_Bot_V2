@@ -232,7 +232,10 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_node.add_continue_later()
         admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
         admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
-        admin_node.add_transition('/statistics', admin_node.handle_statistics)
+        admin_node.add_transition('/reminder_statistics', admin_node.handle_statistics)
+        admin_node.add_transition('/game_statistics', admin_node.handle_game_statistics)
+        admin_node.add_transition('/training_statistics', admin_node.handle_training_statistics)
+        admin_node.add_transition('/timekeeping_statistics', admin_node.handle_timekeeping_statistics)
 
         admin_add_node = AdminNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
         admin_add_node.add_continue_later()

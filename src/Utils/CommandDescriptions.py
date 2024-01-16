@@ -15,7 +15,10 @@ class CommandDescriptions(object):
         'overview': 'Go back to overview (choose game, training or timekeeping-event)',
         'continue later': 'Go back to main menu',
         '/cancel': 'Go Back to main admin menu',
-        '/statistics': 'Show reminder statistics for all players'
+        '/reminder_statistics': 'Show reminder statistics for all players',
+        '/game_statistics': 'Show game-attendance statistics for all players',
+        '/training_statistics': 'Show training-attendance statistics for all players',
+        '/timekeeping_statistics': 'Show timekeeping-attendance statistics for all players'
     }
 
     @classmethod

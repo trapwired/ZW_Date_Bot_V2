@@ -285,6 +285,22 @@ class DataAccess(object):
 
         return users_to_player_metric_dict
 
+    def get_attendance_statistics(self, event_type: Event):
+        all_attendances = self.firebase_repository.get_all_event_attendances(event_type)
+        users_to_attendance_dict = dict()
+
+        for row in all_attendances:
+            attendance = Attendance.from_dict(row.id, row.to_dict())
+            try:
+                user = self.firebase_repository.get_user(attendance.user_id)
+            except Exception:
+                continue
+            if user not in users_to_attendance_dict:
+                users_to_attendance_dict[user] = []
+            users_to_attendance_dict[user].append(attendance)
+
+        return users_to_attendance_dict
+
     ##########
     # DELETE #
     ##########
