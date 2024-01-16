@@ -76,6 +76,9 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
                                           'answer - please quickly fill out your attendance for the moved event - '
                                           'thanks \n(Old event: ') + extra_text + ')'
 
+        case MessageType.ADMIN_STATISTICS:
+            return 'Here you are - which statistics do you like to see?'
+
         case _:
             return message_type.name + ' ' + extra_text
 

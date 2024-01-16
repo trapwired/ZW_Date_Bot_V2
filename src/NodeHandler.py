@@ -232,10 +232,15 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_node.add_continue_later()
         admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
         admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
-        admin_node.add_transition('/reminder_statistics', admin_node.handle_statistics)
-        admin_node.add_transition('/game_statistics', admin_node.handle_game_statistics)
-        admin_node.add_transition('/training_statistics', admin_node.handle_training_statistics)
-        admin_node.add_transition('/timekeeping_statistics', admin_node.handle_timekeeping_statistics)
+        admin_node.add_transition('/statistics', message_type=MessageType.ADMIN_STATISTICS, new_state=UserState.ADMIN_STATISTICS)
+
+        admin_statistics_node = AdminNode(UserState.ADMIN_STATISTICS, telegram_service, user_state_service, data_access)
+        admin_statistics_node.add_continue_later()
+
+        admin_statistics_node.add_transition('/reminder_statistics', admin_statistics_node.handle_statistics)
+        admin_statistics_node.add_transition('/game_statistics', admin_statistics_node.handle_game_statistics)
+        admin_statistics_node.add_transition('/training_statistics', admin_statistics_node.handle_training_statistics)
+        admin_statistics_node.add_transition('/timekeeping_statistics', admin_statistics_node.handle_timekeeping_statistics)
 
         admin_add_node = AdminNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
         admin_add_node.add_continue_later()
@@ -319,6 +324,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.EDIT_TRAININGS: edit_trainings_node,
             UserState.EDIT_TIMEKEEPINGS: edit_timekeepings_node,
             UserState.ADMIN: admin_node,
+            UserState.ADMIN_STATISTICS: admin_statistics_node,
             UserState.ADMIN_ADD: admin_add_node,
             UserState.ADMIN_UPDATE: admin_update_node,
             UserState.ADMIN_UPDATE_GAME: update_games_node,

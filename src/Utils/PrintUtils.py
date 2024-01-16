@@ -193,9 +193,9 @@ def create_sorted_dict(user_to_player_metrics_dict) -> []:
 
 def create_sorted_event_attendance_dict(user_to_event_attendances_dict) -> []:
     result_list = []
-    for key, value in user_to_event_attendances_dict.items():
-        total_attendances = len(value)
-        result_list.append((total_attendances, key, value))
+    for user, all_attendances in user_to_event_attendances_dict.items():
+        total_yes = sum(x.state == AttendanceState.YES for x in all_attendances)
+        result_list.append((total_yes, user, all_attendances))
     result_list.sort(key=lambda x: x[0])
     return result_list
 
@@ -213,14 +213,14 @@ def pretty_print_statistics(user_to_player_metrics_dict: dict):
 
 
 def pretty_print_event_statistics(game_statistics: dict, event_type: Event):
-    event_type_string = event_type.name.lower().title()
-    result = f'{event_type_string}-Statistics:\n\n'
+    event_type_string = event_type.name.lower()
+    result = f'{event_type_string.title()}-Statistics:\n\n'
     result += f'\tPlayer attendance for all {event_type_string}s this season:\n'
     sorted_list = create_sorted_event_attendance_dict(game_statistics)
 
     for element in sorted_list:
-        total_attendances, key, value = element
-        player_name = pretty_print_player_name(key)[0:-1]
+        total_attendances, user, _ = element
+        player_name = pretty_print_player_name(user)[0:-1]
         result += f'\t\t{player_name}: {str(total_attendances)}\n'
     return result
 
