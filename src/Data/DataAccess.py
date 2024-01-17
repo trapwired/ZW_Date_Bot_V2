@@ -318,6 +318,7 @@ class DataAccess(object):
                 self.firebase_repository.delete_training(doc_id)
             case Event.TIMEKEEPING:
                 self.firebase_repository.delete_timekeeping(doc_id)
+        self.firebase_repository.delete_event_attendances(event_type, doc_id)
 
     ########
     # ELSE #

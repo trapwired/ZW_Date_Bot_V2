@@ -128,13 +128,13 @@ class FirebaseRepository(object):
         return Attendance.from_dict(attendance.id, attendance.to_dict())
 
     def get_all_user_event_attendance(self, user: TelegramUser, event_type: Event):
-        table = self.get_event_table(event_type)
+        table = self.get_event_attendance_table(event_type)
         query_ref = self.db.collection(table).where(filter=FieldFilter("userId", "==", user.doc_id))
         entries = query_ref.get()
         return entries
 
     def get_all_event_attendances(self, event_type: Event):
-        table = self.get_event_table(event_type)
+        table = self.get_event_attendance_table(event_type)
         query_ref = self.db.collection(table)
         entries = query_ref.get()
         return entries
@@ -224,6 +224,16 @@ class FirebaseRepository(object):
         db_table = self.tables.get(Table.TIMEKEEPING_TABLE)
         self.db.collection(db_table).document(doc_id).delete()
 
+    def delete_event_attendances(self, event_type: Event, event_doc_id: str):
+        table = self.get_event_attendance_table(event_type)
+        query_ref = self.db.collection(table) \
+            .where(filter=FieldFilter("eventId", "==", event_doc_id))
+        result = query_ref.get()
+        for row in result:
+            self.db.collection(table).document(row.id).delete()
+
+
+
     ########
     # ELSE #
     ########
@@ -235,7 +245,7 @@ class FirebaseRepository(object):
         for doc in docs:
             print('{} => {} '.format(doc.id, doc.to_dict()))
 
-    def get_event_table(self, event_type: Event):
+    def get_event_attendance_table(self, event_type: Event):
         match event_type:
             case Event.GAME:
                 return self.tables.get(Table.GAME_ATTENDANCE_TABLE)
