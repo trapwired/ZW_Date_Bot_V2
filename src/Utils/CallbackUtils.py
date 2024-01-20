@@ -5,7 +5,7 @@ from Enums.CallbackOption import CallbackOption
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 DELIMITER = '#'
-ATTENDANCE_STATE_OPTIONS = [CallbackOption.YES, CallbackOption.NO, CallbackOption.UNSURE]
+ATTENDANCE_STATE_OPTIONS = [CallbackOption.YES, CallbackOption.NO, CallbackOption.UNSURE, CallbackOption.CALENDAR]
 YES_OR_NO_OPTIONS = [CallbackOption.YES, CallbackOption.NO]
 UPDATE_OR_DELETE_OPTIONS = [CallbackOption.UPDATE, CallbackOption.DELETE]
 UPDATE_GAME_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
@@ -42,7 +42,7 @@ def _get_reply_markup(options: [CallbackOption], user_state: UserState, event_ty
                                           callback_data=get_callback_message(user_state, event_type, option,
                                                                              document_id))
         button_list.append(new_button)
-    return InlineKeyboardMarkup([button_list])
+    return InlineKeyboardMarkup([button_list[i:i+3] for i in range(0, len(button_list), 3)]) # split list into list of at most 3 items
 
 
 def get_callback_message(user_state: UserState, event_type: Event, option: CallbackOption, doc_id: str):

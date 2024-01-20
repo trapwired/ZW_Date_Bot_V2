@@ -14,6 +14,7 @@ class UserState(IntEnum):
     EDIT_TIMEKEEPINGS = 11
     EDIT_TRAININGS = 12
     EDIT_GAMES = 13
+    # CALENDAR = 14
 
     ADMIN = 50
     ADMIN_ADD = 51
