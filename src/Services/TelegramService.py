@@ -137,6 +137,10 @@ class TelegramService(object):
         await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
+    async def send_file(self, update: Update | TelegramUser, path: str):
+        chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
+        await self.bot.send_document(chat_id=chat_id, document=path)
+
     async def send_message_with_normal_keyboard(self, update: Update | TelegramUser, message: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
         message_to_send = PrintUtils.prepare_message(message)

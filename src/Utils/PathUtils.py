@@ -10,5 +10,9 @@ def get_secrets_path():
     return os.path.join(get_root_path(), 'secrets')
 
 
+def get_ics_files_path():
+    return os.path.join(get_root_path(), 'ics_files')
+
+
 def get_secrets_file_path(filename: str):
     return os.path.join(get_secrets_path(), filename)

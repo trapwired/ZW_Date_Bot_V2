@@ -92,7 +92,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
         self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access, trigger_service,
-                                                             user_state_service)
+                                                             ics_service, user_state_service)
         add_nodes_reference_to_all_nodes(self.nodes)
 
         self.do_checks(api_config)
@@ -342,8 +342,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
         return all_nodes_dict
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
-                                  trigger_service: TriggerService, user_state_service: UserStateService):
-        edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service)
+                                  trigger_service: TriggerService, ics_service: IcsService, user_state_service: UserStateService):
+        edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service, ics_service)
         update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self,
                                                        user_state_service)
 

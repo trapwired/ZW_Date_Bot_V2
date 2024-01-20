@@ -7,6 +7,7 @@ class CallbackOption(IntEnum):
     UNSURE = AttendanceState.UNSURE
     YES = AttendanceState.YES
     NO = AttendanceState.NO
+    CALENDAR = 3
 
     UPDATE = 10
     DELETE = 11
