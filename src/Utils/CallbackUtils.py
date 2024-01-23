@@ -5,7 +5,7 @@ from Enums.CallbackOption import CallbackOption
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 DELIMITER = '#'
-ATTENDANCE_STATE_OPTIONS = [CallbackOption.YES, CallbackOption.NO, CallbackOption.UNSURE, CallbackOption.CALENDAR]
+ATTENDANCE_STATE_OPTIONS = [CallbackOption.YES, CallbackOption.NO, CallbackOption.UNSURE]
 YES_OR_NO_OPTIONS = [CallbackOption.YES, CallbackOption.NO]
 UPDATE_OR_DELETE_OPTIONS = [CallbackOption.UPDATE, CallbackOption.DELETE]
 UPDATE_GAME_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
@@ -24,7 +24,9 @@ def get_update_event_options(event_type: Event, document_id: str):
 
 
 def get_edit_event_reply_markup(user_state: UserState, event_type: Event, document_id: str):
-    return _get_reply_markup(ATTENDANCE_STATE_OPTIONS, user_state, event_type, document_id)
+    callback_options = ATTENDANCE_STATE_OPTIONS.copy()
+    callback_options.append(CallbackOption.CALENDAR)
+    return _get_reply_markup(callback_options, user_state, event_type, document_id)
 
 
 def get_update_or_delete_reply_markup(event_type: Event, document_id: str):
@@ -35,14 +37,24 @@ def get_yes_or_no_markup(event_type: Event, document_id: str):
     return _get_reply_markup(YES_OR_NO_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
 
 
+def get_option_translation(option: CallbackOption):
+    match option:
+        case CallbackOption.CALENDAR:
+            return 'export to calendar'
+        case _:
+            return option.name
+
+
 def _get_reply_markup(options: [CallbackOption], user_state: UserState, event_type: Event, document_id: str):
     button_list = []
     for option in options:
-        new_button = InlineKeyboardButton(option.name,
+        new_button = InlineKeyboardButton(get_option_translation(option),
                                           callback_data=get_callback_message(user_state, event_type, option,
                                                                              document_id))
         button_list.append(new_button)
-    return InlineKeyboardMarkup([button_list[i:i+3] for i in range(0, len(button_list), 3)]) # split list into list of at most 3 items
+
+    split_button_list = [button_list[i:i + 3] for i in range(0, len(button_list), 3)]  # max 3 items per row
+    return InlineKeyboardMarkup(split_button_list)
 
 
 def get_callback_message(user_state: UserState, event_type: Event, option: CallbackOption, doc_id: str):

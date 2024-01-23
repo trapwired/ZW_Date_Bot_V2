@@ -43,9 +43,8 @@ class EditCallbackNode(CallbackNode):
             case CallbackOption.CALENDAR:
                 await self._send_ics(query, update, event_type, doc_id)
 
-
     async def _write_database(self, telegram_user, query, event_type, attendance_state, doc_id):
-        
+
         new_attendance = Attendance(telegram_user.doc_id, doc_id, attendance_state)
 
         attendance = self.data_access.update_attendance(new_attendance, event_type)
@@ -70,14 +69,13 @@ class EditCallbackNode(CallbackNode):
         await self.trigger_service.check_triggers(trigger_payload)
         return
 
-
     async def _send_ics(self, query, update, event_type, doc_id):
-        await query.answer()
-
         ics_file_path = self.ics_service.get_ics(event_type, doc_id)
 
         with open(ics_file_path, "rb") as ics_file:
             await self.telegram_service.send_file(update, path=InputFile(ics_file))
+
+        await query.answer()
 
         os.remove(ics_file_path)
         return

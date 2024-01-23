@@ -1,3 +1,4 @@
+import os.path
 from datetime import timedelta
 from ics import Calendar, Event, alarm
 
@@ -5,9 +6,19 @@ from Data import DataAccess
 
 from Enums.Event import Event as Ev
 
+from Utils import PathUtils
+
+
+def init_directory():
+    ics_directory = PathUtils.get_ics_files_path()
+    if not os.path.exists(ics_directory):
+        os.mkdir(ics_directory)
+
+
 class IcsService(object):
     def __init__(self, data_access: DataAccess):
         self.data_access = data_access
+        init_directory()
 
         self.DURATION_GAME = timedelta(minutes=90)
         self.DURATION_TRAINING = timedelta(minutes=90)
@@ -16,8 +27,9 @@ class IcsService(object):
     def get_ics(self, event_type: Ev, doc_id: str):
 
         event = self.data_access.get_event(event_type, doc_id)
+        event_title = event_type.name.lower()
 
-        name = f'Handball {event_type.name.lower().capitalize()} Züri West'
+        name = f'Handball {event_title.capitalize()} Züri West'
         begin = event.timestamp
 
         match event_type:
@@ -33,9 +45,11 @@ class IcsService(object):
 
         location = event.location
 
-        event = Event(name=name, begin=begin, duration=duration, location=location, alarms=[alarm.DisplayAlarm(trigger=timedelta(hours=-24))])
+        event = Event(name=name, begin=begin, duration=duration, location=location,
+                      alarms=[alarm.DisplayAlarm(trigger=timedelta(hours=-24))])
 
-        ics_file_path = "/tmp/cal.ics"
+        filename = f'{event_title}-{doc_id}.ics'
+        ics_file_path = os.path.join(PathUtils.get_ics_files_path(), filename)
         cal = Calendar()
         cal.events.add(event)
         with open(ics_file_path, mode="w+") as ics_file:
