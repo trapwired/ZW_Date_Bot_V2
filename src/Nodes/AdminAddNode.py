@@ -8,6 +8,7 @@ from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
 
 from databaseEntities.UsersToState import UsersToState
+from databaseEntities.TempData import TempData
 
 from Utils import UpdateEventUtils
 from Utils import PrintUtils
@@ -21,11 +22,17 @@ class AdminAddNode(Node):
         event_summary = PrintUtils.pretty_print(Event.GAME)
         pretty_print = UpdateEventUtils.get_inline_message('Adding new', Event.GAME, event_summary)
 
-        reply_markup = CallbackUtils.get_add_event_reply_markup(UserState.ADMIN_ADD_GAME, Event.GAME)
+        temp_data = self.data_access.add(TempData(user_to_state.user_id))
+
+        reply_markup = CallbackUtils.get_add_event_reply_markup(UserState.ADMIN_ADD_GAME, Event.GAME, temp_data.doc_id)
+
         # TODO unclear doc_id? (in get_add_event_reply_markup) + in build_additional_information
+        # TODO handle both reply markup responses
         query = await self.telegram_service.send_message(update=update, all_buttons=[], reply_markup=reply_markup,
                                                          message=pretty_print)
+
         # send message, store callback-data in additional data of player
+        # TODO Update temp_data, add fields
         user_to_state.additional_info = CallbackUtils.build_additional_information(query.id,
                                                                                    query.chat.id, 'docId44')
 

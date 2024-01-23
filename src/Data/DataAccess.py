@@ -16,6 +16,7 @@ from databaseEntities.UsersToState import UsersToState
 from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
+from databaseEntities.TempData import TempData
 
 from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException, NoEventFoundException
 from Utils.ApiConfig import ApiConfig
@@ -61,6 +62,11 @@ class DataAccess(object):
         doc_ref = self.firebase_repository.add(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
         # TODO add unsure for each player
         return timekeeping_event.add_document_id(doc_ref[1].id)
+
+    @dispatch(TempData)
+    def add(self, temp_data: TempData) -> TempData:
+        doc_ref = self.firebase_repository.add(temp_data, self.tables.get(Table.TEMP_DATA_TABLE))
+        return temp_data.add_document_id(doc_ref[1].id)
 
     ##########
     # UPDATE #
