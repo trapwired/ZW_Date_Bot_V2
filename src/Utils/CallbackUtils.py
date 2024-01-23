@@ -29,6 +29,11 @@ def get_edit_event_reply_markup(user_state: UserState, event_type: Event, docume
     return _get_reply_markup(callback_options, user_state, event_type, document_id)
 
 
+def get_stats_event_reply_markup(user_state: UserState, event_type: Event, document_id: str):
+    callback_options = [CallbackOption.CALENDAR]
+    return _get_reply_markup(callback_options, user_state, event_type, document_id)
+
+
 def get_update_or_delete_reply_markup(event_type: Event, document_id: str):
     return _get_reply_markup(UPDATE_OR_DELETE_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
 
