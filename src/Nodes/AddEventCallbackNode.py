@@ -37,12 +37,12 @@ class AddEventCallbackNode(CallbackNode):
         _, event_type, callback_option, _ = CallbackUtils.try_parse_callback_message(query.data)
 
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        temp_data = self.data_access.get() # TODO get temp data
 
         match callback_option:
             case CallbackOption.CANCEL:
                 await update.callback_query.answer()
-                user_to_state.additional_info = ''
-                self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
+                # TODO Delete TempData
                 admin_node = self.node_handler.get_node(UserState.ADMIN)
                 sent_message = await self.telegram_service.send_message(
                     update=update,

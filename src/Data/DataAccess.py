@@ -140,6 +140,13 @@ class DataAccess(object):
             self.firebase_repository.update(attendance, table)
             return attendance
 
+    @dispatch(TempData)
+    def update(self, temp_data: TempData):
+        if temp_data.doc_id is None:
+            # TODO: Find / Match / AddDocId
+            raise DocumentIdNotPresentException()
+        return self.firebase_repository.update(temp_data, self.tables.get(Table.TEMP_DATA_TABLE))
+
     #######
     # GET #
     #######

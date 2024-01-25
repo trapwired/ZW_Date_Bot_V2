@@ -4,12 +4,12 @@ from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.Game import Game
+from databaseEntities.TelegramUser import TelegramUser
+from databaseEntities.TempData import TempData
 
 from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState
 from Enums.CallbackOption import CallbackOption
-
-from databaseEntities.TelegramUser import TelegramUser
 
 from Utils import UpdateEventUtils
 
@@ -116,15 +116,18 @@ def pretty_print(tke: TimekeepingEvent, attendance: AttendanceState) -> str:
     return pretty_print(tke) + f' | {attendance.name}'
 
 
-@dispatch(Event)
-def pretty_print(event_type: Event) -> str:
+@dispatch(TempData, Event)
+def pretty_print(temp_data: TempData, event_type: Event) -> str:
+    timestamp = temp_data.timestamp if temp_data.timestamp else UpdateEventUtils.parse_datetime_string('01.01.2000 00:00')
+    opponent = temp_data.opponent if temp_data.opponent else 'XXX'
+    location = temp_data.location if temp_data.location else 'XXX'
     match event_type:
         case Event.GAME:
-            return 'XX.XX.XXXX XX:XX | XXX | XXX'
+            return pretty_print_long(Game(timestamp, location, opponent))
         case Event.TRAINING:
-            return 'XX.XX.XXXX XX:XX | XXX'
+            return pretty_print(Training(timestamp, location))
         case Event.TIMEKEEPING:
-            return 'XX.XX.XXXX XX:XX | XXX'
+            return pretty_print(TimekeepingEvent(timestamp, location))
 
 
 def pretty_print_event_summary(stats: (list, list, list), game_string: str, event_type: Event) -> str:
