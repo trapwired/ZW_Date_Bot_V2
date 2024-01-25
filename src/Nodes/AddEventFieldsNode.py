@@ -31,7 +31,8 @@ class AddEventFieldsNode(Node):
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.ADMIN)
 
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        user_to_state.additional_info = ''
+        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
+        self.data_access.delete(temp_data)
         self.user_state_service.update_user_state(user_to_state, new_state)
         await self.telegram_service.send_message(
             update=update,
@@ -49,11 +50,6 @@ class AddEventFieldsNode(Node):
                 await self.handle_timekeeping_flow(update, user_to_state, new_state)
 
     async def handle_game_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        # tryparse date or string
-        # how to update user_state?
-        # always resend callback (if so, delete old one)
-        # send format / expcted + always /cancel
-        # TODO set correct states
         match user_to_state.state:
             case UserState.ADMIN_ADD_GAME_TIMESTAMP:
                 # TryParse Datetime
@@ -67,19 +63,27 @@ class AddEventFieldsNode(Node):
                         message=parsed_datetime)
                     return
 
-                new_datetime = parsed_datetime
-
-                try_parse = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
-                if not try_parse:
-                    return await self.handle_parse_additional_info_failed(user_to_state, update)
-
-                message_id, chat_id, doc_id = try_parse
+                temp_data = self.data_access.get_temp_data(user_to_state.user_id)
+                temp_data.timestamp = parsed_datetime
+                self.data_access.update(temp_data)
 
                 # if ok, update inline message
+                event_summary = PrintUtils.pretty_print(temp_data, self.event_type)
+                pretty_print = UpdateEventUtils.get_inline_message('Adding new', self.event_type, event_summary)
+                await self.telegram_service.edit_inline_message_text(pretty_print, temp_data.query_id, temp_data.chat_id)
 
-                # send next anweisung
+                # send next instruction
+                message = PrintUtils.get_update_attribute_message(CallbackOption.LOCATION)
+                await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
 
                 # update userState to next one
+                self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_ADD_GAME_LOCATION)
+            case UserState.ADMIN_ADD_GAME_LOCATION:
+                # TODO
+                pass
+            case UserState.ADMIN_ADD_GAME_OPPONENT:
+                # TODO
+                pass
 
     async def handle_training_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         match user_to_state.state:

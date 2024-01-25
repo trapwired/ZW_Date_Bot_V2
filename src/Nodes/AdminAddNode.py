@@ -26,7 +26,6 @@ class AdminAddNode(Node):
 
         reply_markup = CallbackUtils.get_add_event_reply_markup(UserState.ADMIN_ADD_GAME, Event.GAME, temp_data.doc_id)
 
-        # TODO handle both reply markup responses (from inline message)
         query = await self.telegram_service.send_message(update=update, all_buttons=[], reply_markup=reply_markup,
                                                          message=pretty_print)
 

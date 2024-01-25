@@ -254,6 +254,9 @@ class DataAccess(object):
         unsure_with_names = self.add_names(unsure)
         return yes_with_names, no_with_names, unsure_with_names
 
+    def get_temp_data(self, user_id: str) -> TempData:
+        return self.firebase_repository.get_temp_data(user_id)
+
     def add_names(self, doc_id_list: list) -> list[TelegramUser]:
         result = []
         for doc in doc_id_list:
@@ -291,6 +294,10 @@ class DataAccess(object):
                 self.firebase_repository.delete_training(doc_id)
             case Event.TIMEKEEPING:
                 self.firebase_repository.delete_timekeeping(doc_id)
+
+    @dispatch(TempData)
+    def delete(self, temp_data: TempData):
+        self.firebase_repository.delete(temp_data)
 
     ########
     # ELSE #
