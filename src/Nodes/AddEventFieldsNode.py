@@ -6,6 +6,7 @@ from Enums.MessageType import MessageType
 from Enums.UserState import UserState
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
+from Enums.AttendanceState import AttendanceState
 
 from databaseEntities.UsersToState import UsersToState
 from databaseEntities.Game import Game
@@ -75,6 +76,7 @@ class AddEventFieldsNode(Node):
             case UserState.ADMIN_ADD_GAME_LOCATION:
                 temp_data.location = message
                 self.data_access.update(temp_data)
+                # TODO add reply markup
 
                 next_attribute = CallbackOption.OPPONENT
                 next_state = UserState.ADMIN_ADD_GAME_OPPONENT
@@ -85,21 +87,27 @@ class AddEventFieldsNode(Node):
                 temp_data.opponent = message
 
                 await self.update_inline_message(temp_data, 'Adding new', add_save_reply_markup=True)
+                # TODO add reply markup
 
                 next_attribute = CallbackOption.SAVE
                 next_state = UserState.ADMIN_FINISH_ADD_GAME
-                # notify everyone
-                pass
+
             case UserState.ADMIN_FINISH_ADD_GAME:
                 if message == 'save':
-                    new_game = self.data_access.add(Game(temp_data.get_game_parameters()))
+                    new_game = self.data_access.add(Game(*temp_data.get_game_parameters()))
 
-                    # edit inline_message: remove buttons
                     await self.update_inline_message(temp_data, 'Saved')
-                    # notify everyone
-                    # TODO get rid of reply markup
+                    self.data_access.delete(temp_data)
 
+                    await self.notify_all_players(new_game)
+                    self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
 
+                    await self.telegram_service.send_message(
+                        update=update,
+                        all_buttons=self.node_handler.get_node(UserState.ADMIN).get_commands_for_buttons(
+                            user_to_state.role, new_state,
+                            update.effective_chat.id),
+                        message_type=MessageType.ADMIN)
                     return
                 else:
                     next_attribute = CallbackOption.SAVE
@@ -142,3 +150,24 @@ class AddEventFieldsNode(Node):
             message=text)
 
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
+
+    async def notify_all_players(self, new_event):
+        all_players = self.data_access.get_all_players()
+
+        for player in all_players:
+            await self.telegram_service.send_message(
+                update=player,
+                all_buttons=None,
+                message_type=MessageType.EVENT_ADDED)
+
+            pretty_print_event = PrintUtils.pretty_print(new_event, AttendanceState.UNSURE)
+            reply_markup = CallbackUtils.get_edit_event_reply_markup(
+                UserState.EDIT,
+                self.event_type,
+                new_event.doc_id)
+            message_text = self.event_type.name.lower().title() + ' | ' + pretty_print_event
+            await self.telegram_service.send_message(
+                update=player,
+                all_buttons=None,
+                message=message_text,
+                reply_markup=reply_markup)

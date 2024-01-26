@@ -74,6 +74,8 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.EVENT_TIMESTAMP_CHANGED:
             return 'Hey ' + first_name + ', the following event was moved by more than 2 hours. I reset your previous answer - please quickly fill out your attendance for the moved event - thanks'
 
+        case MessageType.EVENT_ADDED:
+            return 'Hey ' + first_name + ', a new event was added - if you fill it out now, you don\'t have to think about it in the future...'
         case _:
             return message_type.name + ' ' + extra_text
 
