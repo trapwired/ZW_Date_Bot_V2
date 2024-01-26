@@ -19,5 +19,6 @@ class CallbackOption(IntEnum):
 
     RESTART = 40
     CANCEL = 41
+    SAVE = 42
 
 

@@ -35,6 +35,9 @@ class TempData(DatabaseEntity):
         return (f"TempData(userDocId={self.user_doc_id}, timestamp={self.timestamp}, location={self.location}, "
                 f"opponent={self.opponent}, chatId={self.chat_id}, queryId={self.query_id}, doc_id={self.doc_id})")
 
+    def get_game_parameters(self):
+        return self.timestamp, self.location, self.opponent
+
     def add_inline_information(self, chat_id: int, query_id: int):
         self.chat_id = int(chat_id)
         self.query_id = int(query_id)

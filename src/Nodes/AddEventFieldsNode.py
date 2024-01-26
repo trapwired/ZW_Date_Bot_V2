@@ -8,6 +8,7 @@ from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
 
 from databaseEntities.UsersToState import UsersToState
+from databaseEntities.Game import Game
 
 from Data.DataAccess import DataAccess
 
@@ -50,11 +51,11 @@ class AddEventFieldsNode(Node):
                 await self.handle_timekeeping_flow(update, user_to_state, new_state)
 
     async def handle_game_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        message = update.message.text.lower()
+        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
+
         match user_to_state.state:
             case UserState.ADMIN_ADD_GAME_TIMESTAMP:
-                # TryParse Datetime
-                message = update.message.text.lower()
-
                 parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
                 if type(parsed_datetime) is str:
                     # Error case, send message without changing anything
@@ -63,27 +64,62 @@ class AddEventFieldsNode(Node):
                         message=parsed_datetime)
                     return
 
-                temp_data = self.data_access.get_temp_data(user_to_state.user_id)
                 temp_data.timestamp = parsed_datetime
                 self.data_access.update(temp_data)
 
-                # if ok, update inline message
-                event_summary = PrintUtils.pretty_print(temp_data, self.event_type)
-                pretty_print = UpdateEventUtils.get_inline_message('Adding new', self.event_type, event_summary)
-                await self.telegram_service.edit_inline_message_text(pretty_print, temp_data.query_id, temp_data.chat_id)
+                next_attribute = CallbackOption.LOCATION
+                next_state = UserState.ADMIN_ADD_GAME_LOCATION
 
-                # send next instruction
-                message = PrintUtils.get_update_attribute_message(CallbackOption.LOCATION)
-                await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
+                await self.update_inline_message(temp_data, 'Adding new')
 
-                # update userState to next one
-                self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_ADD_GAME_LOCATION)
             case UserState.ADMIN_ADD_GAME_LOCATION:
-                # TODO
-                pass
+                temp_data.location = message
+                self.data_access.update(temp_data)
+
+                next_attribute = CallbackOption.OPPONENT
+                next_state = UserState.ADMIN_ADD_GAME_OPPONENT
+
+                await self.update_inline_message(temp_data, 'Adding new')
+
             case UserState.ADMIN_ADD_GAME_OPPONENT:
-                # TODO
+                temp_data.opponent = message
+
+                await self.update_inline_message(temp_data, 'Adding new', add_save_reply_markup=True)
+
+                next_attribute = CallbackOption.SAVE
+                next_state = UserState.ADMIN_FINISH_ADD_GAME
+                # notify everyone
                 pass
+            case UserState.ADMIN_FINISH_ADD_GAME:
+                if message == 'save':
+                    new_game = self.data_access.add(Game(temp_data.get_game_parameters()))
+
+                    # edit inline_message: remove buttons
+                    await self.update_inline_message(temp_data, 'Saved')
+                    # notify everyone
+                    # TODO get rid of reply markup
+
+
+                    return
+                else:
+                    next_attribute = CallbackOption.SAVE
+                    next_state = UserState.ADMIN_FINISH_ADD_GAME
+
+        # send next instruction
+        message = PrintUtils.get_update_attribute_message(next_attribute)
+        await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
+
+        # update userState to next one
+        self.user_state_service.update_user_state(user_to_state, next_state)
+
+    async def update_inline_message(self, temp_data, prefix, add_save_reply_markup=False):
+        event_summary = PrintUtils.pretty_print(temp_data, self.event_type)
+        pretty_print = UpdateEventUtils.get_inline_message(prefix, self.event_type, event_summary)
+        reply_markup = CallbackUtils.get_finish_add_event_reply_markup(UserState.ADMIN_ADD_GAME, Event.GAME,
+                                                                       temp_data.doc_id) if add_save_reply_markup else None
+        # TODO get rid of reply markup / handle correctly
+        await self.telegram_service.edit_inline_message_text(pretty_print, temp_data.query_id, temp_data.chat_id,
+                                                             reply_markup)
 
     async def handle_training_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         match user_to_state.state:

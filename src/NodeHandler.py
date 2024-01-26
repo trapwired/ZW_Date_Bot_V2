@@ -348,7 +348,9 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.ADMIN_ADD_GAME: admin_add_game_node,
             UserState.ADMIN_ADD_TRAINING: admin_add_training_node,
             UserState.ADMIN_ADD_TIMEKEEPING: admin_add_timekeeping_node,
-            UserState.ADMIN_ADD_GAME_TIMESTAMP: admin_add_game_node
+            UserState.ADMIN_ADD_GAME_TIMESTAMP: admin_add_game_node,
+            UserState.ADMIN_ADD_GAME_LOCATION: admin_add_game_node,
+            UserState.ADMIN_ADD_GAME_OPPONENT: admin_add_game_node
         }
 
         return all_nodes_dict

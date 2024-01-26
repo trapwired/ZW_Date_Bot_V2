@@ -50,9 +50,13 @@ def get_attendance_symbols(attendance: Attendance | None) -> (str, str):
 
 
 def get_update_attribute_message(attribute: CallbackOption) -> str:
-    message = f'Send me the new {attribute.name.title()} in the following form:\n'
-    message += f'{UpdateEventUtils.get_input_format_string(attribute)}\n'
-    message += 'To cancel updating, just send me /cancel'
+    if attribute == CallbackOption.SAVE:
+        message = (f'Review your changes in the message above - if all data is correct, use the button \'SAVE\' or type'
+                   f' \'save\' to store the event. Use the other buttons to \'RESTART\' or \'CANCEL\'...')
+    else:
+        message = f'Send me the new {attribute.name.title()} in the following form:\n'
+        message += f'{UpdateEventUtils.get_input_format_string(attribute)}\n'
+        message += 'To cancel updating, just send me /cancel'
     return message
 
 

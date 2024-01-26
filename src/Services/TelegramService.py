@@ -198,8 +198,10 @@ class TelegramService(object):
                 return self.trainers_games
         return []
 
-    async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int):
-        await self.bot.edit_message_text(text=message, message_id=message_id, chat_id=chat_id)
+    async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int,
+                                       reply_markup: InlineKeyboardMarkup = None):
+        await self.bot.edit_message_text(text=message, message_id=message_id, chat_id=chat_id,
+                                         reply_markup=reply_markup)
 
     async def delete_previous_message(self, message: Message):
         previous_message_id = int(message.id) - 1

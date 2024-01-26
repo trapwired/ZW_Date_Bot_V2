@@ -62,3 +62,7 @@ class AddEventCallbackNode(CallbackNode):
                 admin_add_node = self.node_handler.get_node(UserState.ADMIN_ADD)
                 await admin_add_node.handle_add_game(update, user_to_state, UserState.ADMIN_ADD_GAME)
                 return
+
+            case CallbackOption.SAVE:
+                # TODO
+                return
