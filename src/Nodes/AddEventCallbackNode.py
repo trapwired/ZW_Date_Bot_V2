@@ -17,7 +17,15 @@ from Utils import PrintUtils
 
 from telegram import Update
 
-from databaseEntities.Game import Game
+
+def get_user_state_from_event_type(event_type: Event):
+    match event_type:
+        case Event.GAME:
+            return UserState.ADMIN_FINISH_ADD_GAME
+        case Event.TRAINING:
+            return UserState.ADMIN_FINISH_ADD_TRAINING
+        case Event.TIMEKEEPING:
+            return UserState.ADMIN_FINISH_ADD_TIMEKEEPING
 
 
 class AddEventCallbackNode(CallbackNode):
@@ -65,24 +73,21 @@ class AddEventCallbackNode(CallbackNode):
                 await self.telegram_service.delete_previous_message(sent_message)
 
                 admin_add_node = self.node_handler.get_node(UserState.ADMIN_ADD)
-                await admin_add_node.handle_add_game(update, user_to_state, UserState.ADMIN_ADD_GAME)
+
+                match temp_data.event_type:
+                    case Event.GAME:
+                        await admin_add_node.handle_add_game(update, user_to_state, UserState.ADMIN_ADD_GAME)
+                    case Event.TRAINING:
+                        await admin_add_node.handle_add_training(update, user_to_state, UserState.ADMIN_ADD_TRAINING)
+                    case Event.GAME:
+                        await admin_add_node.handle_add_timekeeping(update, user_to_state,
+                                                                    UserState.ADMIN_ADD_TIMEKEEPING)
                 return
 
             case CallbackOption.SAVE:
-                # TODO add support for all kind of events - how do we know? Probably field on temp-data
-                new_game = self.data_access.add(Game(*temp_data.get_game_parameters()))
-
-                await self.update_inline_message(temp_data, 'Saved')
-                self.data_access.delete(temp_data)
-
-                await self.notify_all_players(new_game, Event.GAME)
-                self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
-                await self.telegram_service.send_message(
-                    update=update,
-                    all_buttons=self.node_handler.get_node(UserState.ADMIN).get_commands_for_buttons(
-                        user_to_state.role, UserState.ADMIN,
-                        update.effective_chat.id),
-                    message_type=MessageType.ADMIN)
+                user_state = get_user_state_from_event_type(temp_data.event_type)
+                add_event_fields_node = self.node_handler.get_node(user_state)
+                await add_event_fields_node.handle_save(UserState.ADMIN, temp_data, update, user_to_state)
 
     async def notify_all_players(self, new_event, event_type: Event):
         all_players = self.data_access.get_all_players()
