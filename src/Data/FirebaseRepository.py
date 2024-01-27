@@ -19,12 +19,12 @@ from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.PlayerMetric import PlayerMetric
+from databaseEntities.TempData import TempData
 
-from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException
+from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException, \
+    NoTempDataFoundException, TooManyObjectsFoundException
 from Utils import PathUtils
 from Utils.ApiConfig import ApiConfig
-
-
 
 
 class FirebaseRepository(object):
@@ -101,17 +101,30 @@ class FirebaseRepository(object):
         doc_ref = self.add(new_player_metric, Table.PLAYER_METRIC)
         return new_player_metric.add_document_id(doc_ref[1].id)
 
+    def get_temp_data(self, user_doc_id: str) -> TempData:
+        query_ref = (self.db.collection(self.tables.get(Table.TEMP_DATA_TABLE))
+                     .where(filter=FieldFilter("userDocId", "==", user_doc_id)))
+        result_list = query_ref.get()
+        if len(result_list) == 0:
+            raise NoTempDataFoundException()
+        if len(result_list) > 1:
+            raise TooManyObjectsFoundException()
+        temp_data = result_list[0]
+        return TempData.from_dict(temp_data.id, temp_data.to_dict())
+
     def get_future_events(self, table: Table) -> list:
         # get all events in table which take place in the future
         now = datetime.datetime.now()
-        query_ref = self.db.collection(self.tables.get(table)).where(filter=FieldFilter("timestamp", ">", now))
+        query_ref = (self.db.collection(self.tables.get(table))
+                     .where(filter=FieldFilter("timestamp", ">", now)))
         event_list = query_ref.get()
         if len(event_list) == 0:
             return []
         return event_list
 
     def get_attendance_list(self, doc_id: str, table: Table):
-        query_ref = self.db.collection(self.tables.get(table)).where(filter=FieldFilter("eventId", "==", doc_id))
+        query_ref = (self.db.collection(self.tables.get(table))
+                     .where(filter=FieldFilter("eventId", "==", doc_id)))
         entries = query_ref.get()
         return entries
 
@@ -212,6 +225,11 @@ class FirebaseRepository(object):
     # DELETE #
     ##########
 
+    @dispatch(TempData)
+    def delete(self, temp_data: TempData):
+        db_table = self.tables.get(Table.TEMP_DATA_TABLE)
+        self.db.collection(db_table).document(temp_data.doc_id).delete()
+
     def delete_game(self, doc_id: str):
         db_table = self.tables.get(Table.GAMES_TABLE)
         self.db.collection(db_table).document(doc_id).delete()
@@ -261,4 +279,3 @@ class FirebaseRepository(object):
         for row in attendance_rows:
             doc = collection_reference.document(row.id)
             doc.update(field_update)
-

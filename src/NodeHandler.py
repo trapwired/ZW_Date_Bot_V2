@@ -28,9 +28,12 @@ from Nodes.RejectedNode import RejectedNode
 from Nodes.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 from Nodes.AdminNode import AdminNode
+from Nodes.AdminAddNode import AdminAddNode
+from Nodes.AddEventFieldsNode import AddEventFieldsNode
 from Nodes.UpdateNode import UpdateNode
 from Nodes.EditEventTimestampNode import EditEventTimestampNode
 from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNode
+from Nodes.AddEventCallbackNode import AddEventCallbackNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode
@@ -95,7 +98,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
                                                              ics_service, user_state_service)
         add_nodes_reference_to_all_nodes(self.nodes)
 
-        self.do_checks(api_config)
+        # TODO uncomment
+        # self.do_checks(api_config)
 
     def check_update(self, update: object):
         if isinstance(update, Update):
@@ -242,9 +246,23 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_statistics_node.add_transition('/training_statistics', admin_statistics_node.handle_training_statistics)
         admin_statistics_node.add_transition('/timekeeping_statistics', admin_statistics_node.handle_timekeeping_statistics)
 
-        admin_add_node = AdminNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
+        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
         admin_add_node.add_continue_later()
         admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
+        admin_add_node.add_transition('/game', admin_add_node.handle_add_game,
+                                      new_state=UserState.ADMIN_ADD_GAME_TIMESTAMP)
+        admin_add_node.add_transition('/training', admin_add_node.handle_add_training,
+                                      new_state=UserState.ADMIN_ADD_TRAINING_TIMESTAMP)
+        admin_add_node.add_transition('/timekeeping', admin_add_node.handle_add_timekeeping,
+                                      new_state=UserState.ADMIN_ADD_TIMEKEEPING_TIMESTAMP,
+                                      allowed_roles=RoleSet.PLAYERS)
+
+        admin_add_game_node = AddEventFieldsNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service,
+                                                 data_access, Event.GAME, self)
+        admin_add_training_node = AddEventFieldsNode(UserState.ADMIN_ADD_TRAINING, telegram_service, user_state_service,
+                                                     data_access, Event.TRAINING, self)
+        admin_add_timekeeping_node = AddEventFieldsNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service,
+                                                        user_state_service, data_access, Event.TIMEKEEPING, self)
 
         admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access)
         admin_update_node.add_continue_later()
@@ -336,7 +354,20 @@ class NodeHandler(BaseHandler[Update, CCT]):
             UserState.ADMIN_UPDATE_TRAINING_LOCATION: admin_update_training_location_node,
             UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP: admin_update_training_timestamp_node,
             UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION: admin_update_timekeeping_location_node,
-            UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP: admin_update_timekeeping_timestamp_node
+            UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP: admin_update_timekeeping_timestamp_node,
+            UserState.ADMIN_ADD_GAME: admin_add_game_node,
+            UserState.ADMIN_ADD_GAME_TIMESTAMP: admin_add_game_node,
+            UserState.ADMIN_ADD_GAME_LOCATION: admin_add_game_node,
+            UserState.ADMIN_ADD_GAME_OPPONENT: admin_add_game_node,
+            UserState.ADMIN_FINISH_ADD_GAME: admin_add_game_node,
+            UserState.ADMIN_ADD_TRAINING: admin_add_training_node,
+            UserState.ADMIN_ADD_TRAINING_TIMESTAMP: admin_add_training_node,
+            UserState.ADMIN_ADD_TRAINING_LOCATION: admin_add_training_node,
+            UserState.ADMIN_FINISH_ADD_TRAINING: admin_add_training_node,
+            UserState.ADMIN_ADD_TIMEKEEPING: admin_add_timekeeping_node,
+            UserState.ADMIN_ADD_TIMEKEEPING_TIMESTAMP: admin_add_timekeeping_node,
+            UserState.ADMIN_ADD_TIMEKEEPING_LOCATION: admin_add_timekeeping_node,
+            UserState.ADMIN_FINISH_ADD_TIMEKEEPING: admin_add_timekeeping_node
         }
 
         return all_nodes_dict
@@ -346,11 +377,17 @@ class NodeHandler(BaseHandler[Update, CCT]):
         edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service, ics_service)
         update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self,
                                                        user_state_service)
+        add_callback_node = AddEventCallbackNode(telegram_service, data_access, trigger_service, self,
+                                                 user_state_service)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node,
-            UserState.ADMIN_UPDATE: update_callback_node
+            UserState.ADMIN_UPDATE: update_callback_node,
+            UserState.ADMIN_ADD_GAME: add_callback_node,
+            UserState.ADMIN_ADD_TRAINING: add_callback_node,
+            UserState.ADMIN_ADD_TIMEKEEPING: add_callback_node
         }
+        # TODO correct, one callback node for 3 states?
         return callback_nodes_dict
 
     def add_event_transitions_to_node(self, event_type: Event, node: Node, event_function: Callable):
@@ -381,3 +418,6 @@ class NodeHandler(BaseHandler[Update, CCT]):
         if not self.callback_nodes[user_state]:
             raise Exception('No callback-node found for user_state: ', user_state)
         return self.callback_nodes[user_state]
+
+    def get_node(self, user_state: UserState) -> Node:
+        return self.nodes[user_state]

@@ -3,7 +3,8 @@ import traceback
 
 import telegram
 from multipledispatch import dispatch
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove, \
+    Message
 
 from Enums.MessageType import MessageType
 from Enums.Event import Event
@@ -79,6 +80,8 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.ADMIN_STATISTICS:
             return 'Here you are - which statistics do you like to see?'
 
+        case MessageType.EVENT_ADDED:
+            return 'Hey ' + first_name + ', a new event was added - if you fill it out now, you don\'t have to think about it in the future...'
         case _:
             return message_type.name + ' ' + extra_text
 
@@ -134,8 +137,8 @@ class TelegramService(object):
         if reply_markup is None:
             reply_markup = self.get_reply_keyboard(message_type, all_buttons)
         message_to_send = PrintUtils.prepare_message(message)
-        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        return await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
+                                           parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_file(self, update: Update | TelegramUser, path: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
@@ -144,8 +147,8 @@ class TelegramService(object):
     async def send_message_with_normal_keyboard(self, update: Update | TelegramUser, message: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
         message_to_send = PrintUtils.prepare_message(message)
-        await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=ReplyKeyboardRemove(),
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        return await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=ReplyKeyboardRemove(),
+                                           parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_info_message_to_trainers(self, message: str, event_type: Event):
         message_to_send = PrintUtils.prepare_message(message)
@@ -212,5 +215,18 @@ class TelegramService(object):
                 return self.trainers_games
         return []
 
-    async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int):
-        await self.bot.edit_message_text(text=message, message_id=message_id, chat_id=chat_id)
+    async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int,
+                                       reply_markup: InlineKeyboardMarkup = None):
+        await self.bot.edit_message_text(text=message, message_id=message_id, chat_id=chat_id,
+                                         reply_markup=reply_markup)
+
+    async def delete_previous_message(self, message: Message):
+        previous_message_id = int(message.id) - 1
+        chat_id = message.chat_id
+        await self.bot.deleteMessage(message_id=previous_message_id, chat_id=chat_id)
+
+    async def delete_message(self, update: Update):
+        if update.message:
+            await update.message.delete()
+        elif update.callback_query:
+            await update.callback_query.delete_message()

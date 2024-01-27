@@ -18,4 +18,8 @@ class CallbackOption(IntEnum):
 
     Back = 30
 
+    RESTART = 40
+    CANCEL = 41
+    SAVE = 42
+
 

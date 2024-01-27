@@ -6,11 +6,14 @@ from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.Game import Game
+from databaseEntities.TelegramUser import TelegramUser
+from databaseEntities.TempData import TempData
 
 from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState
+from Enums.CallbackOption import CallbackOption
 
-from databaseEntities.TelegramUser import TelegramUser
+from Utils import UpdateEventUtils
 
 from databaseEntities.PlayerMetric import PlayerMetric
 
@@ -48,6 +51,17 @@ def get_attendance_symbols(attendance: Attendance | None) -> (str, str):
     attendance_before = '👉'
     attendance_after = '👈'
     return attendance_before, attendance_after
+
+
+def get_update_attribute_message(attribute: CallbackOption) -> str:
+    if attribute == CallbackOption.SAVE:
+        message = (f'Review your changes in the message above - if all data is correct, use the button \'SAVE\' or type'
+                   f' \'save\' to store the event. Use the other buttons to \'RESTART\' or \'CANCEL\'...')
+    else:
+        message = f'Send me the new {attribute.name.title()} in the following form:\n'
+        message += f'{UpdateEventUtils.get_input_format_string(attribute)}\n'
+        message += 'To cancel updating, just send me /cancel'
+    return message
 
 
 def pretty_print_event_stats(event_stats: (list, list, list), event_type: Event, attendance: Attendance | None):
@@ -112,6 +126,20 @@ def pretty_print(tke: TimekeepingEvent, attendance: Attendance = None) -> str:
 @dispatch(TimekeepingEvent, AttendanceState)
 def pretty_print(tke: TimekeepingEvent, attendance: AttendanceState) -> str:
     return pretty_print(tke) + f' | {attendance.name}'
+
+
+@dispatch(TempData, Event)
+def pretty_print(temp_data: TempData, event_type: Event) -> str:
+    timestamp = temp_data.timestamp if temp_data.timestamp else UpdateEventUtils.parse_datetime_string('01.01.2000 00:00')
+    opponent = temp_data.opponent if temp_data.opponent else 'XXX'
+    location = temp_data.location if temp_data.location else 'XXX'
+    match event_type:
+        case Event.GAME:
+            return pretty_print_long(Game(timestamp, location, opponent))
+        case Event.TRAINING:
+            return pretty_print(Training(timestamp, location))
+        case Event.TIMEKEEPING:
+            return pretty_print(TimekeepingEvent(timestamp, location))
 
 
 def pretty_print_event_summary(stats: (list, list, list), game_string: str, event_type: Event) -> str:

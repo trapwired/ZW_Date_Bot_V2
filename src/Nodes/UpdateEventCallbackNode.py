@@ -44,16 +44,6 @@ def get_new_user_state(callback_option: CallbackOption, event_type: Event):
     raise Exception(f'No userState found for: {callback_option} and {event_type}')
 
 
-def get_input_format_string(callback_option: CallbackOption):
-    match callback_option:
-        case CallbackOption.OPPONENT:
-            return 'freetext, spaces allowed, no max length, but end will be trimmed'
-        case CallbackOption.LOCATION:
-            return 'freetext, spaces allowed, no max length, but end will be trimmed'
-        case CallbackOption.DATETIME:
-            return 'numbers and symbols, format: 20.03.2023 19:38'
-
-
 class UpdateEventCallbackNode(CallbackNode):
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  node_handler, user_state_service: UserStateService):
@@ -76,14 +66,12 @@ class UpdateEventCallbackNode(CallbackNode):
                 event_summary = PrintUtils.pretty_print(self.data_access.get_timekeeping(doc_id))
                 new_state = UserState.ADMIN_UPDATE_TIMEKEEPING
 
-        event_type_string = event_type.name.lower().title()
-
         if callback_option in [CallbackOption.UPDATE, CallbackOption.DELETE, CallbackOption.NO, CallbackOption.Back]:
             await self._handle_pure_callback(query, event_summary, event_type, doc_id,
                                              callback_option)
         else:
-            await self._handle_callback_with_messages(update, event_type_string, event_summary, event_type, doc_id,
-                                                      callback_option, new_state)
+            await self._handle_callback_with_messages(update, event_summary, event_type, doc_id, callback_option,
+                                                      new_state)
 
     async def _handle_pure_callback(self, query: CallbackQuery, event_summary: str, event_type: Event, doc_id: str,
                                     callback_option: CallbackOption):
@@ -107,9 +95,9 @@ class UpdateEventCallbackNode(CallbackNode):
         await query.answer()
         await query.edit_message_text(text=message, reply_markup=reply_markup)
 
-    async def _handle_callback_with_messages(self, update: Update, event_type_string: str, event_summary: str,
-                                             event_type: Event, doc_id: str, callback_option: CallbackOption,
-                                             new_state: UserState):
+    async def _handle_callback_with_messages(self, update: Update, event_summary: str, event_type: Event, doc_id: str,
+                                             callback_option: CallbackOption, new_state: UserState):
+        event_type_string = event_type.name.lower().title()
         query = update.callback_query
         message = 'Not Implemented'
         reply_markup = None
@@ -131,13 +119,12 @@ class UpdateEventCallbackNode(CallbackNode):
             await query.answer()
             await query.edit_message_text(text=callback_message, reply_markup=reply_markup)
 
-            normal_message = f'Send me the new {callback_option.name.title()} in the following form:\n'
-            normal_message += f'{get_input_format_string(callback_option)}\n'
-            normal_message += 'To cancel updating, just send me /cancel'
+            normal_message = PrintUtils.get_update_attribute_message(callback_option)
             await self.send_normal_message_keyboard(update, normal_message)
 
             user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
-            user_to_state.additional_info = CallbackUtils.build_additional_information(query.message.id, query.message.chat_id, doc_id)
+            user_to_state.additional_info = CallbackUtils.build_additional_information(query.message.id,
+                                                                                       query.message.chat_id, doc_id)
 
             self.user_state_service.update_user_state(user_to_state, get_new_user_state(callback_option, event_type))
 

@@ -22,6 +22,18 @@ class ObjectNotFoundException(Exception):
         super().__init__(message)
 
 
+class NoEventFoundException(Exception):
+    pass
+
+
+class NoTempDataFoundException(Exception):
+    pass
+
+
+class TooManyObjectsFoundException(Exception):
+    pass
+
+
 class MissingCommandDescriptionException(Exception):
     def __init__(self, missing_commands):
         message = 'We are missing a description for the following commands: ' + ', '.join(missing_commands)

@@ -11,6 +11,8 @@ UPDATE_OR_DELETE_OPTIONS = [CallbackOption.UPDATE, CallbackOption.DELETE]
 UPDATE_GAME_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT, CallbackOption.Back]
 UPDATE_TRAINING_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.Back]
 UPDATE_TKE_OPTIONS = [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.Back]
+ADD_EVENT_OPTIONS = [CallbackOption.RESTART, CallbackOption.CANCEL]
+FINISH_ADD_EVENT_OPTIONS = [CallbackOption.SAVE, CallbackOption.RESTART, CallbackOption.CANCEL]
 
 
 def get_update_event_options(event_type: Event, document_id: str):
@@ -21,6 +23,14 @@ def get_update_event_options(event_type: Event, document_id: str):
             return _get_reply_markup(UPDATE_TRAINING_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
         case Event.TIMEKEEPING:
             return _get_reply_markup(UPDATE_TKE_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
+
+
+def get_add_event_reply_markup(user_state: UserState, event_type: Event, document_id: str):
+    return _get_reply_markup(ADD_EVENT_OPTIONS, user_state, event_type, document_id)
+
+
+def get_finish_add_event_reply_markup(user_state: UserState, event_type: Event, document_id: str):
+    return _get_reply_markup(FINISH_ADD_EVENT_OPTIONS, user_state, event_type, document_id)
 
 
 def get_edit_event_reply_markup(user_state: UserState, event_type: Event, document_id: str):
@@ -53,9 +63,8 @@ def get_option_translation(option: CallbackOption):
 def _get_reply_markup(options: [CallbackOption], user_state: UserState, event_type: Event, document_id: str):
     button_list = []
     for option in options:
-        new_button = InlineKeyboardButton(get_option_translation(option),
-                                          callback_data=get_callback_message(user_state, event_type, option,
-                                                                             document_id))
+        callback_data = get_callback_message(user_state, event_type, option, document_id)
+        new_button = InlineKeyboardButton(get_option_translation(option), callback_data=callback_data)
         button_list.append(new_button)
 
     split_button_list = [button_list[i:i + 3] for i in range(0, len(button_list), 3)]  # max 3 items per row

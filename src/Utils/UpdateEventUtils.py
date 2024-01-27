@@ -36,7 +36,18 @@ def mark_updating_in_event_string(event_type: Event, event_summary: str, option:
     return ' | '.join(split)
 
 
-def get_inline_message(prefix_string: str, event_type: Event, event: Game | Training | TimekeepingEvent | str, middle_string: str = '') -> str:
+def get_input_format_string(callback_option: CallbackOption):
+    match callback_option:
+        case CallbackOption.OPPONENT:
+            return 'freetext, spaces allowed, no max length, but end will be trimmed'
+        case CallbackOption.LOCATION:
+            return 'freetext, spaces allowed, no max length, but end will be trimmed'
+        case CallbackOption.DATETIME:
+            return 'numbers and symbols, format: 20.03.2023 19:38'
+
+
+def get_inline_message(prefix_string: str, event_type: Event, event: Game | Training | TimekeepingEvent | str,
+                       middle_string: str = '') -> str:
     event_type_string = event_type.name.lower().title()
 
     if type(event) is str:

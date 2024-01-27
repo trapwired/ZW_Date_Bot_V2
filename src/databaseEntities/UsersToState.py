@@ -17,7 +17,7 @@ class UsersToState(DatabaseEntity):
                  doc_id: str = None):
         super().__init__(doc_id)
         self.user_id = user_id
-        if type(state) is str:
+        if type(state) is str or type(state) is int:
             state = UserState(int(state))
         self.state = state
         self.additional_info = additional_info

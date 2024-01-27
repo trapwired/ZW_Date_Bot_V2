@@ -19,7 +19,10 @@ class CommandDescriptions(object):
         '/game_statistics': 'Show game-attendance statistics for all players',
         '/training_statistics': 'Show training-attendance statistics for all players',
         '/timekeeping_statistics': 'Show timekeeping-attendance statistics for all players',
-        '/statistics': 'Go to statistics menu'
+        '/statistics': 'Go to statistics menu',
+        '/game': 'Add a new game',
+        '/training': 'Add a new training',
+        '/timekeeping': 'Add a new timekeeping-event'
     }
 
     @classmethod
