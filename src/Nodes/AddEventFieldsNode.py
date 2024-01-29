@@ -54,6 +54,7 @@ class AddEventFieldsNode(Node):
         new_game = self.data_access.add(temp_data.get_finished_event())
         await self.update_inline_message(temp_data, 'Saved', AddEventMarkup.NONE)
         self.data_access.delete(temp_data)
+        self.node_handler.recalculate_node_transitions()
         await self.notify_all_players(new_game)
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
         await self.telegram_service.send_message(
