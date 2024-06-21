@@ -33,9 +33,8 @@ def get_players_from_doc_ids(id_list: [str], all_players: [TelegramUser]) -> [Te
     result = []
     for player_id in id_list:
         player = next((x for x in all_players if x.doc_id == player_id), None)
-        if player is None:
-            raise ObjectNotFoundException(player)
-        result.append(player)
+        if player is not None:
+            result.append(player)
     return result
 
 
