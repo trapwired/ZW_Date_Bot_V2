@@ -10,6 +10,7 @@ class MessageType(IntEnum):
     TO_STATS = 3
     TO_EDIT = 4
     WEBSITE = 5
+    PRIVACY = 6
 
     STATS_TO_GAMES = 10
     STATS_TO_TRAININGS = 11

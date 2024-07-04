@@ -15,3 +15,9 @@ class DefaultNode(Node):
             update=update,
             all_buttons=None,
             message_type=MessageType.WEBSITE)
+
+    async def handle_privacy(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        await self.telegram_service.send_message(
+            update=update,
+            all_buttons=None,
+            message_type=MessageType.PRIVACY)
