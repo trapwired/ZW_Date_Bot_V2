@@ -29,6 +29,16 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
             return 'Cheerio ' + first_name + '!'
         case MessageType.WEBSITE:
             return 'Here you go :)'
+        case MessageType.PRIVACY:
+            return ('Privacy policy: \nI am a bot, I store only the data necessary to my functionality, which is the '
+                    'following:\n- The firstname and lastname you indicated in your profile,\n- the chatId telegram '
+                    'assigned to you\n- all data concerning your attendance in past and upcoming '
+                    'trainings, games and timekeeping events (which is either YES, NO or UNSURE) that you indicated '
+                    'by yourself by using the bot.\n\nThe data is stored in a password and 2FA protected Database, and your personal data (firstname, lastname, '
+                    'chatId) is stored in one dedicated table, to which all other inforamtion is only linked via '
+                    'randomly generated ids. Up to this day, the data is stored indefinitely. Only the sole '
+                    'maintainer of this bot, has access to the database, and the data is never sold or given away in '
+                    'any way to any other legal entities.') \
 
         case MessageType.REJECTED:
             return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \

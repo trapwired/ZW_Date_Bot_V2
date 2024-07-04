@@ -157,6 +157,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access)
         default_node.add_transition('/website', default_node.handle_website)
+        default_node.add_transition('/privacy', default_node.handle_privacy)
         default_node.add_transition('/stats', new_state=UserState.STATS, message_type=MessageType.STATS_OVERVIEW)
         default_node.add_transition('/edit', new_state=UserState.EDIT, allowed_roles=RoleSet.PLAYERS,
                                     message_type=MessageType.EDIT_OVERVIEW)
