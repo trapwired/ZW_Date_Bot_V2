@@ -30,16 +30,23 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.WEBSITE:
             return 'Here you go :)'
         case MessageType.PRIVACY:
-            return ('Privacy policy: \nI am a bot, I store only the data necessary to my functionality, which is the '
-                    'following:\n- The firstname and lastname you indicated in your profile,\n- the chatId telegram '
-                    'assigned to you\n- all data concerning your attendance in past and upcoming '
-                    'trainings, games and timekeeping events (which is either YES, NO or UNSURE) that you indicated '
-                    'by yourself by using the bot.\n\nThe data is stored in a password and 2FA protected Database, and your personal data (firstname, lastname, '
-                    'chatId) is stored in one dedicated table, to which all other inforamtion is only linked via '
-                    'randomly generated ids. Up to this day, the data is stored indefinitely. Only the sole '
-                    'maintainer of this bot, has access to the database, and the data is never sold or given away in '
-                    'any way to any other legal entities.') \
-
+            return ("Privacy Policy\n\n"
+                    "Hey there! I'm your friendly neighborhood Telegram bot, and I'm here to help manage your team's "
+                    "attendance for games, trainings, and timekeeping events. But first, let's talk about privacy.\n\n"
+                    "You see, even though I'm a bot, I respect your privacy just like any good friend would. "
+                    "Here's what I keep in my digital notebook:\n"
+                    "- Your first and last name, as you've shared in your profile,\n"
+                    "- Your unique chatId that Telegram gave you,\n"
+                    "- Your attendance status (YES, NO, or UNSURE) for past and future trainings, games, "
+                    "and timekeeping events."
+                    "Don't worry, I only know what you tell me!\n\n"
+                    "Now, where do I keep this information? In a top-notch, secure-as-a-fortress database, "
+                    "protected by a password and 2FA. Your personal details (name and chatId) have their own VIP table,"
+                    " and all other information is linked via randomly generated IDs.\n\n"
+                    "I'm not a blabbermouth, so your data stays with me indefinitely and is only accessible by my "
+                    "creator, the sole maintainer of this bot. I promise, your data is never sold, traded, or given "
+                    "away to any other folks or legal entities.\n\n"
+                    "So, that's it! Now let's get back to managing your team's schedule, shall we?")
         case MessageType.REJECTED:
             return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \
                    'you got the bot recommended from... :)'
