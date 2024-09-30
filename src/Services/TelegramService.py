@@ -153,9 +153,10 @@ class TelegramService(object):
             message = get_text(message_type, first_name=first_name, extra_text=message_extra_text)
         if reply_markup is None:
             reply_markup = self.get_reply_keyboard(message_type, all_buttons)
-        message_to_send = PrintUtils.prepare_message(message)
-        return await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
-                                           parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        messages_to_send = PrintUtils.prepare_message(message)
+        for message_to_send in messages_to_send:
+            await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
+                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_file(self, update: Update | TelegramUser, path: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
@@ -163,44 +164,50 @@ class TelegramService(object):
 
     async def send_message_with_normal_keyboard(self, update: Update | TelegramUser, message: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
-        message_to_send = PrintUtils.prepare_message(message)
-        return await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=ReplyKeyboardRemove(),
-                                           parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        messages_to_send = PrintUtils.prepare_message(message)
+        for message_to_send in messages_to_send:
+            await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=ReplyKeyboardRemove(),
+                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_info_message_to_trainers(self, message: str, event_type: Event):
-        message_to_send = PrintUtils.prepare_message(message)
+        messages_to_send = PrintUtils.prepare_message(message)
         chat_ids = self.get_chat_ids(event_type)
         for chat_id in chat_ids:
-            await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=None,
-                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+            for message_to_send in messages_to_send:
+                await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=None,
+                                            parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str)
     async def send_maintainer_message(self, message: str):
         message = 'INFO: ' + message
-        message_to_send = PrintUtils.prepare_message(message)
-        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        messages_to_send = PrintUtils.prepare_message(message)
+        for message_to_send in messages_to_send:
+            await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
         text = 'ERROR: ' + description + '\n\n' + error_message
-        message_to_send = PrintUtils.prepare_message(text)
-        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        messages_to_send = PrintUtils.prepare_message(text)
+        for message_to_send in messages_to_send:
+            await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str, Update, Exception)
     async def send_maintainer_message(self, description: str, update: Update, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
         text = 'ERROR: ' + description + '\n\n' + str(update) + '\n\n' + error_message
-        message_to_send = PrintUtils.prepare_message(text)
-        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        messages_to_send = PrintUtils.prepare_message(text)
+        for message_to_send in messages_to_send:
+            await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_maintainer_hi(self, hi: str):
-        message_to_send = PrintUtils.prepare_message(hi)
-        await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        messages_to_send = PrintUtils.prepare_message(hi)
+        for message_to_send in messages_to_send:
+            await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_group_message(self, message: str):
         await self.bot.send_message(chat_id=int(self.group_chat_id), text=message,

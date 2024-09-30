@@ -280,9 +280,14 @@ def prepare_message(message: str):
         doubles_dict = build_doubles_dict(doubles)
         one_line = ''
 
-    # max length is 4096 chars
-    result = result[len(result) - 4095:]
-    return result
+    # max length is 4096 chars - split into multiple messages
+    result_list = []
+    while len(result) > 4096:
+        result_list.append(result[:4095])
+        result = result[4095:]
+    result_list.append(result)
+
+    return result_list
 
 
 def build_doubles_dict(doubles: str):
