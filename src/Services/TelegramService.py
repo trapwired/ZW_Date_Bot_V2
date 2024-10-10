@@ -154,9 +154,10 @@ class TelegramService(object):
         if reply_markup is None:
             reply_markup = self.get_reply_keyboard(message_type, all_buttons)
         messages_to_send = PrintUtils.prepare_message(message)
-        for message_to_send in messages_to_send:
-            await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=reply_markup,
-                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        if len(messages_to_send) > 1:
+            await self.send_maintainer_message('Message too long (1): \n\n' + message)
+        return await self.bot.send_message(chat_id=chat_id, text=messages_to_send[0], reply_markup=reply_markup,
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_file(self, update: Update | TelegramUser, path: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
@@ -165,12 +166,15 @@ class TelegramService(object):
     async def send_message_with_normal_keyboard(self, update: Update | TelegramUser, message: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
         messages_to_send = PrintUtils.prepare_message(message)
-        for message_to_send in messages_to_send:
-            await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=ReplyKeyboardRemove(),
-                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        if len(messages_to_send) > 1:
+            await self.send_maintainer_message('Message too long (2): \n\n' + message)
+        await self.bot.send_message(chat_id=chat_id, text=messages_to_send[0], reply_markup=ReplyKeyboardRemove(),
+                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_info_message_to_trainers(self, message: str, event_type: Event):
         messages_to_send = PrintUtils.prepare_message(message)
+        if len(messages_to_send) > 1:
+            await self.send_maintainer_message('Message too long (3): \n\n' + message)
         chat_ids = self.get_chat_ids(event_type)
         for chat_id in chat_ids:
             for message_to_send in messages_to_send:
@@ -181,15 +185,16 @@ class TelegramService(object):
     async def send_maintainer_message(self, message: str):
         message = 'INFO: ' + message
         messages_to_send = PrintUtils.prepare_message(message)
-        for message_to_send in messages_to_send:
-            await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
+        if len(messages_to_send) > 1:
+            await self.send_maintainer_message('Message too long (4): \n\n' + message)
+        return await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=messages_to_send[0],
                                         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):
         error_message = repr(error) + '\n' + traceback.format_exc()
-        text = 'ERROR: ' + description + '\n\n' + error_message
-        messages_to_send = PrintUtils.prepare_message(text)
+        message = 'ERROR: ' + description + '\n\n' + error_message
+        messages_to_send = PrintUtils.prepare_message(message)
         for message_to_send in messages_to_send:
             await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
                                         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
@@ -210,7 +215,7 @@ class TelegramService(object):
                                         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_group_message(self, message: str):
-        await self.bot.send_message(chat_id=int(self.group_chat_id), text=message,
+        return await self.bot.send_message(chat_id=int(self.group_chat_id), text=message,
                                     parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     def get_reply_keyboard(self, message_type: MessageType, all_commands: [str]):
