@@ -302,7 +302,8 @@ class DataAccess(object):
         return users_to_player_metric_dict
 
     def get_attendance_statistics(self, event_type: Event):
-        all_attendances = self.firebase_repository.get_all_event_attendances(event_type)
+        relevant_event_ids = self.firebase_repository.get_all_relevant_event_ids(event_type)
+        all_attendances = self.firebase_repository.get_all_event_attendances(event_type, relevant_event_ids)
         all_active_players = self.firebase_repository.get_all_active_players_to_state()
         user_id_to_attendance_dict = dict()
 

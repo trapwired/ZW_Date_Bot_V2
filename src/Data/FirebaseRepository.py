@@ -1,4 +1,5 @@
-import datetime
+from datetime import datetime
+import pandas as pd
 from multipledispatch import dispatch
 
 import firebase_admin
@@ -25,6 +26,24 @@ from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFou
     NoTempDataFoundException, TooManyObjectsFoundException
 from Utils import PathUtils
 from Utils.ApiConfig import ApiConfig
+from Utils import DateTimeUtils
+
+
+def get_current_season_dates():
+    today = datetime.today()
+    current_year = today.year
+
+    # Determine if we are in the first half of the year (January to June)
+    if today.month < 7:
+        # Current season started last year on July 1st
+        season_start = datetime(current_year - 1, 7, 1)
+        season_end = datetime(current_year, 6, 30)
+    else:
+        # Current season started this year on July 1st
+        season_start = datetime(current_year, 7, 1)
+        season_end = datetime(current_year + 1, 6, 30)
+
+    return season_start, season_end
 
 
 class FirebaseRepository(object):
@@ -92,12 +111,21 @@ class FirebaseRepository(object):
         return TimekeepingEvent.from_dict(res.id, res.to_dict())
 
     def get_player_metric(self, user: TelegramUser):
-        query_ref = self.db.collection(self.tables.get(Table.PLAYER_METRIC)).where(
-            filter=FieldFilter("userId", "==", user.doc_id))
+        season_start, season_end = get_current_season_dates()
+        query_ref = (self.db.collection(self.tables.get(Table.PLAYER_METRIC))
+            .where(filter=FieldFilter("userId", "==", user.doc_id))) \
+            .where(filter=FieldFilter("insertTimestamp", ">", season_start)) \
+            .where(filter=FieldFilter("insertTimestamp", "<", season_end))
         entries = query_ref.get()
-        if len(entries) > 0:
+        if len(entries) == 1:
             return PlayerMetric.from_dict(entries[0].id, entries[0].to_dict())
-        new_player_metric = PlayerMetric(user.doc_id, 0, 0, 0)
+        if len(entries) > 1:
+            # HOW? Delete all but one
+            for entry in entries[1:]:
+                self.db.collection(self.tables.get(Table.PLAYER_METRIC)).document(entry.id).delete()
+            return PlayerMetric.from_dict(entries[0].id, entries[0].to_dict())
+        now = DateTimeUtils.add_zurich_timezone(pd.Timestamp.now())
+        new_player_metric = PlayerMetric(user.doc_id, 0, 0, 0, now)
         doc_ref = self.add(new_player_metric, Table.PLAYER_METRIC)
         return new_player_metric.add_document_id(doc_ref[1].id)
 
@@ -114,7 +142,7 @@ class FirebaseRepository(object):
 
     def get_future_events(self, table: Table) -> list:
         # get all events in table which take place in the future
-        now = datetime.datetime.now()
+        now = datetime.now()
         query_ref = (self.db.collection(self.tables.get(table))
                      .where(filter=FieldFilter("timestamp", ">", now)))
         event_list = query_ref.get()
@@ -146,15 +174,33 @@ class FirebaseRepository(object):
         entries = query_ref.get()
         return entries
 
-    def get_all_event_attendances(self, event_type: Event):
+    def get_all_event_attendances(self, event_type: Event, relevant_doc_ids: list[str]):
+        if len(relevant_doc_ids) == 0:
+            return []
         table = self.get_event_attendance_table(event_type)
-        query_ref = self.db.collection(table)
+        query_ref = self.db.collection(table).where(filter=FieldFilter("eventId", "in", relevant_doc_ids))
         entries = query_ref.get()
         return entries
 
+    def get_all_relevant_event_ids(self, event_type: Event):
+        table = self.get_event_table(event_type)
+        season_start, season_end = get_current_season_dates()
+        query_ref = (self.db.collection(table)) \
+            .where(filter=FieldFilter("timestamp", ">", season_start)) \
+            .where(filter=FieldFilter("timestamp", "<", season_end))
+        # filter > start date and < end date
+        entries = query_ref.get()
+        result = []
+        for row in entries:
+            result.append(row.id)
+        return result
+
     def get_all_player_metrics(self):
         table = self.tables.get(Table.PLAYER_METRIC)
-        query_ref = self.db.collection(table)
+        season_start, season_end = get_current_season_dates()
+        query_ref = (self.db.collection(table)) \
+            .where(filter=FieldFilter("insertTimestamp", ">", season_start)) \
+            .where(filter=FieldFilter("insertTimestamp", "<", season_end))
         entries = query_ref.get()
         return entries
 
@@ -272,6 +318,15 @@ class FirebaseRepository(object):
             case Event.TIMEKEEPING:
                 return self.tables.get(Table.TIMEKEEPING_ATTENDANCE_TABLE)
 
+    def get_event_table(self, event_type: Event):
+        match event_type:
+            case Event.GAME:
+                return self.tables.get(Table.GAMES_TABLE)
+            case Event.TRAINING:
+                return self.tables.get(Table.TRAININGS_TABLE)
+            case Event.TIMEKEEPING:
+                return self.tables.get(Table.TIMEKEEPING_TABLE)
+
     def reset_all_player_event_attendance(self, doc_id: str, table: Table):
         collection_reference = self.db.collection(self.tables.get(table))
         attendance_rows = collection_reference.where(filter=FieldFilter("eventId", "==", doc_id)).get()
@@ -279,3 +334,4 @@ class FirebaseRepository(object):
         for row in attendance_rows:
             doc = collection_reference.document(row.id)
             doc.update(field_update)
+
