@@ -243,7 +243,7 @@ def pretty_print_statistics(user_to_player_metrics_dict: dict):
 def pretty_print_event_statistics(game_statistics: dict, event_type: Event):
     event_type_string = event_type.name.lower()
     result = f'{event_type_string.title()}-Statistics:\n\n'
-    result += f'\tPlayer attendance for all {event_type_string}s this season:\n'
+    result += f'\tPlayer attendance for all {event_type_string}s this season (so far):\n'
     sorted_list = create_sorted_event_attendance_dict(game_statistics)
 
     for element in sorted_list:

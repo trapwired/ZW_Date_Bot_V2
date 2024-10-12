@@ -314,7 +314,8 @@ class DataAccess(object):
 
         for row in all_attendances:
             attendance = Attendance.from_dict(row.id, row.to_dict())
-            user_id_to_attendance_dict[attendance.user_id].append(attendance)
+            if user_id_to_attendance_dict[attendance.user_id]:
+                user_id_to_attendance_dict[attendance.user_id].append(attendance)
 
         user_to_attendance_dict = dict()
         for user_id, attendance_list in user_id_to_attendance_dict.items():
