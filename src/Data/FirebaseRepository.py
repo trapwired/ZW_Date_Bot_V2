@@ -124,8 +124,7 @@ class FirebaseRepository(object):
             for entry in entries[1:]:
                 self.db.collection(self.tables.get(Table.PLAYER_METRIC)).document(entry.id).delete()
             return PlayerMetric.from_dict(entries[0].id, entries[0].to_dict())
-        now = DateTimeUtils.add_zurich_timezone(pd.Timestamp.now())
-        new_player_metric = PlayerMetric(user.doc_id, 0, 0, 0, now)
+        new_player_metric = PlayerMetric(user.doc_id, 0, 0, 0, DateTimeUtils.get_local_now())
         doc_ref = self.add(new_player_metric, Table.PLAYER_METRIC)
         return new_player_metric.add_document_id(doc_ref[1].id)
 
@@ -184,10 +183,10 @@ class FirebaseRepository(object):
 
     def get_all_relevant_event_ids(self, event_type: Event):
         table = self.get_event_table(event_type)
-        season_start, season_end = get_current_season_dates()
+        season_start, _ = get_current_season_dates()
         query_ref = (self.db.collection(table)) \
             .where(filter=FieldFilter("timestamp", ">", season_start)) \
-            .where(filter=FieldFilter("timestamp", "<", season_end))
+            .where(filter=FieldFilter("timestamp", "<", DateTimeUtils.get_local_now()))
         # filter > start date and < end date
         entries = query_ref.get()
         result = []
