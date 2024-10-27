@@ -51,7 +51,6 @@ def use_one_time_setup(data_access: DataAccess):
 def run_job_queue():
     job_queue = application.job_queue
     job_queue.run_once(send_hi, 1)
-    job_queue.run_once(scheduling_service.send_same_day_game_reminder, 1)
 
     # Individual event reminders
     job_queue.run_daily(  # Game Reminders, each day at 11:59 local time
