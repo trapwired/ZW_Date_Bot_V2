@@ -215,14 +215,9 @@ class TelegramService(object):
                                         parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     async def send_group_message(self, message: str):
-        messages_to_send = PrintUtils.prepare_message(message)
-        if len(messages_to_send) > 1:
-            await self.send_maintainer_message('Group-Message too long: \n\n')
-            for message in messages_to_send:
-                await self.send_maintainer_message(message)
-        else:
-            return await self.bot.send_message(chat_id=int(self.group_chat_id), text=messages_to_send[0],
-                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        # This message has to be already prepared and contain no illegal characters
+        return await self.bot.send_message(chat_id=int(self.group_chat_id), text=message,
+                                           parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     def get_reply_keyboard(self, message_type: MessageType, all_commands: [str]):
         match message_type:

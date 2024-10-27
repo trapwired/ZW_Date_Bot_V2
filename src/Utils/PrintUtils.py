@@ -173,13 +173,14 @@ def create_game_summary(game: Game) -> str:
     when_str = game.timestamp.strftime('%H:%M')
     meeting_time = game.timestamp - datetime.timedelta(minutes=45)
     meeting_time_str = meeting_time.strftime('%H:%M')
-    maps_search_part = '+'.join(game.location.strip().split(' '))
+    location_string = game.location.title().replace('(H)', '').replace('(A)', '').strip()
+    maps_search_part = '+'.join(location_string.split(' '))
     maps_link = f'https://www.google.com/maps/search/{maps_search_part}'
 
     summary = (f'Just a quick reminder for the game today:\n'
                f'_When:_ {when_str} o\'clock\n'
                f'_Meeting time:_ *{meeting_time_str}, ready in the changing room*\n'
-               f'_Where:_ {game.location.title()} \\([Google Maps]({maps_link})\\)\n'
+               f'_Where:_ {location_string} \\([Google Maps]({maps_link})\\)\n'
                f'_Opponent:_ {game.opponent.title()}\n'
                f'_Jerseys:_ Don\'t forget to bring them, \\(whoever has them\\.\\.\\.\\)')
     return summary
@@ -187,12 +188,13 @@ def create_game_summary(game: Game) -> str:
 
 def create_training_summary(training: Training) -> str:
     when_str = training.timestamp.strftime('%H:%M')
-    maps_search_part = '+'.join(training.location.strip().split(' '))
+    location_string = training.location.title().replace('(H)', '').replace('(A)', '').strip()
+    maps_search_part = '+'.join(location_string.split(' '))
     maps_link = f'https://www.google.com/maps/search/{maps_search_part}'
 
     summary = (f'Just a quick reminder for the training tomorrow:\n'
                f'_When:_ {when_str} o\'clock\n'
-               f'_Where:_ {training.location.title()} \\([Google Maps]({maps_link})\\)\n'
+               f'_Where:_ {location_string} \\([Google Maps]({maps_link})\\)\n'
                f'Please be there on time, so we can use the full 90min to train\\.\\.\\.\\')
     return summary
 
