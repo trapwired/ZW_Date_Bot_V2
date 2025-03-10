@@ -13,6 +13,7 @@ from Utils import PrintUtils
 from Utils.ApiConfig import ApiConfig
 
 from databaseEntities.TelegramUser import TelegramUser
+from telegram.error import Forbidden
 
 
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
@@ -145,6 +146,14 @@ class TelegramService(object):
         self.trainers_training = api_config.get_int_list('Chat_Ids', 'TRAINERS_TRAINING')
         self.group_chat_id = api_config.get_key('Chat_Ids', 'GROUP_CHAT')
 
+    async def _send_message(self, chat_id: int, message: str, reply_markup=None):
+        try:
+            return await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup,
+                                               parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        except Forbidden as e:
+            await self.send_maintainer_message(
+                f'Exception in _send_message: Forbidden\nUser: {chat_id}\nMessage: {message}\nError: {e}')
+
     async def send_message(self, update: Update | TelegramUser, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
@@ -156,8 +165,8 @@ class TelegramService(object):
         messages_to_send = PrintUtils.prepare_message(message)
         if len(messages_to_send) > 1:
             await self.send_maintainer_message('Message too long (1): \n\n' + message)
-        return await self.bot.send_message(chat_id=chat_id, text=messages_to_send[0], reply_markup=reply_markup,
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+
+        return await self._send_message(chat_id=chat_id, message=messages_to_send[0], reply_markup=reply_markup)
 
     async def send_file(self, update: Update | TelegramUser, path: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
@@ -168,8 +177,7 @@ class TelegramService(object):
         messages_to_send = PrintUtils.prepare_message(message)
         if len(messages_to_send) > 1:
             await self.send_maintainer_message('Message too long (2): \n\n' + message)
-        await self.bot.send_message(chat_id=chat_id, text=messages_to_send[0], reply_markup=ReplyKeyboardRemove(),
-                                    parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+        await self._send_message(chat_id=chat_id, message=messages_to_send[0], reply_markup=ReplyKeyboardRemove())
 
     async def send_info_message_to_trainers(self, message: str, event_type: Event):
         messages_to_send = PrintUtils.prepare_message(message)
@@ -178,8 +186,7 @@ class TelegramService(object):
         chat_ids = self.get_chat_ids(event_type)
         for chat_id in chat_ids:
             for message_to_send in messages_to_send:
-                await self.bot.send_message(chat_id=chat_id, text=message_to_send, reply_markup=None,
-                                            parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+                await self._send_message(chat_id=chat_id, message=message_to_send, reply_markup=None)
 
     @dispatch(str)
     async def send_maintainer_message(self, message: str):
@@ -188,7 +195,7 @@ class TelegramService(object):
         if len(messages_to_send) > 1:
             await self.send_maintainer_message('Message too long (4): \n\n' + message)
         return await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=messages_to_send[0],
-                                        parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
+                                           parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
 
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):
