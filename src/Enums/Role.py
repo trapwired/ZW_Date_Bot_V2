@@ -7,4 +7,5 @@ class Role(IntEnum):
     SPECTATOR = 10
     ADMIN = 42
     RETIRED = 100
+    INACTIVE = 101
     REJECTED = 999

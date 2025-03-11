@@ -259,7 +259,7 @@ class FirebaseRepository(object):
             updated_user_to_state = user_to_state.add_document_id(res[0].id)
             self.update_user_state(updated_user_to_state)
         else:
-            return ObjectNotFoundException(collection, res[0].id)
+            return ObjectNotFoundException(collection, user_to_state.user_id)
 
     def update_user_via_telegram_id(self, user: TelegramUser):
         user_id = self.get_user(user.telegramId).doc_id

@@ -1,4 +1,3 @@
-import configparser
 import traceback
 
 import telegram
@@ -14,6 +13,8 @@ from Utils.ApiConfig import ApiConfig
 
 from databaseEntities.TelegramUser import TelegramUser
 from telegram.error import Forbidden
+
+from Services.AdminService import AdminService
 
 
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
@@ -138,8 +139,9 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
 
 
 class TelegramService(object):
-    def __init__(self, bot: telegram.Bot, api_config: ApiConfig):
+    def __init__(self, bot: telegram.Bot, api_config: ApiConfig, admin_service: AdminService):
         self.bot = bot
+        self.admin_service = admin_service
         self.maintainer_chat_id = api_config.get_key('Chat_Ids', 'MAINTAINER')
         self.website = api_config.get_key('Additional_Data', 'WEBSITE')
         self.trainers_games = api_config.get_int_list('Chat_Ids', 'TRAINERS_GAMES')
@@ -151,8 +153,9 @@ class TelegramService(object):
             return await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup,
                                                parse_mode=telegram.constants.ParseMode.MARKDOWN_V2)
         except Forbidden as e:
+            self.admin_service.set_user_inactive(chat_id)
             await self.send_maintainer_message(
-                f'Exception in _send_message: Forbidden\nUser: {chat_id}\nMessage: {message}\nError: {e}')
+                f'Exception in _send_message: Forbidden\nUser: {chat_id}\nSetting User to Inactive\nMessage: {message}\nError: {e}')
 
     async def send_message(self, update: Update | TelegramUser, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):

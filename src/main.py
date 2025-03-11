@@ -29,9 +29,9 @@ def initialize_logging():
 
 def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _data_access = DataAccess(api_config)
-    _telegram_service = TelegramService(bot, api_config)
     _user_state_service = UserStateService(_data_access)
     _admin_service = AdminService(_data_access)
+    _telegram_service = TelegramService(bot, api_config, _admin_service)
     _ics_service = IcsService(_data_access)
     _statistics_service = StatisticsService(_data_access)
     _scheduling_service = SchedulingService(_data_access, _telegram_service, _statistics_service, api_config)
