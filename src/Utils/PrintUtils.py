@@ -145,7 +145,9 @@ def pretty_print(temp_data: TempData, event_type: Event) -> str:
 def pretty_print_event_summary(stats: (list, list, list), game_string: str, event_type: Event) -> str:
     yes, no, unsure = stats
     total_players = len(yes) + len(no) + len(unsure)
-    result = game_string + '\n\n'
+    result = ''
+    if game_string:
+        result = game_string + '\n\n'
     if len(yes) > 0:
         result += f'*\tYes ({len(yes)}/{total_players})*\n'
         for player in yes:
@@ -186,7 +188,7 @@ def create_game_summary(game: Game) -> str:
     return summary
 
 
-def create_training_summary(training: Training) -> str:
+def create_training_summary(training: Training, playerOverview: str) -> str:
     when_str = training.timestamp.strftime('%H:%M')
     location_string = training.location.title().replace('(H)', '').replace('(A)', '').strip()
     maps_search_part = '+'.join(location_string.split(' '))
@@ -195,6 +197,7 @@ def create_training_summary(training: Training) -> str:
     summary = (f'Just a quick reminder for the training tomorrow:\n'
                f'_When:_ {when_str} o\'clock\n'
                f'_Where:_ {location_string} \\([Google Maps]({maps_link})\\)\n'
+               f'_Who:_\n{playerOverview}\n'
                f'Please be there on time, so we can use the full 90min to train\\.\\.\\.\\')
     return summary
 

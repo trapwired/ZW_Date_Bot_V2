@@ -75,9 +75,16 @@ class SchedulingService:
             if len(events_to_remind) == 0:
                 return
 
-            message = PrintUtils.create_training_summary(events_to_remind[0])
+            event_type = Event.TRAINING
+            for event in events_to_remind:
+                stats = self.data_access.get_stats_event(event.doc_id, event_type)
+                stats_with_names = self.data_access.get_names(stats)
+                player_overview = PrintUtils.pretty_print_event_summary(stats_with_names, None, event_type)
+                player_overview_escaped = player_overview.replace('(', '\(').replace(')', '\)').replace('.', '\.').replace(',', '\,')
 
-            await self.telegram_service.send_group_message(message)
+                message = PrintUtils.create_training_summary(events_to_remind[0], player_overview_escaped)
+                await self.telegram_service.send_group_message(message)
+
         except Exception as e:
             await self.telegram_service.send_maintainer_message(
                 'Exception caught in SchedulingService.send_previous_day_training_reminder()',
