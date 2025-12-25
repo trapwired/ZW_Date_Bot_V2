@@ -86,7 +86,7 @@ def run_job_queue():
     # Training Reminder, on day before training
     job_queue.run_daily(  # previous day at 20:30
         scheduling_service.send_previous_day_training_reminder,
-        datetime.time(18, 30, 0)
+        datetime.time(7, 30, 0)
     )
 
 
