@@ -4,6 +4,7 @@ from typing import Callable
 
 import telegram
 from telegram import Update
+from telegram.error import BadRequest
 from telegram.constants import ChatType
 from telegram.ext import ContextTypes, BaseHandler
 from telegram.ext._utils.types import CCT
@@ -126,6 +127,11 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
             users_to_state, node = self.get_user_state_and_node(update)
             await node.handle(update, users_to_state)
+        except BadRequest as e:
+            if "Message is not modified" in str(e):
+                logging.debug(f"Ignoring 'Message is not modified' error: {e}")
+                return
+            await self.telegram_service.send_maintainer_message('Exception caught in NodeHandler.handle()', update, e)
         except Exception as e:
             await self.telegram_service.send_maintainer_message('Exception caught in NodeHandler.handle()', update, e)
 
