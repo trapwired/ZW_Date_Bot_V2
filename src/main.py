@@ -79,9 +79,9 @@ def run_job_queue():
         datetime.time(16, 59, 0))
 
     # Game Reminder, on day of game
-    job_queue.run_daily(  # same day at 8:00
+    job_queue.run_daily(  # same day at 9:00
         scheduling_service.send_same_day_game_reminder,
-        datetime.time(6, 0, 0)
+        datetime.time(8, 0, 0)
     )
     # Training Reminder, on day before training
     job_queue.run_daily(  # previous day at 20:30

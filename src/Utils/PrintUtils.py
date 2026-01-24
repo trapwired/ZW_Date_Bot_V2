@@ -179,11 +179,15 @@ def create_game_summary(game: Game) -> str:
     maps_search_part = '+'.join(location_string.split(' '))
     maps_link = f'https://www.google.com/maps/search/{maps_search_part}'
 
+    # Escape dynamic content for MarkdownV2
+    location_escaped = escape_markdown_v2(location_string)
+    opponent_escaped = escape_markdown_v2(game.opponent.title())
+
     summary = (f'Just a quick reminder for the game today:\n'
                f'_When:_ {when_str} o\'clock\n'
                f'_Meeting time:_ *{meeting_time_str}, ready in the changing room*\n'
-               f'_Where:_ {location_string} \\([Google Maps]({maps_link})\\)\n'
-               f'_Opponent:_ {game.opponent.title()}\n'
+               f'_Where:_ {location_escaped} \\([Google Maps]({maps_link})\\)\n'
+               f'_Opponent:_ {opponent_escaped}\n'
                f'_Jerseys:_ Don\'t forget to bring them, \\(whoever has them\\.\\.\\.\\)')
     return summary
 
@@ -231,6 +235,17 @@ def create_sorted_event_attendance_dict(user_to_event_attendances_dict) -> []:
         result_list.append((total_yes, user, all_attendances))
     result_list.sort(key=lambda x: x[0])
     return result_list
+
+
+def escape_markdown_v2(text: str) -> str:
+    """Escape special characters for Telegram MarkdownV2."""
+    escape_chars = '_*[]()~`>#+-=|{}.!'
+    result = ''
+    for char in text:
+        if char in escape_chars:
+            result += '\\'
+        result += char
+    return result
 
 
 def pretty_print_statistics(user_to_player_metrics_dict: dict):
