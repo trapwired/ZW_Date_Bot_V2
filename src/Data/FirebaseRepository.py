@@ -173,12 +173,18 @@ class FirebaseRepository(object):
         entries = query_ref.get()
         return entries
 
+    # Firestore caps the 'in' operator at 30 comparison values, so batch the ids.
+    FIRESTORE_IN_LIMIT = 30
+
     def get_all_event_attendances(self, event_type: Event, relevant_doc_ids: list[str]):
         if len(relevant_doc_ids) == 0:
             return []
         table = self.get_event_attendance_table(event_type)
-        query_ref = self.db.collection(table).where(filter=FieldFilter("eventId", "in", relevant_doc_ids))
-        entries = query_ref.get()
+        entries = []
+        for i in range(0, len(relevant_doc_ids), self.FIRESTORE_IN_LIMIT):
+            batch = relevant_doc_ids[i:i + self.FIRESTORE_IN_LIMIT]
+            query_ref = self.db.collection(table).where(filter=FieldFilter("eventId", "in", batch))
+            entries.extend(query_ref.get())
         return entries
 
     def get_all_relevant_event_ids(self, event_type: Event):
