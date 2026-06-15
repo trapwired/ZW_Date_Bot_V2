@@ -52,6 +52,12 @@ def get_yes_or_no_markup(event_type: Event, document_id: str):
     return _get_reply_markup(YES_OR_NO_OPTIONS, UserState.ADMIN_UPDATE, event_type, document_id)
 
 
+def get_reset_statistics_markup():
+    # A reset has no event/document, but the callback format requires both - the placeholders are
+    # ignored by the reset callback node. ADMIN_STATISTICS (the screen the admin is on) routes the click.
+    return _get_reply_markup(YES_OR_NO_OPTIONS, UserState.ADMIN_STATISTICS, Event.GAME, '')
+
+
 def get_option_translation(option: CallbackOption):
     match option:
         case CallbackOption.CALENDAR:

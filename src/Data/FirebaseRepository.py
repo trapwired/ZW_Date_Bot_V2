@@ -297,9 +297,18 @@ class FirebaseRepository(object):
         table = self.get_event_attendance_table(event_type)
         query_ref = self.db.collection(table) \
             .where(filter=FieldFilter("eventId", "==", event_doc_id))
-        result = query_ref.get()
-        for row in result:
-            self.db.collection(table).document(row.id).delete()
+        self._delete_documents(table, query_ref.stream())
+
+    def delete_all_player_metrics(self) -> int:
+        db_table = self.tables.get(Table.PLAYER_METRIC)
+        return self._delete_documents(db_table, self.db.collection(db_table).stream())
+
+    def _delete_documents(self, table: str, docs) -> int:
+        deleted_count = 0
+        for doc in docs:
+            self.db.collection(table).document(doc.id).delete()
+            deleted_count += 1
+        return deleted_count
 
 
 

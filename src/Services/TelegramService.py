@@ -100,6 +100,10 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.ADMIN_STATISTICS:
             return 'Here you are - which statistics do you like to see?'
 
+        case MessageType.ADMIN_RESET_STATISTICS:
+            return ('Are you sure you want to end the current season?\n\n'
+                    'This permanently resets the reminder statistics for ALL players and cannot be undone.')
+
         case MessageType.EVENT_ADDED:
             return 'Hey ' + first_name + ', a new event was added - if you fill it out now, you don\'t have to think about it in the future...'
         case _:
@@ -135,6 +139,23 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
             current_line = [c]
     if len(current_line) > 0:
         result.append(current_line)
+    result.append(['/help'])
+    return result
+
+
+def generate_statistics_keyboard(all_commands: [str]) -> [[str]]:
+    # Fixed layout for the statistics screen; only rows whose commands the user actually has are shown.
+    layout = [
+        ['continue later'],
+        ['/reminder_statistics', '/game_statistics'],
+        ['/training_statistics', '/timekeeping_statistics'],
+        ['/reset_statistics'],
+    ]
+    placed = {command for row in layout for command in row} | {'/help'}
+
+    result = [present for row in layout if (present := [c for c in row if c in all_commands])]
+    # Keep any command not covered by the fixed layout on its own row, so nothing silently disappears.
+    result.extend([c] for c in all_commands if c not in placed)
     result.append(['/help'])
     return result
 
@@ -243,7 +264,10 @@ class TelegramService(object):
 
         if all_commands is None or len(all_commands) == 0:
             return None
-        keyboard = generate_keyboard(all_commands)
+        if message_type == MessageType.ADMIN_STATISTICS:
+            keyboard = generate_statistics_keyboard(all_commands)
+        else:
+            keyboard = generate_keyboard(all_commands)
         return ReplyKeyboardMarkup(keyboard, one_time_keyboard=False)
 
     def get_chat_ids(self, event_type):
@@ -262,7 +286,7 @@ class TelegramService(object):
                                          reply_markup=reply_markup)
 
     async def delete_previous_message(self, message: Message):
-        await self._delete_message(int(message.id) - 1, message.chat_id)
+        await self._delete_message(message.message_id - 1, message.chat_id)
 
     async def delete_message(self, update: Update):
         if update.message:

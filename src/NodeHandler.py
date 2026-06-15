@@ -35,6 +35,7 @@ from Nodes.UpdateNode import UpdateNode
 from Nodes.EditEventTimestampNode import EditEventTimestampNode
 from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNode
 from Nodes.AddEventCallbackNode import AddEventCallbackNode
+from Nodes.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode
@@ -252,6 +253,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_statistics_node.add_transition('/game_statistics', admin_statistics_node.handle_game_statistics)
         admin_statistics_node.add_transition('/training_statistics', admin_statistics_node.handle_training_statistics)
         admin_statistics_node.add_transition('/timekeeping_statistics', admin_statistics_node.handle_timekeeping_statistics)
+        admin_statistics_node.add_transition('/reset_statistics', admin_statistics_node.handle_reset_statistics,
+                                             allowed_roles=RoleSet.ADMINS)
 
         admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
         admin_add_node.add_continue_later()
@@ -386,13 +389,15 @@ class NodeHandler(BaseHandler[Update, CCT]):
                                                        user_state_service)
         add_callback_node = AddEventCallbackNode(telegram_service, data_access, trigger_service, self,
                                                  user_state_service)
+        reset_statistics_callback_node = ResetStatisticsCallbackNode(telegram_service, data_access, trigger_service)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node,
             UserState.ADMIN_UPDATE: update_callback_node,
             UserState.ADMIN_ADD_GAME: add_callback_node,
             UserState.ADMIN_ADD_TRAINING: add_callback_node,
-            UserState.ADMIN_ADD_TIMEKEEPING: add_callback_node
+            UserState.ADMIN_ADD_TIMEKEEPING: add_callback_node,
+            UserState.ADMIN_STATISTICS: reset_statistics_callback_node
         }
         # TODO correct, one callback node for 3 states?
         return callback_nodes_dict

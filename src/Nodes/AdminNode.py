@@ -8,6 +8,7 @@ from Enums.Event import Event
 
 from databaseEntities.UsersToState import UsersToState
 
+from Utils import CallbackUtils
 from Utils import PrintUtils
 
 
@@ -19,6 +20,7 @@ class AdminNode(Node):
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
+            message_type=MessageType.ADMIN_STATISTICS,
             message=message)
 
     async def handle_game_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
@@ -27,6 +29,7 @@ class AdminNode(Node):
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
+            message_type=MessageType.ADMIN_STATISTICS,
             message=message)
 
     async def handle_training_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
@@ -35,6 +38,7 @@ class AdminNode(Node):
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
+            message_type=MessageType.ADMIN_STATISTICS,
             message=message)
 
     async def handle_timekeeping_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
@@ -43,7 +47,15 @@ class AdminNode(Node):
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
+            message_type=MessageType.ADMIN_STATISTICS,
             message=message)
+
+    async def handle_reset_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        await self.telegram_service.send_message(
+            update=update,
+            all_buttons=None,
+            message_type=MessageType.ADMIN_RESET_STATISTICS,
+            reply_markup=CallbackUtils.get_reset_statistics_markup())
 
     async def handle_add(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(

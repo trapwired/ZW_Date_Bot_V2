@@ -342,6 +342,10 @@ class DataAccess(object):
     def delete(self, temp_data: TempData):
         self.firebase_repository.delete(temp_data)
 
+    def reset_statistics(self) -> int:
+        # Ends the current season: hard-deletes every player's reminder statistics.
+        return self.firebase_repository.delete_all_player_metrics()
+
     ########
     # ELSE #
     ########

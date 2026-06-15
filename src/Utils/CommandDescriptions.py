@@ -21,6 +21,7 @@ class CommandDescriptions(object):
         '/training_statistics': 'Show training-attendance statistics for all players',
         '/timekeeping_statistics': 'Show timekeeping-attendance statistics for all players',
         '/statistics': 'Go to statistics menu',
+        '/reset_statistics': 'End the current season and reset reminder statistics for all players',
         '/game': 'Add a new game',
         '/training': 'Add a new training',
         '/timekeeping': 'Add a new timekeeping-event'
