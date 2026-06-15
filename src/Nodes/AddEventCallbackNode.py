@@ -69,7 +69,7 @@ class AddEventCallbackNode(CallbackNode):
                 message = 'Sure, let\'s restart...'
                 sent_message = await self.telegram_service.send_message_with_normal_keyboard(update, message)
 
-                await update.callback_query.delete_message()
+                await self.telegram_service.delete_message(update)
                 await self.telegram_service.delete_previous_message(sent_message)
 
                 admin_add_node = self.node_handler.get_node(UserState.ADMIN_ADD)

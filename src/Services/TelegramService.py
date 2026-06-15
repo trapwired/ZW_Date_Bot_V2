@@ -1,3 +1,4 @@
+import logging
 import traceback
 
 import telegram
@@ -12,7 +13,7 @@ from Utils import PrintUtils
 from Utils.ApiConfig import ApiConfig
 
 from databaseEntities.TelegramUser import TelegramUser
-from telegram.error import Forbidden
+from telegram.error import BadRequest, Forbidden
 
 from Services.AdminService import AdminService
 
@@ -261,12 +262,20 @@ class TelegramService(object):
                                          reply_markup=reply_markup)
 
     async def delete_previous_message(self, message: Message):
-        previous_message_id = int(message.id) - 1
-        chat_id = message.chat_id
-        await self.bot.deleteMessage(message_id=previous_message_id, chat_id=chat_id)
+        await self._delete_message(int(message.id) - 1, message.chat_id)
 
     async def delete_message(self, update: Update):
         if update.message:
-            await update.message.delete()
+            message = update.message
         elif update.callback_query:
-            await update.callback_query.delete_message()
+            message = update.callback_query.message
+        else:
+            return
+        await self._delete_message(message.message_id, message.chat_id)
+
+    async def _delete_message(self, message_id: int, chat_id: int):
+        try:
+            await self.bot.deleteMessage(message_id=message_id, chat_id=chat_id)
+        except BadRequest as e:
+            # Bots can't delete messages older than 48h; this cleanup is best-effort.
+            logging.debug(f"Could not delete message {message_id} in chat {chat_id}: {e}")
