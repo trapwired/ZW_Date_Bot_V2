@@ -37,7 +37,7 @@ class EditNode(Node):
             )
             return
 
-        message = event_type.name.lower().title() + ': ' + PrintUtils.pretty_print(event, attendance)
+        message = PrintUtils.event_label(event_type) + ': ' + PrintUtils.pretty_print(event, attendance)
         reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, document_id)
         await self.telegram_service.send_message(
             update=update,

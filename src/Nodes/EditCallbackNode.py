@@ -57,13 +57,13 @@ class EditCallbackNode(CallbackNode):
             case Event.TIMEKEEPING:
                 event = self.data_access.get_timekeeping(doc_id)
 
-        message = event_type.name.lower().title() + ': ' + PrintUtils.pretty_print(event, attendance)
+        message = PrintUtils.event_label(event_type) + ': ' + PrintUtils.pretty_print(event, attendance)
         reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, doc_id)
         await query.answer()
 
-        if message == query.message.text:
+        if message == query.message.text_html:
             return
-        await query.edit_message_text(text=message, reply_markup=reply_markup)
+        await self.telegram_service.edit_callback_message(query, message, reply_markup)
 
         trigger_payload = TriggerPayload(new_attendance=new_attendance, doc_id=doc_id, event_type=event_type)
         await self.trigger_service.check_triggers(trigger_payload)

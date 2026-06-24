@@ -16,6 +16,7 @@ from Services.UserStateService import UserStateService
 
 from Utils import PrintUtils
 from Utils import RoleAssignment
+from Utils import Format
 
 
 class AssignRolesCallbackNode(CallbackNode):
@@ -46,31 +47,31 @@ class AssignRolesCallbackNode(CallbackNode):
 
     async def _show_overview(self, query):
         counts = {role: self.data_access.get_role_user_count(role) for role in ASSIGNABLE_ROLES}
-        await query.edit_message_text(
-            text='Select a role to manage:',
+        await self.telegram_service.edit_callback_message(
+            query, Format.bold('Select a role to manage:'),
             reply_markup=RoleAssignment.build_overview_markup(counts))
 
     async def _show_user_list(self, query, role: Role):
         users_to_state = self.data_access.get_users_to_state_by_role(role)
         if len(users_to_state) == 0:
-            await query.edit_message_text(
-                text=f'No users currently have the role {role.name}.',
+            await self.telegram_service.edit_callback_message(
+                query, f'No users currently have the role {Format.bold(role.name)}.',
                 reply_markup=RoleAssignment.build_home_markup())
             return
 
         users = self.data_access.add_names([uts.user_id for uts in users_to_state])
         entries = [(uts.user_id, PrintUtils.get_player_display_name(user), role)
                    for uts, user in zip(users_to_state, users)]
-        await query.edit_message_text(
-            text=f'Users with role {role.name} - tap one to change it:',
+        await self.telegram_service.edit_callback_message(
+            query, f'Users with role {Format.bold(role.name)} - tap one to change it:',
             reply_markup=RoleAssignment.build_user_list_markup(entries))
 
     async def _show_assign_options(self, query, user_doc_id: str):
         user = self.data_access.get_user_by_doc_id(user_doc_id)
         user_to_state = self.data_access.get_user_state_for_user(user)
-        name = PrintUtils.get_player_display_name(user)
-        await query.edit_message_text(
-            text=f'{name} is currently {user_to_state.role.name}. Assign a new role:',
+        name = Format.bold(PrintUtils.get_player_display_name(user))
+        await self.telegram_service.edit_callback_message(
+            query, f'{name} is currently {Format.bold(user_to_state.role.name)}. Assign a new role:',
             reply_markup=RoleAssignment.build_assign_markup(user_doc_id, user_to_state.role))
 
     async def _assign_role(self, query, user_doc_id: str, new_role: Role):
@@ -85,11 +86,11 @@ class AssignRolesCallbackNode(CallbackNode):
 
         notified = await self._notify_user(user, new_role)
 
-        name = PrintUtils.get_player_display_name(user)
-        text = f'✓ {name} is now {new_role.name}.'
+        name = Format.bold(PrintUtils.get_player_display_name(user))
+        text = f'✅ {name} is now {Format.bold(new_role.name)}.'
         if not notified:
             text += '\nCould not notify them - they may have removed Telegram.'
-        await query.edit_message_text(text=text, reply_markup=RoleAssignment.build_home_markup())
+        await self.telegram_service.edit_callback_message(query, text, reply_markup=RoleAssignment.build_home_markup())
 
     async def _notify_user(self, user, new_role: Role) -> bool:
         # Best-effort: the role change is already persisted, so a user we can no longer reach
@@ -100,7 +101,7 @@ class AssignRolesCallbackNode(CallbackNode):
             await self.telegram_service.send_message(
                 update=user,
                 all_buttons=buttons,
-                message=f'An admin set your role to {new_role.name}.')
+                message=f'An admin set your role to {Format.bold(new_role.name)}.')
             return True
         except TelegramError as e:
             logging.info(f'Could not notify user {user.telegramId} of role change: {e}')

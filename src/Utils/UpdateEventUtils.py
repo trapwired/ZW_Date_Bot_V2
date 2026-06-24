@@ -48,7 +48,7 @@ def get_input_format_string(callback_option: CallbackOption):
 
 def get_inline_message(prefix_string: str, event_type: Event, event: Game | Training | TimekeepingEvent | str,
                        middle_string: str = '') -> str:
-    event_type_string = event_type.name.lower().title()
+    event_type_string = PrintUtils.event_label(event_type)
 
     if type(event) is str:
         event_summary = event

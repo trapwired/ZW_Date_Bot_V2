@@ -80,9 +80,8 @@ class SchedulingService:
                 stats = self.data_access.get_stats_event(event.doc_id, event_type)
                 stats_with_names = self.data_access.get_names(stats)
                 player_overview = PrintUtils.pretty_print_event_summary(stats_with_names, None, event_type)
-                player_overview_escaped = player_overview.replace('(', '\(').replace(')', '\)').replace('.', '\.').replace(',', '\,')
 
-                message = PrintUtils.create_training_summary(events_to_remind[0], player_overview_escaped)
+                message = PrintUtils.create_training_summary(events_to_remind[0], player_overview)
                 await self.telegram_service.send_group_message(message)
 
         except Exception as e:
@@ -192,7 +191,7 @@ class SchedulingService:
         for event in event_list:
             pretty_print_event = PrintUtils.pretty_print(event, AttendanceState.UNSURE)
             reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, event.doc_id)
-            message_text = event_type.name.lower().title() + ' | ' + pretty_print_event
+            message_text = PrintUtils.event_label(event_type) + ' | ' + pretty_print_event
             await self.telegram_service.send_message(
                 update=player,
                 all_buttons=None,

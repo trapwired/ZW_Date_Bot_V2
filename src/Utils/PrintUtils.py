@@ -14,9 +14,26 @@ from Enums.AttendanceState import AttendanceState
 from Enums.CallbackOption import CallbackOption
 
 from Utils import UpdateEventUtils
+from Utils import Format
 
 from databaseEntities.PlayerMetric import PlayerMetric
 
+EVENT_EMOJI = {Event.GAME: '🤾', Event.TRAINING: '🏃', Event.TIMEKEEPING: '⏱️'}
+ATTENDANCE_EMOJI = {AttendanceState.YES: '✅', AttendanceState.NO: '❌', AttendanceState.UNSURE: '❓'}
+
+DATETIME_FORMAT = '%d.%m.%Y %H:%M'
+
+
+def event_label(event_type: Event) -> str:
+    return f'{EVENT_EMOJI[event_type]} {event_type.name.title()}'
+
+
+def _datetime(event) -> str:
+    return event.timestamp.strftime(DATETIME_FORMAT)
+
+
+# NOTE: pretty_print_game_stats / pretty_print_timekeeping_stats feed reply-keyboard BUTTON
+# labels, which Telegram renders literally (no HTML parsing) - so they stay plain text.
 
 def pretty_print_game_stats(game_stats: (list, list, list), attendance: Attendance | None):
     yes, no, unsure = game_stats
@@ -55,11 +72,12 @@ def get_attendance_symbols(attendance: Attendance | None) -> (str, str):
 
 def get_update_attribute_message(attribute: CallbackOption) -> str:
     if attribute == CallbackOption.SAVE:
-        message = (f'Review your changes in the message above - if all data is correct, use the button \'SAVE\' or type'
-                   f' \'save\' to store the event. Use the other buttons to \'RESTART\' or \'CANCEL\'...')
+        message = (f'Review your changes in the message above - if all data is correct, use the button {Format.bold("SAVE")}'
+                   f' or type \'save\' to store the event. Use the other buttons to {Format.bold("RESTART")} or '
+                   f'{Format.bold("CANCEL")}...')
     else:
-        message = f'Send me the new {attribute.name.title()} in the following form:\n'
-        message += f'{UpdateEventUtils.get_input_format_string(attribute)}\n'
+        message = f'Send me the new {Format.bold(attribute.name.title())} in the following form:\n'
+        message += f'{Format.escape(UpdateEventUtils.get_input_format_string(attribute))}\n'
         message += 'To cancel updating, just send me /cancel'
     return message
 
@@ -75,57 +93,72 @@ def pretty_print_event_stats(event_stats: (list, list, list), event_type: Event,
 
 
 def pretty_print_event_datetime(event: Game | Training | TimekeepingEvent):
-    return f'{event.__class__.__name__.title()} - {event.timestamp.strftime("%d.%m.%Y %H:%M")}'
+    # Plain text: the only caller passes this as message_extra_text, which get_text escapes.
+    return f'{event.__class__.__name__.title()} - {_datetime(event)}'
 
+
+def pretty_print_event_command(event) -> str:
+    # PLAIN text (no tags, no escaping) for reply-keyboard event buttons: Telegram renders
+    # button labels literally AND echoes the tapped label back as a user message, so HTML
+    # markup must never appear here. This is also the command string used for matching.
+    return f'{_datetime(event)} | {event.location.title()}'
+
+
+# The single-line event renderers keep '|' as the field separator because
+# UpdateEventUtils.mark_updating_in_event_string splits on it by index.
 
 @dispatch(Game)
 def pretty_print(game: Game) -> str:
-    return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location.title()}'
+    return f'{Format.bold(_datetime(game))} | {Format.escape(game.location.title())}'
 
 
 @dispatch(Game)
 def pretty_print_long(game: Game) -> str:
-    return f'{game.timestamp.strftime("%d.%m.%Y %H:%M")} | {game.location.title()} | {game.opponent.title()}'
+    return f'{pretty_print(game)} | {Format.escape(game.opponent.title())}'
 
 
 @dispatch(Game, Attendance)
 def pretty_print(game: Game, attendance: Attendance) -> str:
-    return pretty_print(game) + f' | {attendance.state.name}'
+    return f'{pretty_print(game)} | {_attendance(attendance.state)}'
 
 
 @dispatch(Game, AttendanceState)
 def pretty_print(game: Game, attendance: AttendanceState) -> str:
-    return pretty_print(game) + f' | {attendance.name}'
+    return f'{pretty_print(game)} | {_attendance(attendance)}'
 
 
 @dispatch(Training)
 def pretty_print(training: Training) -> str:
-    return f'{training.timestamp.strftime("%d.%m.%Y %H:%M")} | {training.location.title()}'
+    return f'{Format.bold(_datetime(training))} | {Format.escape(training.location.title())}'
 
 
 @dispatch(Training, Attendance)
 def pretty_print(training: Training, attendance: Attendance) -> str:
-    return pretty_print(training) + f' | {attendance.state.name}'
+    return f'{pretty_print(training)} | {_attendance(attendance.state)}'
 
 
 @dispatch(Training, AttendanceState)
 def pretty_print(training: Training, attendance: AttendanceState) -> str:
-    return pretty_print(training) + f' | {attendance.name}'
+    return f'{pretty_print(training)} | {_attendance(attendance)}'
 
 
 @dispatch(TimekeepingEvent)
 def pretty_print(tke: TimekeepingEvent) -> str:
-    return f'{tke.timestamp.strftime("%d.%m.%Y %H:%M")} | {tke.location.title()}'
+    return f'{Format.bold(_datetime(tke))} | {Format.escape(tke.location.title())}'
 
 
 @dispatch(TimekeepingEvent, Attendance)
 def pretty_print(tke: TimekeepingEvent, attendance: Attendance = None) -> str:
-    return pretty_print(tke) + f' | {attendance.state.name}'
+    return f'{pretty_print(tke)} | {_attendance(attendance.state)}'
 
 
 @dispatch(TimekeepingEvent, AttendanceState)
 def pretty_print(tke: TimekeepingEvent, attendance: AttendanceState) -> str:
-    return pretty_print(tke) + f' | {attendance.name}'
+    return f'{pretty_print(tke)} | {_attendance(attendance)}'
+
+
+def _attendance(state: AttendanceState) -> str:
+    return f'{ATTENDANCE_EMOJI[state]} {state.name.title()}'
 
 
 @dispatch(TempData, Event)
@@ -148,27 +181,26 @@ def pretty_print_event_summary(stats: (list, list, list), game_string: str, even
     result = ''
     if game_string:
         result = game_string + '\n\n'
-    if len(yes) > 0:
-        result += f'*\tYes ({len(yes)}/{total_players})*\n'
-        for player in yes:
-            result += pretty_print_player_name(player)
-        result += '\n'
+
+    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.YES], 'Yes', yes, total_players)
 
     if event_type is Event.TIMEKEEPING:
         if len(yes) == 0:
             result += '\t\tNoone indicated yes until now :('
         return result
 
-    if len(no) > 0:
-        result += f'*\tNo ({len(no)}/{total_players})*\n'
-        for player in no:
-            result += pretty_print_player_name(player)
-        result += '\n'
-    if len(unsure) > 0:
-        result += f'*\tUnsure ({len(unsure)}/{total_players})*\n'
-        for player in unsure:
-            result += pretty_print_player_name(player)
+    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.NO], 'No', no, total_players)
+    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.UNSURE], 'Unsure', unsure, total_players)
     return result
+
+
+def _attendance_block(emoji: str, label: str, players: list, total_players: int) -> str:
+    if len(players) == 0:
+        return ''
+    block = Format.bold(f'{emoji} {label} ({len(players)}/{total_players})') + '\n'
+    for player in players:
+        block += pretty_print_player_name(player)
+    return block + '\n'
 
 
 def create_game_summary(game: Game) -> str:
@@ -176,37 +208,36 @@ def create_game_summary(game: Game) -> str:
     meeting_time = game.timestamp - datetime.timedelta(minutes=45)
     meeting_time_str = meeting_time.strftime('%H:%M')
     location_string = game.location.title().replace('(H)', '').replace('(A)', '').strip()
-    maps_search_part = '+'.join(location_string.split(' '))
-    maps_link = f'https://www.google.com/maps/search/{maps_search_part}'
+    maps_link = _maps_link(location_string)
 
-    # Escape dynamic content for MarkdownV2
-    location_escaped = escape_markdown_v2(location_string)
-    opponent_escaped = escape_markdown_v2(game.opponent.title())
-
-    summary = (f'Just a quick reminder for the game today:\n'
-               f'_When:_ {when_str} o\'clock\n'
-               f'_Meeting time:_ *{meeting_time_str}, ready in the changing room*\n'
-               f'_Where:_ {location_escaped} \\([Google Maps]({maps_link})\\)\n'
-               f'_Opponent:_ {opponent_escaped}\n'
-               f'_Jerseys:_ Don\'t forget to bring them, \\(whoever has them\\.\\.\\.\\)')
-    return summary
+    return (f'{EVENT_EMOJI[Event.GAME]} {Format.bold("Game today!")}\n\n'
+            f'{Format.bold("When:")} {Format.escape(when_str)} o\'clock\n'
+            f'{Format.bold("Meeting:")} {Format.escape(meeting_time_str)}, ready in the changing room\n'
+            f'{Format.bold("Where:")} {Format.link(location_string, maps_link)}\n'
+            f'{Format.bold("Opponent:")} {Format.escape(game.opponent.title())}\n'
+            f'{Format.italic("Jerseys: do not forget to bring them (whoever has them...)")}')
 
 
-def create_training_summary(training: Training, playerOverview: str) -> str:
+def create_training_summary(training: Training, player_overview: str) -> str:
     when_str = training.timestamp.strftime('%H:%M')
     location_string = training.location.title().replace('(H)', '').replace('(A)', '').strip()
-    maps_search_part = '+'.join(location_string.split(' '))
-    maps_link = f'https://www.google.com/maps/search/{maps_search_part}'
+    maps_link = _maps_link(location_string)
 
-    summary = (f'Just a quick reminder for the training tomorrow:\n'
-               f'_When:_ {when_str} o\'clock\n'
-               f'_Where:_ {location_string} \\([Google Maps]({maps_link})\\)\n'
-               f'_Who:_\n{playerOverview}\n'
-               f'Please be there on time, so we can use the full 90min to train\\.\\.\\.\\')
-    return summary
+    return (f'{EVENT_EMOJI[Event.TRAINING]} {Format.bold("Training tomorrow!")}\n\n'
+            f'{Format.bold("When:")} {Format.escape(when_str)} o\'clock\n'
+            f'{Format.bold("Where:")} {Format.link(location_string, maps_link)}\n'
+            f'{Format.bold("Who:")}\n{player_overview}\n'
+            f'Please be there on time, so we can use the full 90min to train...')
+
+
+def _maps_link(location_string: str) -> str:
+    maps_search_part = '+'.join(location_string.split(' '))
+    return f'https://www.google.com/maps/search/{maps_search_part}'
 
 
 def get_player_display_name(player: TelegramUser) -> str:
+    # Raw (unescaped) name - safe for reply-keyboard buttons. Escape at the call site
+    # when embedding into an HTML message.
     name = player.firstname.capitalize()
     if player.lastname:
         name += f' {player.lastname[0].capitalize()}.'
@@ -214,7 +245,7 @@ def get_player_display_name(player: TelegramUser) -> str:
 
 
 def pretty_print_player_name(player: TelegramUser) -> str:
-    return f'\t\t{get_player_display_name(player)}\n'
+    return f'\t\t{Format.escape(get_player_display_name(player))}\n'
 
 
 def pretty_print_player_metric(player_metric: PlayerMetric) -> str:
@@ -240,81 +271,51 @@ def create_sorted_event_attendance_dict(user_to_event_attendances_dict) -> []:
     return result_list
 
 
-def escape_markdown_v2(text: str) -> str:
-    """Escape special characters for Telegram MarkdownV2."""
-    escape_chars = '_*[]()~`>#+-=|{}.!'
-    result = ''
-    for char in text:
-        if char in escape_chars:
-            result += '\\'
-        result += char
-    return result
-
-
 def pretty_print_statistics(user_to_player_metrics_dict: dict):
-    result = 'Statistics:\n\n'
-    result += '\tReminders sent (Game, Training, Timekeeping-Event):\n'
+    result = Format.bold('Statistics') + '\n\n'
+    result += Format.italic('Reminders sent (Game, Training, Timekeeping-Event):') + '\n'
     sorted_list = create_sorted_dict(user_to_player_metrics_dict)
     for element in sorted_list:
         total_reminders, key, value = element
-        player_name = pretty_print_player_name(key)[0:-1]
-        statistics = pretty_print_player_metric(value)
+        player_name = Format.escape(get_player_display_name(key))
+        statistics = Format.escape(pretty_print_player_metric(value))
         result += f'\t\t{player_name} ({str(total_reminders)})\t\t{statistics}\n'
     return result
 
 
 def pretty_print_event_statistics(game_statistics: dict, event_type: Event):
     event_type_string = event_type.name.lower()
-    result = f'{event_type_string.title()}-Statistics:\n\n'
-    result += f'\tPlayer attendance for all {event_type_string}s this season (so far):\n'
+    result = Format.bold(f'{event_type_string.title()}-Statistics') + '\n\n'
+    result += Format.italic(f'Player attendance for all {event_type_string}s this season (so far):') + '\n'
     sorted_list = create_sorted_event_attendance_dict(game_statistics)
 
     for element in sorted_list:
         total_attendances, user, _ = element
-        player_name = pretty_print_player_name(user)[0:-1]
+        player_name = Format.escape(get_player_display_name(user))
         result += f'\t\t{player_name}: {str(total_attendances)}\n'
     return result
 
 
-def prepare_message(message: str):
-    # Escape characters for markdownV2
-    escape_chars = '.|()#_!-+\\><=~*{}[]'
-    doubles = '*'
+def split_message(message: str) -> list[str]:
+    # Telegram caps messages at 4096 chars. Split on line boundaries so HTML tags
+    # (which never span lines in our messages) are never cut in half.
+    max_length = 4096
+    if len(message) <= max_length:
+        return [message]
 
-    result = ''
-    one_line = ''
-    doubles_dict = build_doubles_dict(doubles)
-    line_split = message.splitlines()
-    for line in line_split:
-        for char in line:
-            if char in escape_chars:
-                if char in doubles_dict.keys():
-                    doubles_dict[char] += 1
-        for char in line:
-            if char in escape_chars:
-                if char in doubles_dict.keys():
-                    if doubles_dict[char] % 2 == 1:
-                        one_line += '\\'
-                else:
-                    one_line += '\\'
-            one_line += char
-        result += one_line + '\n'
-        # reset values
-        doubles_dict = build_doubles_dict(doubles)
-        one_line = ''
-
-    # max length is 4096 chars - split into multiple messages
-    result_list = []
-    while len(result) > 4096:
-        result_list.append(result[:4095])
-        result = result[4095:]
-    result_list.append(result)
-
-    return result_list
-
-
-def build_doubles_dict(doubles: str):
-    res = {}
-    for char in doubles:
-        res[char] = 0
-    return res
+    chunks = []
+    current = ''
+    for line in message.splitlines(keepends=True):
+        while len(line) > max_length:
+            if current:
+                chunks.append(current)
+                current = ''
+            chunks.append(line[:max_length])
+            line = line[max_length:]
+        if len(current) + len(line) > max_length:
+            chunks.append(current)
+            current = ''
+        current += line
+    if current:
+        chunks.append(current)
+    return chunks

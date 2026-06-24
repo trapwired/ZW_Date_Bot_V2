@@ -27,7 +27,7 @@ def add_event_transitions_to_node(event_type: Event, node: Node, event_function:
         return
 
     for event in events:
-        event_string = PrintUtils.pretty_print(event)
+        event_string = PrintUtils.pretty_print_event_command(event)
         # TODO add other func? or make self.state fat / mark somehow??
         additional_data_func = partial(node.data_access.get_stats_event, event_id=event.doc_id, event_type=event_type)
 

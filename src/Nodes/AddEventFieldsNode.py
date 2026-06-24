@@ -256,7 +256,7 @@ class AddEventFieldsNode(Node):
                 UserState.EDIT,
                 self.event_type,
                 new_event.doc_id)
-            message_text = self.event_type.name.lower().title() + ' | ' + pretty_print_event
+            message_text = PrintUtils.event_label(self.event_type) + ' | ' + pretty_print_event
             await self.telegram_service.send_message(
                 update=player,
                 all_buttons=None,

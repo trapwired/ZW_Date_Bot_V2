@@ -93,31 +93,31 @@ class UpdateEventCallbackNode(CallbackNode):
                 reply_markup = CallbackUtils.get_update_or_delete_reply_markup(event_type, doc_id)
 
         await query.answer()
-        await query.edit_message_text(text=message, reply_markup=reply_markup)
+        await self.telegram_service.edit_callback_message(query, message, reply_markup)
 
     async def _handle_callback_with_messages(self, update: Update, event_summary: str, event_type: Event, doc_id: str,
                                              callback_option: CallbackOption, new_state: UserState):
-        event_type_string = event_type.name.lower().title()
+        event_label = PrintUtils.event_label(event_type)
         query = update.callback_query
         message = 'Not Implemented'
         reply_markup = None
         match callback_option:
             case CallbackOption.YES:
-                message = 'Deleting ' + event_type_string + '...'
+                message = 'Deleting ' + event_label + '...'
                 await query.answer()
-                await query.edit_message_text(text=message, reply_markup=reply_markup)
+                await self.telegram_service.edit_callback_message(query, message, reply_markup)
                 self.data_access.delete_event(event_type, doc_id)
                 self.node_handler.recalculate_node_transitions()
-                await self.send_normal_message(update, 'Deleted' + event_type_string + ' 👍', new_state)
+                await self.send_normal_message(update, 'Deleted ' + event_label + ' 👍', new_state)
                 return
 
         if callback_option in [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT]:
             updated_event_summary = UpdateEventUtils.mark_updating_in_event_string(event_type, event_summary,
                                                                                    callback_option)
-            callback_message = 'Updating ' + event_type_string + ': ' + updated_event_summary
+            callback_message = 'Updating ' + event_label + ': ' + updated_event_summary
             reply_markup = CallbackUtils.get_update_event_options(event_type, doc_id)
             await query.answer()
-            await query.edit_message_text(text=callback_message, reply_markup=reply_markup)
+            await self.telegram_service.edit_callback_message(query, callback_message, reply_markup)
 
             normal_message = PrintUtils.get_update_attribute_message(callback_option)
             await self.send_normal_message_keyboard(update, normal_message)
@@ -131,7 +131,7 @@ class UpdateEventCallbackNode(CallbackNode):
             return
 
         await query.answer()
-        await query.edit_message_text(text=message, reply_markup=reply_markup)
+        await self.telegram_service.edit_callback_message(query, message, reply_markup)
 
     async def send_normal_message(self, update: Update, message: str, new_state: UserState):
         node = self.node_handler.nodes[new_state]

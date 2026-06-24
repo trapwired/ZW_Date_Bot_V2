@@ -25,4 +25,4 @@ class ResetStatisticsCallbackNode(CallbackNode):
             case _:
                 return
 
-        await query.edit_message_text(text=message)
+        await self.telegram_service.edit_callback_message(query, message)
