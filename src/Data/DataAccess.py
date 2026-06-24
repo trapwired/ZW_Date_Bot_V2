@@ -6,6 +6,7 @@ from Data.Tables import Tables
 
 from Enums.UserState import UserState
 from Enums.Table import Table
+from Enums.Role import Role
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
@@ -227,6 +228,19 @@ class DataAccess(object):
             player = self.firebase_repository.get_user(uts.user_id)
             all_players.append(player)
         return all_players
+
+    def get_users_to_state_by_role(self, role: Role) -> [UsersToState]:
+        rows = self.firebase_repository.get_users_to_state_by_role(role)
+        return [UsersToState.from_dict(row.id, row.to_dict()) for row in rows]
+
+    def get_role_user_count(self, role: Role) -> int:
+        return len(self.firebase_repository.get_users_to_state_by_role(role))
+
+    def get_user_by_doc_id(self, user_doc_id: str) -> TelegramUser:
+        return self.firebase_repository.get_user(user_doc_id)
+
+    def get_user_state_for_user(self, user: TelegramUser) -> UsersToState:
+        return self.firebase_repository.get_user_state(user)
 
     def get_stats_event(self, event_id: str, event_type: Event) -> (list, list, list):
         yes = []

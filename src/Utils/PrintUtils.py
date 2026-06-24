@@ -206,12 +206,15 @@ def create_training_summary(training: Training, playerOverview: str) -> str:
     return summary
 
 
-def pretty_print_player_name(player: TelegramUser) -> str:
-    res = f'\t\t{player.firstname.capitalize()}'
+def get_player_display_name(player: TelegramUser) -> str:
+    name = player.firstname.capitalize()
     if player.lastname:
-        res += f' {player.lastname[0].capitalize()}.'
-    res += '\n'
-    return res
+        name += f' {player.lastname[0].capitalize()}.'
+    return name
+
+
+def pretty_print_player_name(player: TelegramUser) -> str:
+    return f'\t\t{get_player_display_name(player)}\n'
 
 
 def pretty_print_player_metric(player_metric: PlayerMetric) -> str:

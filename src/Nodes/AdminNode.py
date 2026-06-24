@@ -5,11 +5,13 @@ from Nodes.Node import Node
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
 from Enums.Event import Event
+from Enums.Role import ASSIGNABLE_ROLES
 
 from databaseEntities.UsersToState import UsersToState
 
 from Utils import CallbackUtils
 from Utils import PrintUtils
+from Utils import RoleAssignment
 
 
 class AdminNode(Node):
@@ -56,6 +58,14 @@ class AdminNode(Node):
             all_buttons=None,
             message_type=MessageType.ADMIN_RESET_STATISTICS,
             reply_markup=CallbackUtils.get_reset_statistics_markup())
+
+    async def handle_assign_roles(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        counts = {role: self.data_access.get_role_user_count(role) for role in ASSIGNABLE_ROLES}
+        await self.telegram_service.send_message(
+            update=update,
+            all_buttons=None,
+            message='Select a role to manage:',
+            reply_markup=RoleAssignment.build_overview_markup(counts))
 
     async def handle_add(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(

@@ -36,6 +36,7 @@ from Nodes.EditEventTimestampNode import EditEventTimestampNode
 from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNode
 from Nodes.AddEventCallbackNode import AddEventCallbackNode
 from Nodes.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
+from Nodes.AssignRolesCallbackNode import AssignRolesCallbackNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode
@@ -46,6 +47,7 @@ from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundExceptio
 from Utils.CommandDescriptions import CommandDescriptions
 from Utils import NodeUtils
 from Utils import CallbackUtils
+from Utils import RoleAssignment
 from Utils.ApiConfig import ApiConfig
 
 
@@ -245,6 +247,7 @@ class NodeHandler(BaseHandler[Update, CCT]):
         admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
         admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
         admin_node.add_transition('/statistics', message_type=MessageType.ADMIN_STATISTICS, new_state=UserState.ADMIN_STATISTICS)
+        admin_node.add_transition('/assign_roles', admin_node.handle_assign_roles, allowed_roles=RoleSet.ADMINS)
 
         admin_statistics_node = AdminNode(UserState.ADMIN_STATISTICS, telegram_service, user_state_service, data_access)
         admin_statistics_node.add_continue_later()
@@ -390,6 +393,8 @@ class NodeHandler(BaseHandler[Update, CCT]):
         add_callback_node = AddEventCallbackNode(telegram_service, data_access, trigger_service, self,
                                                  user_state_service)
         reset_statistics_callback_node = ResetStatisticsCallbackNode(telegram_service, data_access, trigger_service)
+        self.assign_roles_callback_node = AssignRolesCallbackNode(telegram_service, data_access, trigger_service,
+                                                                  user_state_service, self)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node,
@@ -421,6 +426,9 @@ class NodeHandler(BaseHandler[Update, CCT]):
 
     def get_callback_node(self, update):
         query = update.callback_query
+        if RoleAssignment.is_role_callback(query.data):
+            return self.assign_roles_callback_node
+
         callback_message = CallbackUtils.try_parse_callback_message(query.data)
         if callback_message is None:
             raise Exception('Parsing of Callback message failed: ', query.data)

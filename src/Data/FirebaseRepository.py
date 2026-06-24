@@ -9,6 +9,7 @@ from google.cloud.firestore_v1 import FieldFilter
 from Data.Tables import Tables
 
 from Enums.Table import Table
+from Enums.Role import Role
 from Enums.RoleSet import RoleSet
 from Enums.Event import Event
 
@@ -208,6 +209,11 @@ class FirebaseRepository(object):
             .where(filter=FieldFilter("insertTimestamp", "<", season_end))
         entries = query_ref.get()
         return entries
+
+    def get_users_to_state_by_role(self, role: Role):
+        query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
+            filter=FieldFilter("role", "==", role))
+        return query_ref.get()
 
     def get_all_active_players_to_state(self):
         query_ref = self.db.collection(self.tables.get(Table.USERS_TO_STATE_TABLE)).where(
