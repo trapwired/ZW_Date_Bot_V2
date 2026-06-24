@@ -6,8 +6,7 @@ import telegram
 from telegram import Update
 from telegram.error import BadRequest
 from telegram.constants import ChatType
-from telegram.ext import ContextTypes, BaseHandler
-from telegram.ext._utils.types import CCT
+from telegram.ext import ContextTypes, BaseHandler, CallbackContext
 
 from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
@@ -82,7 +81,7 @@ def check_all_commands_have_description(nodes: dict):
         raise MissingCommandDescriptionException(missing_commands)
 
 
-class NodeHandler(BaseHandler[Update, CCT]):
+class NodeHandler(BaseHandler[Update, CallbackContext, None]):
     GROUP_TYPES = [ChatType.GROUP, ChatType.SUPERGROUP]
 
     def __init__(self, bot: telegram.Bot, api_config: ApiConfig, telegram_service: TelegramService,

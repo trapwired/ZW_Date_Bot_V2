@@ -14,5 +14,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /root/ZW_Date_Bot_V2
-            git pull origin master
+            before=$(git rev-parse HEAD)
+            git pull origin main
+            after=$(git rev-parse HEAD)
+            if ! git diff --quiet "$before" "$after" -- requirements.txt; then
+              echo "requirements.txt changed — updating packages"
+              venv/bin/pip install --upgrade pip
+              venv/bin/pip install -r requirements.txt
+            fi
             systemctl restart zwdatebot
