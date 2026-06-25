@@ -3,7 +3,7 @@ import traceback
 
 import telegram
 from multipledispatch import dispatch
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove, \
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, ReplyKeyboardRemove, \
     Message
 
 from Enums.MessageType import MessageType
@@ -145,6 +145,23 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
     return result
 
 
+def generate_admin_keyboard(all_commands: [str]) -> [[str]]:
+    # Fixed layout for the admin overview; only rows whose commands the user actually has are shown.
+    layout = [
+        ['continue later'],
+        ['/add', '/update'],
+        ['/statistics'],
+        ['/assign_roles', '/update_website'],
+    ]
+    placed = {command for row in layout for command in row} | {'/help'}
+
+    result = [present for row in layout if (present := [c for c in row if c in all_commands])]
+    # Keep any command not covered by the fixed layout on its own row, so nothing silently disappears.
+    result.extend([c] for c in all_commands if c not in placed)
+    result.append(['/help'])
+    return result
+
+
 def generate_statistics_keyboard(all_commands: [str]) -> [[str]]:
     # Fixed layout for the statistics screen; only rows whose commands the user actually has are shown.
     layout = [
@@ -167,7 +184,6 @@ class TelegramService(object):
         self.bot = bot
         self.admin_service = admin_service
         self.maintainer_chat_id = api_config.get_key('Chat_Ids', 'MAINTAINER')
-        self.website = api_config.get_key('Additional_Data', 'WEBSITE')
         self.trainers_games = api_config.get_int_list('Chat_Ids', 'TRAINERS_GAMES')
         self.trainers_training = api_config.get_int_list('Chat_Ids', 'TRAINERS_TRAINING')
         self.group_chat_id = api_config.get_key('Chat_Ids', 'GROUP_CHAT')
@@ -259,9 +275,6 @@ class TelegramService(object):
             case MessageType.WRONG_START_COMMAND:
                 keyboard = [['/start']]
                 return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-            case MessageType.WEBSITE:
-                return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="handball.ch/Züri West 1",
-                                                                                   url=self.website)]])
             case MessageType.REJECTED:
                 return None
 
@@ -269,6 +282,8 @@ class TelegramService(object):
             return None
         if message_type == MessageType.ADMIN_STATISTICS:
             keyboard = generate_statistics_keyboard(all_commands)
+        elif message_type == MessageType.ADMIN:
+            keyboard = generate_admin_keyboard(all_commands)
         else:
             keyboard = generate_keyboard(all_commands)
         return ReplyKeyboardMarkup(keyboard, one_time_keyboard=False)

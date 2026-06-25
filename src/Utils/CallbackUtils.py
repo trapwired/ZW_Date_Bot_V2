@@ -58,6 +58,12 @@ def get_reset_statistics_markup():
     return _get_reply_markup(YES_OR_NO_OPTIONS, UserState.ADMIN_STATISTICS, Event.GAME, '')
 
 
+def get_website_confirm_markup():
+    # Plain yes/no confirm; the new URL itself is too long for callback_data (64-byte limit) and is
+    # stashed in the user's state instead. ADMIN_UPDATE_WEBSITE (the screen the admin is on) routes the click.
+    return _get_reply_markup(YES_OR_NO_OPTIONS, UserState.ADMIN_UPDATE_WEBSITE, Event.GAME, '')
+
+
 def get_option_translation(option: CallbackOption):
     match option:
         case CallbackOption.CALENDAR:

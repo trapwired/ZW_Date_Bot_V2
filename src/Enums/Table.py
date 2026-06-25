@@ -12,3 +12,4 @@ class Table(IntEnum):
     TRAININGS_TABLE = 7
     PLAYER_METRIC = 8
     TEMP_DATA_TABLE = 9
+    SETTINGS_TABLE = 10

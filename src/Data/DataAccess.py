@@ -19,6 +19,7 @@ from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.PlayerMetric import PlayerMetric
 from databaseEntities.TempData import TempData
+from databaseEntities.Settings import Settings
 
 from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException
 from Utils.ApiConfig import ApiConfig
@@ -281,6 +282,13 @@ class DataAccess(object):
 
     def get_temp_data(self, user_id: str) -> TempData:
         return self.firebase_repository.get_temp_data(user_id)
+
+    def get_website(self) -> str | None:
+        settings = self.firebase_repository.get_settings()
+        return settings.website if settings else None
+
+    def set_website(self, website: str):
+        self.firebase_repository.set_settings(Settings(website))
 
     def add_names(self, doc_id_list: list) -> list[TelegramUser]:
         result = []

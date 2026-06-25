@@ -16,7 +16,8 @@ def initialize_tables(api_config: ApiConfig):
         Table.TRAINING_ATTENDANCE_TABLE: api_config.get_key('Tables', 'TRAINING_ATTENDANCE_TABLE'),
         Table.TRAININGS_TABLE: api_config.get_key('Tables', 'TRAININGS_TABLE'),
         Table.PLAYER_METRIC: api_config.get_key('Tables', 'PLAYER_METRIC'),
-        Table.TEMP_DATA_TABLE: api_config.get_key('Tables', 'TEMP_DATA')
+        Table.TEMP_DATA_TABLE: api_config.get_key('Tables', 'TEMP_DATA'),
+        Table.SETTINGS_TABLE: api_config.get_key('Tables', 'SETTINGS_TABLE')
     }
 
 

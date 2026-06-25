@@ -22,6 +22,7 @@ from databaseEntities.Training import Training
 from databaseEntities.Attendance import Attendance
 from databaseEntities.PlayerMetric import PlayerMetric
 from databaseEntities.TempData import TempData
+from databaseEntities.Settings import Settings
 
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException, \
     NoTempDataFoundException, TooManyObjectsFoundException
@@ -48,6 +49,10 @@ def get_current_season_dates():
 
 
 class FirebaseRepository(object):
+    # The settings table holds a single configuration document under a fixed id, so it can be
+    # read/written deterministically without a query (no "more than one" ambiguity).
+    SETTINGS_DOC_ID = 'config'
+
     def __init__(self, api_config: ApiConfig, tables: Tables):
         self.tables = tables
         api_config_path = PathUtils.get_secrets_file_path(api_config.get_key('Firebase', 'credentialsFileName'))
@@ -139,6 +144,18 @@ class FirebaseRepository(object):
             raise TooManyObjectsFoundException()
         temp_data = result_list[0]
         return TempData.from_dict(temp_data.id, temp_data.to_dict())
+
+    def get_settings(self) -> Settings | None:
+        collection = self.tables.get(Table.SETTINGS_TABLE)
+        doc = self.db.collection(collection).document(self.SETTINGS_DOC_ID).get()
+        if not doc.exists:
+            return None
+        return Settings.from_dict(doc.id, doc.to_dict())
+
+    def set_settings(self, settings: Settings):
+        # Upsert: creates the single settings document on first save, overwrites it afterwards.
+        collection = self.tables.get(Table.SETTINGS_TABLE)
+        self.db.collection(collection).document(self.SETTINGS_DOC_ID).set(settings.to_dict())
 
     def get_future_events(self, table: Table) -> list:
         # get all events in table which take place in the future

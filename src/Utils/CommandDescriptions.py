@@ -22,6 +22,7 @@ class CommandDescriptions(object):
         '/timekeeping_statistics': 'Show timekeeping-attendance statistics for all players',
         '/statistics': 'Go to statistics menu',
         '/assign_roles': 'View players grouped by role and change a player\'s role',
+        '/update_website': 'Update the website link shown to players',
         '/reset_statistics': 'End the current season and reset reminder statistics for all players',
         '/game': 'Add a new game',
         '/training': 'Add a new training',

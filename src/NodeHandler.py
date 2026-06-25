@@ -36,6 +36,8 @@ from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNod
 from Nodes.AddEventCallbackNode import AddEventCallbackNode
 from Nodes.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
 from Nodes.AssignRolesCallbackNode import AssignRolesCallbackNode
+from Nodes.UpdateWebsiteNode import UpdateWebsiteNode
+from Nodes.UpdateWebsiteCallbackNode import UpdateWebsiteCallbackNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode
@@ -247,6 +249,11 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
         admin_node.add_transition('/statistics', message_type=MessageType.ADMIN_STATISTICS, new_state=UserState.ADMIN_STATISTICS)
         admin_node.add_transition('/assign_roles', admin_node.handle_assign_roles, allowed_roles=RoleSet.ADMINS)
+        admin_node.add_transition('/update_website', admin_node.handle_update_website,
+                                  new_state=UserState.ADMIN_UPDATE_WEBSITE, allowed_roles=RoleSet.ADMINS)
+
+        update_website_node = UpdateWebsiteNode(UserState.ADMIN_UPDATE_WEBSITE, telegram_service, user_state_service,
+                                                data_access)
 
         admin_statistics_node = AdminNode(UserState.ADMIN_STATISTICS, telegram_service, user_state_service, data_access)
         admin_statistics_node.add_continue_later()
@@ -354,6 +361,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.EDIT_TRAININGS: edit_trainings_node,
             UserState.EDIT_TIMEKEEPINGS: edit_timekeepings_node,
             UserState.ADMIN: admin_node,
+            UserState.ADMIN_UPDATE_WEBSITE: update_website_node,
             UserState.ADMIN_STATISTICS: admin_statistics_node,
             UserState.ADMIN_ADD: admin_add_node,
             UserState.ADMIN_UPDATE: admin_update_node,
@@ -394,6 +402,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         reset_statistics_callback_node = ResetStatisticsCallbackNode(telegram_service, data_access, trigger_service)
         self.assign_roles_callback_node = AssignRolesCallbackNode(telegram_service, data_access, trigger_service,
                                                                   user_state_service, self)
+        update_website_callback_node = UpdateWebsiteCallbackNode(telegram_service, data_access, trigger_service,
+                                                                 user_state_service, self)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node,
@@ -401,7 +411,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_ADD_GAME: add_callback_node,
             UserState.ADMIN_ADD_TRAINING: add_callback_node,
             UserState.ADMIN_ADD_TIMEKEEPING: add_callback_node,
-            UserState.ADMIN_STATISTICS: reset_statistics_callback_node
+            UserState.ADMIN_STATISTICS: reset_statistics_callback_node,
+            UserState.ADMIN_UPDATE_WEBSITE: update_website_callback_node
         }
         # TODO correct, one callback node for 3 states?
         return callback_nodes_dict

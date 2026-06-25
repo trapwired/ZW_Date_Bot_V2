@@ -67,6 +67,16 @@ class AdminNode(Node):
             message='Select a role to manage:',
             reply_markup=RoleAssignment.build_overview_markup(counts))
 
+    async def handle_update_website(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        current = self.data_access.get_website()
+        current_text = current if current else 'not set'
+        message = (f'The website link shown to players is currently:\n{current_text}\n\n'
+                   'Send me the new URL, or /cancel to abort.')
+        await self.telegram_service.send_message(
+            update=update,
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
+            message=message)
+
     async def handle_add(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(
             update=update,
