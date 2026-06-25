@@ -107,9 +107,12 @@ def pretty_print_event_command(event) -> str:
 # The single-line event renderers keep '|' as the field separator because
 # UpdateEventUtils.mark_updating_in_event_string splits on it by index.
 
-@dispatch(Game)
-def pretty_print(game: Game) -> str:
-    return f'{Format.bold(_datetime(game))} | {Format.escape(game.location.title())}'
+_EVENT_TYPES = (Game, Training, TimekeepingEvent)
+
+
+@dispatch(_EVENT_TYPES)
+def pretty_print(event) -> str:
+    return f'{Format.bold(_datetime(event))} | {Format.escape(event.location.title())}'
 
 
 @dispatch(Game)
@@ -117,44 +120,14 @@ def pretty_print_long(game: Game) -> str:
     return f'{pretty_print(game)} | {Format.escape(game.opponent.title())}'
 
 
-@dispatch(Game, Attendance)
-def pretty_print(game: Game, attendance: Attendance) -> str:
-    return f'{pretty_print(game)} | {_attendance(attendance.state)}'
+@dispatch(_EVENT_TYPES, Attendance)
+def pretty_print(event, attendance: Attendance) -> str:
+    return f'{pretty_print(event)} | {_attendance(attendance.state)}'
 
 
-@dispatch(Game, AttendanceState)
-def pretty_print(game: Game, attendance: AttendanceState) -> str:
-    return f'{pretty_print(game)} | {_attendance(attendance)}'
-
-
-@dispatch(Training)
-def pretty_print(training: Training) -> str:
-    return f'{Format.bold(_datetime(training))} | {Format.escape(training.location.title())}'
-
-
-@dispatch(Training, Attendance)
-def pretty_print(training: Training, attendance: Attendance) -> str:
-    return f'{pretty_print(training)} | {_attendance(attendance.state)}'
-
-
-@dispatch(Training, AttendanceState)
-def pretty_print(training: Training, attendance: AttendanceState) -> str:
-    return f'{pretty_print(training)} | {_attendance(attendance)}'
-
-
-@dispatch(TimekeepingEvent)
-def pretty_print(tke: TimekeepingEvent) -> str:
-    return f'{Format.bold(_datetime(tke))} | {Format.escape(tke.location.title())}'
-
-
-@dispatch(TimekeepingEvent, Attendance)
-def pretty_print(tke: TimekeepingEvent, attendance: Attendance = None) -> str:
-    return f'{pretty_print(tke)} | {_attendance(attendance.state)}'
-
-
-@dispatch(TimekeepingEvent, AttendanceState)
-def pretty_print(tke: TimekeepingEvent, attendance: AttendanceState) -> str:
-    return f'{pretty_print(tke)} | {_attendance(attendance)}'
+@dispatch(_EVENT_TYPES, AttendanceState)
+def pretty_print(event, attendance: AttendanceState) -> str:
+    return f'{pretty_print(event)} | {_attendance(attendance)}'
 
 
 def _attendance(state: AttendanceState) -> str:

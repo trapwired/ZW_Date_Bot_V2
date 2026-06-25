@@ -26,26 +26,18 @@ class AdminNode(Node):
             message=message)
 
     async def handle_game_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        game_statistics = self.data_access.get_attendance_statistics(Event.GAME)
-        message = PrintUtils.pretty_print_event_statistics(game_statistics, Event.GAME)
-        await self.telegram_service.send_message(
-            update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
-            message_type=MessageType.ADMIN_STATISTICS,
-            message=message)
+        await self._handle_event_statistics(Event.GAME, update, user_to_state, new_state)
 
     async def handle_training_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        game_statistics = self.data_access.get_attendance_statistics(Event.TRAINING)
-        message = PrintUtils.pretty_print_event_statistics(game_statistics, Event.TRAINING)
-        await self.telegram_service.send_message(
-            update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
-            message_type=MessageType.ADMIN_STATISTICS,
-            message=message)
+        await self._handle_event_statistics(Event.TRAINING, update, user_to_state, new_state)
 
     async def handle_timekeeping_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        game_statistics = self.data_access.get_attendance_statistics(Event.TIMEKEEPING)
-        message = PrintUtils.pretty_print_event_statistics(game_statistics, Event.TIMEKEEPING)
+        await self._handle_event_statistics(Event.TIMEKEEPING, update, user_to_state, new_state)
+
+    async def _handle_event_statistics(self, event_type: Event, update: Update, user_to_state: UsersToState,
+                                       new_state: UserState):
+        statistics = self.data_access.get_attendance_statistics(event_type)
+        message = PrintUtils.pretty_print_event_statistics(statistics, event_type)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
