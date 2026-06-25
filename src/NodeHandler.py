@@ -103,8 +103,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                                              ics_service, user_state_service)
         add_nodes_reference_to_all_nodes(self.nodes)
 
-        # TODO uncomment
-        # self.do_checks(api_config)
+        self.do_checks(api_config)
 
     def check_update(self, update: object):
         if isinstance(update, Update):
