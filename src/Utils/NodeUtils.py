@@ -9,6 +9,7 @@ from Enums.RoleSet import RoleSet
 from Nodes.Node import Node
 
 from Utils import PrintUtils
+from Utils.CustomExceptions import NoEventFoundException
 
 
 def add_event_transitions_to_node(event_type: Event, node: Node, event_function: Callable):
