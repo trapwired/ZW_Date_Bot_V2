@@ -216,7 +216,15 @@ through a feature service.
 - **2b-iii-b — roles (done, branch `phase-2b-iii-b-roles`):** new `RoleService`;
   AssignRolesCallbackNode and AdminNode.handle_assign_roles routed through it.
   Deduped the role-counts dict (built in both). AssignRolesCallbackNode now zero
-  `data_access`. 8 nodes `data_access`-free. 51 green.
+  `data_access`. 8 nodes `data_access`-free.
+  Review follow-up: closed a pre-existing **callback authorization gap** — no
+  callback node checked the caller's role, so a forwarded admin inline button
+  let a non-admin run admin actions (role assign = privilege escalation; event
+  delete = data loss). Added a cross-cutting seam: `CallbackNode.required_roles`
+  (mirrors `Transition.allowed_roles`), enforced once in
+  `NodeHandler.is_caller_allowed`. Admin callback nodes declare `RoleSet.ADMINS`.
+  Also fixed a duplicate `case Event.GAME` in AddEventCallbackNode RESTART
+  (timekeeping restart was unreachable). 52 green.
 - **2b-iii — remaining slices (todo):** WebsiteService (UpdateWebsiteCallbackNode
   + AdminNode.handle_update_website), StatsService (StatsNode / AdminNode
   statistics / ResetStatisticsCallbackNode). Plus the small reads in Node.py base

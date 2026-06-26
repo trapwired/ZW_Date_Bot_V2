@@ -6,6 +6,7 @@ from telegram.error import TelegramError
 from Data.DataAccess import DataAccess
 
 from Enums.Role import Role
+from Enums.RoleSet import RoleSet
 from Enums.UserState import UserState
 
 from Nodes.CallbackNode import CallbackNode
@@ -20,6 +21,8 @@ from Utils import Format
 
 
 class AssignRolesCallbackNode(CallbackNode):
+    required_roles = RoleSet.ADMINS
+
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  user_state_service: UserStateService, node_handler, role_service):
         super().__init__(telegram_service, data_access, trigger_service)

@@ -2,6 +2,7 @@ from Data.DataAccess import DataAccess
 
 from Enums.CallbackOption import CallbackOption
 from Enums.MessageType import MessageType
+from Enums.RoleSet import RoleSet
 from Enums.UserState import UserState
 from Enums.Event import Event
 
@@ -27,6 +28,8 @@ def get_user_state_from_event_type(event_type: Event):
 
 
 class AddEventCallbackNode(CallbackNode):
+    required_roles = RoleSet.ADMINS
+
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  node_handler, user_state_service: UserStateService, event_service):
         super().__init__(telegram_service, data_access, trigger_service)
@@ -78,7 +81,7 @@ class AddEventCallbackNode(CallbackNode):
                         await admin_add_node.handle_add_game(update, user_to_state, UserState.ADMIN_ADD_GAME)
                     case Event.TRAINING:
                         await admin_add_node.handle_add_training(update, user_to_state, UserState.ADMIN_ADD_TRAINING)
-                    case Event.GAME:
+                    case Event.TIMEKEEPING:
                         await admin_add_node.handle_add_timekeeping(update, user_to_state,
                                                                     UserState.ADMIN_ADD_TIMEKEEPING)
                 return

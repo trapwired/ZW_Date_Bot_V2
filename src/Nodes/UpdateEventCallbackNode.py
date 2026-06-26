@@ -8,6 +8,7 @@ from Utils import PrintUtils
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
 from Enums.Role import Role
+from Enums.RoleSet import RoleSet
 from Enums.UserState import UserState
 
 from Data.DataAccess import DataAccess
@@ -45,6 +46,8 @@ def get_new_user_state(callback_option: CallbackOption, event_type: Event):
 
 
 class UpdateEventCallbackNode(CallbackNode):
+    required_roles = RoleSet.ADMINS
+
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  node_handler, user_state_service: UserStateService, event_service):
         super().__init__(telegram_service, data_access, trigger_service)

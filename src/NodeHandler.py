@@ -128,6 +128,11 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
             if update.callback_query:
                 callback_node = self.get_callback_node(update)
+                if not self.is_caller_allowed(update, callback_node):
+                    # Forwarded inline buttons keep working callback_data; gate admin actions
+                    # by the pressing user's role, mirroring Transition.allowed_roles for text.
+                    await update.callback_query.answer()
+                    return
                 await callback_node.handle(update)
                 return
 
@@ -445,6 +450,13 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
     def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)
         check_all_commands_have_description(self.nodes)
+
+    def is_caller_allowed(self, update, callback_node) -> bool:
+        try:
+            role = self.user_state_service.get_user_state(update.effective_chat.id).role
+        except ObjectNotFoundException:
+            return False
+        return role in callback_node.required_roles
 
     def get_callback_node(self, update):
         query = update.callback_query
