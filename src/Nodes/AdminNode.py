@@ -5,9 +5,12 @@ from Nodes.Node import Node
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
 from Enums.Event import Event
-from Enums.Role import ASSIGNABLE_ROLES
 
 from databaseEntities.UsersToState import UsersToState
+
+from Services.TelegramService import TelegramService
+from Services.UserStateService import UserStateService
+from Data.DataAccess import DataAccess
 
 from Utils import CallbackUtils
 from Utils import PrintUtils
@@ -15,6 +18,11 @@ from Utils import RoleAssignment
 
 
 class AdminNode(Node):
+
+    def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
+                 data_access: DataAccess, role_service):
+        super().__init__(state, telegram_service, user_state_service, data_access)
+        self.role_service = role_service
 
     async def handle_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         all_statistics = self.data_access.get_user_to_player_metric()
@@ -52,7 +60,7 @@ class AdminNode(Node):
             reply_markup=CallbackUtils.get_reset_statistics_markup())
 
     async def handle_assign_roles(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        counts = {role: self.data_access.get_role_user_count(role) for role in ASSIGNABLE_ROLES}
+        counts = self.role_service.role_counts()
         await self.telegram_service.send_message(
             update=update,
             all_buttons=None,

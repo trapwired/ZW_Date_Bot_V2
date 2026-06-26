@@ -213,11 +213,14 @@ through a feature service.
   routed through it — zero `data_access`. Also finished the eventmgmt vertical:
   AdminAddNode's draft creation now uses `EventService.create_draft`. Added the
   callback-attendance + calendar-export pins. 7 nodes `data_access`-free. 48 green.
-- **2b-iii — remaining slices (todo):** RoleService (AssignRolesCallbackNode),
-  WebsiteService (UpdateWebsiteCallbackNode + AdminNode.handle_update_website),
-  StatsService (StatsNode / AdminNode statistics / ResetStatisticsCallbackNode).
-  Plus the small reads in Node.py base / InitNode / DefaultNode / EditNode /
-  UpdateNode.
+- **2b-iii-b — roles (done, branch `phase-2b-iii-b-roles`):** new `RoleService`;
+  AssignRolesCallbackNode and AdminNode.handle_assign_roles routed through it.
+  Deduped the role-counts dict (built in both). AssignRolesCallbackNode now zero
+  `data_access`. 8 nodes `data_access`-free. 51 green.
+- **2b-iii — remaining slices (todo):** WebsiteService (UpdateWebsiteCallbackNode
+  + AdminNode.handle_update_website), StatsService (StatsNode / AdminNode
+  statistics / ResetStatisticsCallbackNode). Plus the small reads in Node.py base
+  / InitNode / DefaultNode / EditNode / UpdateNode.
 - **2b-iv — right-size the pass-through services** (`UserStateService` /
   `AdminService` / `StatisticsService`).
 
