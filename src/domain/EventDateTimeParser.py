@@ -39,8 +39,8 @@ def _split_multiple(string: str, delimiters: str) -> list[str]:
 
 def parse(datetime_string: str) -> ParsedDateTime:
     # Expected form: 20.03.2023 19:38
-    datetime_string = datetime_string.strip()
-    split = datetime_string.split(' ')
+    # split() (no arg) collapses runs of whitespace, so 'date   time' or tabs still parse.
+    split = datetime_string.split()
     if len(split) != 2:
         return ParsedDateTime.failure(
             'Tried to split into date and time by space in middle, this did not work - please try again')
@@ -63,8 +63,8 @@ def parse(datetime_string: str) -> ParsedDateTime:
     time_split = _split_multiple(time, TIME_SEPARATORS)
     if len(time_split) != 2:
         return ParsedDateTime.failure(
-            f'Tried to split time ({time}) into 3 parts, using the following separators: ({TIME_SEPARATORS}) '
-            f'- that did not work - wrong length: {len(time_split)}')
+            f'Tried to split time ({time}) into 2 parts (hour and minute), using the following separators: '
+            f'({TIME_SEPARATORS}) - that did not work - wrong length: {len(time_split)}')
     hour_str, min_str = time_split
     try:
         hour, minute = int(hour_str), int(min_str)
@@ -73,5 +73,11 @@ def parse(datetime_string: str) -> ParsedDateTime:
             f'Tried to parse hour / minute into a number - that did not work, please try again (Exception for '
             f'reference: : {e.args})')
 
-    date_time = pd.Timestamp(year, month, day, hour, minute, 0, 0)
+    # The numbers parsed but may not form a real date/time (month 13, day 32, hour 25, ...).
+    # pd.Timestamp raises on those; turn it into a failure result so the flow never crashes.
+    try:
+        date_time = pd.Timestamp(year, month, day, hour, minute, 0, 0)
+    except (ValueError, OverflowError) as e:
+        return ParsedDateTime.failure(
+            f'That date/time does not exist, please try again (Exception for reference: {e.args})')
     return ParsedDateTime.success(DateTimeUtils.add_zurich_timezone(date_time))
