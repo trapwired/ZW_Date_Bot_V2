@@ -1,32 +1,35 @@
-"""Pin parse_datetime_string before Phase 2 moves it into the domain layer.
+"""Unit tests for the event datetime parser (moved to domain in Phase 2).
 
-Pins the current contract INCLUDING its quirk: errors are returned as plain
-strings (not raised). Phase 2 replaces that str-or-value union with a result
-object, so this test should flip intentionally then.
+The old str-or-value contract is gone: parse() now returns a ParsedDateTime with
+.ok / .value / .error.
 """
 import pandas as pd
 
-from Utils.UpdateEventUtils import parse_datetime_string
+from domain.EventDateTimeParser import parse
 
 
-def _assert_parsed(result, expected):
-    assert isinstance(result, pd.Timestamp)
-    assert result.tzinfo is not None  # add_zurich_timezone attaches a tz
-    assert (result.year, result.month, result.day, result.hour, result.minute) == expected
+def _assert_ok(result, expected):
+    assert result.ok
+    assert result.error is None
+    assert isinstance(result.value, pd.Timestamp)
+    assert result.value.tzinfo is not None  # add_zurich_timezone attaches a tz
+    assert (result.value.year, result.value.month, result.value.day,
+            result.value.hour, result.value.minute) == expected
 
 
 def test_parses_canonical_format():
-    _assert_parsed(parse_datetime_string("24.12.2030 18:30"), (2030, 12, 24, 18, 30))
+    _assert_ok(parse("24.12.2030 18:30"), (2030, 12, 24, 18, 30))
 
 
 def test_accepts_alternate_separators():
     # date separators are '.,-', time separators are '-:;'
-    _assert_parsed(parse_datetime_string("24-12-2030 18-30"), (2030, 12, 24, 18, 30))
-    _assert_parsed(parse_datetime_string("24,12,2030 18;30"), (2030, 12, 24, 18, 30))
+    _assert_ok(parse("24-12-2030 18-30"), (2030, 12, 24, 18, 30))
+    _assert_ok(parse("24,12,2030 18;30"), (2030, 12, 24, 18, 30))
 
 
-def test_errors_are_returned_as_strings_not_raised():
-    assert isinstance(parse_datetime_string("not a date"), str)
-    assert isinstance(parse_datetime_string("24.12.2030"), str)        # missing time half
-    assert isinstance(parse_datetime_string("1.2.3.4 5:6"), str)       # date has 4 parts
-    assert isinstance(parse_datetime_string("24.12.2030 xx:30"), str)  # non-numeric time
+def test_errors_report_not_ok_with_a_message():
+    for bad in ("not a date", "24.12.2030", "1.2.3.4 5:6", "24.12.2030 xx:30"):
+        result = parse(bad)
+        assert not result.ok
+        assert result.value is None
+        assert isinstance(result.error, str) and result.error

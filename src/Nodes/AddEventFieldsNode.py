@@ -20,6 +20,8 @@ from Utils import UpdateEventUtils
 from Utils import PrintUtils
 from Utils import CallbackUtils
 
+from domain import EventDateTimeParser
+
 
 # Ordered field-collection steps per event type. The only thing that differs
 # between game/training/timekeeping is this list (games additionally collect an
@@ -92,12 +94,12 @@ class AddEventFieldsNode(Node):
         _, field = steps[index]
 
         if field == CallbackOption.DATETIME:
-            parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
-            if type(parsed_datetime) is str:
+            parsed = EventDateTimeParser.parse(message)
+            if not parsed.ok:
                 # Parsing failed - report and stay on this step without mutating anything.
-                await self.telegram_service.send_message_with_normal_keyboard(update=update, message=parsed_datetime)
+                await self.telegram_service.send_message_with_normal_keyboard(update=update, message=parsed.error)
                 return
-            temp_data.timestamp = parsed_datetime
+            temp_data.timestamp = parsed.value
         elif field == CallbackOption.LOCATION:
             temp_data.location = message
         elif field == CallbackOption.OPPONENT:
