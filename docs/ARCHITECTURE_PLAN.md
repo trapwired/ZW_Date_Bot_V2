@@ -186,14 +186,29 @@ so Phase 2 is split.
 - Tests: characterization pin for the >2h / <2h reset flow added first; unit pins
   for the parser (new API) and the policy. 32 green.
 
-**Phase 2b — node-thinning sweep (todo, next PR):**
-- Introduce `eventmgmt` / `attendance` feature services that own the
-  get→mutate→persist→notify orchestration nodes currently do.
-- Move remaining `data_access` calls out of every node into those services.
-- Right-size the pass-through services (`UserStateService` / `AdminService` /
-  `StatisticsService`).
-- Needs a callback-query Update factory in the test harness to pin the
-  edit-attendance / update-event callback flows before moving them.
+**Phase 2b — node-thinning sweep (incremental, one vertical per PR):**
+
+Too large for one PR (57 `data_access` calls across 18 node files), so done
+vertical-by-vertical. Each increment pins its flow first, then routes persistence
+through a feature service.
+
+- **2b-i — EventService (done, branch `phase-2b-thin-nodes`):** new
+  `Services/EventService.py` owns the event-management data orchestration
+  (drafts, event get/update/delete, attendance reset, recipient lookup).
+  `finalize_draft` folds add-event + discard-draft into one call so a saved draft
+  can't linger. Thinned the three **text-driven** event nodes —
+  AddEventFieldsNode, EditEventTimestampNode, EditEventLocationOrOpponentNode —
+  to zero `data_access`. Added a characterization pin for the location/opponent
+  edit. 41 green.
+- **2b-ii — callback event nodes (todo):** UpdateEventCallbackNode (update/delete)
+  and AddEventCallbackNode (cancel/restart/save) → EventService. Needs a
+  callback-query Update factory in the harness, built first to pin those flows.
+- **2b-iii — other slices (todo):** AttendanceService (EditCallbackNode),
+  RoleService (AssignRolesCallbackNode), WebsiteService (UpdateWebsiteCallbackNode),
+  StatsService (StatsNode / AdminNode statistics). Plus the small reads in
+  Node.py base / InitNode / DefaultNode / EditNode / UpdateNode.
+- **2b-iv — right-size the pass-through services** (`UserStateService` /
+  `AdminService` / `StatisticsService`).
 
 ---
 
@@ -254,6 +269,28 @@ Can be authored via the Excalidraw MCP or hand-written `.excalidraw` JSON. Do th
 LAST so the diagram reflects the final structure, not an intermediate one.
 
 Exit criteria: diagram matches the shipped code; README links to it.
+
+---
+
+## Phase 7 — Comment cleanup pass (closing deliverable)
+
+During the refactor, docstrings and comments accumulate **historical narration** —
+"used to do inline against DataAccess", "replaces the old str-union", "extracted
+in Phase 2", "moved here in 2b". That framing helps reviewers mid-migration but
+is noise once it ships: a comment should describe what the class/function **does
+now**, not what it used to be or which phase changed it.
+
+Final sweep once the architecture has settled:
+- Rewrite every docstring/comment to describe present behavior and intent only.
+- Remove phase references, "previously/used to/replaces/migrated from" wording,
+  and before/after comparisons.
+- Keep genuinely useful *why* comments (invariants, gotchas, cross-module
+  contracts) — the rule is "explain the non-obvious why", not "narrate history".
+
+Do this LAST so comments reflect the final design, not an intermediate step.
+
+Exit criteria: no comment references a refactor phase or prior implementation;
+comments describe current behavior only.
 
 ---
 

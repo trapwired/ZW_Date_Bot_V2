@@ -16,6 +16,7 @@ from Services.UserStateService import UserStateService
 from Services.SchedulingService import SchedulingService
 from Services.TriggerService import TriggerService
 from Services.StatisticsService import StatisticsService
+from Services.EventService import EventService
 
 from OneTimeSetup import OneTimeSetup
 
@@ -36,7 +37,9 @@ def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _statistics_service = StatisticsService(_data_access)
     _scheduling_service = SchedulingService(_data_access, _telegram_service, _statistics_service, api_config)
     _trigger_service = TriggerService(_data_access, _telegram_service)
-    return _telegram_service, _user_state_service, _admin_service, _ics_service, _data_access, _scheduling_service, _trigger_service
+    _event_service = EventService(_data_access)
+    return _telegram_service, _user_state_service, _admin_service, _ics_service, _data_access, _scheduling_service, \
+        _trigger_service, _event_service
 
 
 async def send_hi(context: ContextTypes.DEFAULT_TYPE):
@@ -97,13 +100,13 @@ if __name__ == "__main__":
 
     application = ApplicationBuilder().token(api_config.get_key('Telegram', 'api_token')).build()
 
-    telegram_service, user_state_service, admin_service, ics_service, data_access, scheduling_service, trigger_service \
-        = initialize_services(application.bot, api_config)
+    telegram_service, user_state_service, admin_service, ics_service, data_access, scheduling_service, trigger_service, \
+        event_service = initialize_services(application.bot, api_config)
 
     # use_one_time_setup(data_access)
 
     node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service, admin_service,
-                               ics_service, data_access, trigger_service)
+                               ics_service, data_access, trigger_service, event_service)
     application.add_handler(node_handler)
 
     run_job_queue()
