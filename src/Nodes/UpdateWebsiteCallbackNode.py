@@ -10,12 +10,15 @@ from Data.DataAccess import DataAccess
 
 from Enums.CallbackOption import CallbackOption
 from Enums.MessageType import MessageType
+from Enums.RoleSet import RoleSet
 from Enums.UserState import UserState
 
 from Utils import CallbackUtils
 
 
 class UpdateWebsiteCallbackNode(CallbackNode):
+    required_roles = RoleSet.ADMINS
+
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  user_state_service: UserStateService, node_handler):
         super().__init__(telegram_service, data_access, trigger_service)

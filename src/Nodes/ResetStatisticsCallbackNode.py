@@ -5,9 +5,11 @@ from Nodes.CallbackNode import CallbackNode
 from Utils import CallbackUtils
 
 from Enums.CallbackOption import CallbackOption
+from Enums.RoleSet import RoleSet
 
 
 class ResetStatisticsCallbackNode(CallbackNode):
+    required_roles = RoleSet.ADMINS
 
     async def handle(self, update: Update):
         query = update.callback_query
