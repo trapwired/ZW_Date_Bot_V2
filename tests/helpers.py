@@ -61,7 +61,7 @@ def make_callback_update(chat_id: int, data: str, message_text: str = "", messag
     TelegramUser branch (telegramId/firstname) for non-Update inputs, which is what we want."""
     return SimpleNamespace(
         effective_chat=SimpleNamespace(id=chat_id, type=ChatType.PRIVATE),
-        effective_user=SimpleNamespace(first_name=first_name),
+        effective_user=SimpleNamespace(id=chat_id, first_name=first_name, last_name="User"),
         message=None,
         callback_query=FakeCallbackQuery(data, chat_id, message_text, message_id),
         telegramId=chat_id,
