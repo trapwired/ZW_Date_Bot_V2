@@ -200,9 +200,14 @@ through a feature service.
   AddEventFieldsNode, EditEventTimestampNode, EditEventLocationOrOpponentNode —
   to zero `data_access`. Added a characterization pin for the location/opponent
   edit. 41 green.
-- **2b-ii — callback event nodes (todo):** UpdateEventCallbackNode (update/delete)
-  and AddEventCallbackNode (cancel/restart/save) → EventService. Needs a
-  callback-query Update factory in the harness, built first to pin those flows.
+- **2b-ii — callback event nodes (done, branch `phase-2b-ii-callback-event-nodes`):**
+  Built the callback-query Update factory + `drive_callback` harness. Pinned the
+  delete-event, add-cancel and add-save callback flows, then routed
+  UpdateEventCallbackNode (reads + delete) and AddEventCallbackNode
+  (draft get/discard) through EventService — both now zero `data_access`. Added
+  `EventService.delete_event` (now has a caller). Deleted the dead
+  `AddEventCallbackNode.notify_all_players` (no caller) and its orphaned imports.
+  Eventmgmt vertical complete: 5 nodes `data_access`-free. 44 green.
 - **2b-iii — other slices (todo):** AttendanceService (EditCallbackNode),
   RoleService (AssignRolesCallbackNode), WebsiteService (UpdateWebsiteCallbackNode),
   StatsService (StatsNode / AdminNode statistics). Plus the small reads in

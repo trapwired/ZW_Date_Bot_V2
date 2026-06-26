@@ -1,5 +1,6 @@
-"""Shared helpers for characterization tests: Update factory, user seeding, flow driver."""
+"""Shared helpers for characterization tests: Update factories, user seeding, flow drivers."""
 from datetime import datetime
+from types import SimpleNamespace
 
 from telegram import Update, Message, Chat, User
 from telegram.constants import ChatType
@@ -33,6 +34,46 @@ def seed_user(data_access, telegram_id: int, role: Role, state: UserState,
 async def drive(node_handler, chat_id: int, text: str) -> None:
     """Feed one text message through the real NodeHandler entry point."""
     await node_handler.handle_message(make_text_update(chat_id, text), context=None)
+
+
+class FakeCallbackQuery:
+    """Records answer()/edit_message_text() instead of hitting Telegram."""
+
+    def __init__(self, data: str, chat_id: int, message_text: str, message_id: int):
+        self.data = data
+        self.id = "cbq1"
+        self.from_user = SimpleNamespace(id=chat_id, first_name="Test")
+        self.answered = False
+        self.edits = []
+        self.message = SimpleNamespace(text_html=message_text, chat=SimpleNamespace(id=chat_id),
+                                       chat_id=chat_id, message_id=message_id, id=message_id)
+
+    async def answer(self, *args, **kwargs):
+        self.answered = True
+
+    async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
+        self.edits.append(SimpleNamespace(text=text, reply_markup=reply_markup))
+
+
+def make_callback_update(chat_id: int, data: str, message_text: str = "", message_id: int = 10,
+                         first_name: str = "Test"):
+    """A callback-query Update. Not a real telegram.Update: TelegramService falls to its
+    TelegramUser branch (telegramId/firstname) for non-Update inputs, which is what we want."""
+    return SimpleNamespace(
+        effective_chat=SimpleNamespace(id=chat_id, type=ChatType.PRIVATE),
+        effective_user=SimpleNamespace(id=chat_id, first_name=first_name, last_name="User"),
+        message=None,
+        callback_query=FakeCallbackQuery(data, chat_id, message_text, message_id),
+        telegramId=chat_id,
+        firstname=first_name,
+    )
+
+
+async def drive_callback(node_handler, chat_id: int, data: str, message_text: str = "",
+                         message_id: int = 10) -> None:
+    """Feed one callback-query through the real NodeHandler entry point."""
+    await node_handler.handle_message(
+        make_callback_update(chat_id, data, message_text, message_id), context=None)
 
 
 def current_state(data_access, telegram_id: int) -> UserState:

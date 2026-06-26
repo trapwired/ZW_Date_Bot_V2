@@ -46,24 +46,26 @@ def get_new_user_state(callback_option: CallbackOption, event_type: Event):
 
 class UpdateEventCallbackNode(CallbackNode):
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
-                 node_handler, user_state_service: UserStateService):
+                 node_handler, user_state_service: UserStateService, event_service):
         super().__init__(telegram_service, data_access, trigger_service)
         self.node_handler = node_handler
         self.user_state_service = user_state_service
+        self.event_service = event_service
 
     async def handle(self, update: Update):
         query = update.callback_query
         _, event_type, callback_option, doc_id = CallbackUtils.try_parse_callback_message(query.data)
 
+        event = self.event_service.get_event(event_type, doc_id)
         match event_type:
             case Event.GAME:
-                event_summary = PrintUtils.pretty_print_long(self.data_access.get_game(doc_id))
+                event_summary = PrintUtils.pretty_print_long(event)
                 new_state = UserState.ADMIN_UPDATE_GAME
             case Event.TRAINING:
-                event_summary = PrintUtils.pretty_print(self.data_access.get_training(doc_id))
+                event_summary = PrintUtils.pretty_print(event)
                 new_state = UserState.ADMIN_UPDATE_TRAINING
             case Event.TIMEKEEPING:
-                event_summary = PrintUtils.pretty_print(self.data_access.get_timekeeping(doc_id))
+                event_summary = PrintUtils.pretty_print(event)
                 new_state = UserState.ADMIN_UPDATE_TIMEKEEPING
 
         if callback_option in [CallbackOption.UPDATE, CallbackOption.DELETE, CallbackOption.NO, CallbackOption.Back]:
@@ -106,7 +108,7 @@ class UpdateEventCallbackNode(CallbackNode):
                 message = 'Deleting ' + event_label + '...'
                 await query.answer()
                 await self.telegram_service.edit_callback_message(query, message, reply_markup)
-                self.data_access.delete_event(event_type, doc_id)
+                self.event_service.delete_event(event_type, doc_id)
                 self.node_handler.recalculate_node_transitions()
                 await self.send_normal_message(update, 'Deleted ' + event_label + ' 👍', new_state)
                 return

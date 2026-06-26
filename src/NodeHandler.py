@@ -399,9 +399,9 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                   trigger_service: TriggerService, ics_service: IcsService, user_state_service: UserStateService):
         edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service, ics_service)
         update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self,
-                                                       user_state_service)
+                                                       user_state_service, self.event_service)
         add_callback_node = AddEventCallbackNode(telegram_service, data_access, trigger_service, self,
-                                                 user_state_service)
+                                                 user_state_service, self.event_service)
         reset_statistics_callback_node = ResetStatisticsCallbackNode(telegram_service, data_access, trigger_service)
         self.assign_roles_callback_node = AssignRolesCallbackNode(telegram_service, data_access, trigger_service,
                                                                   user_state_service, self)
