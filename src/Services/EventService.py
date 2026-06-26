@@ -1,9 +1,9 @@
 """Application service for the event-management slice.
 
-Owns the event-management data orchestration (drafts, event reads and updates,
+Owns the event-management data orchestration (drafts, event reads/updates/deletes,
 attendance reset, recipient lookup) so the event nodes stay thin and
 Telegram-facing. Presentation (sending messages, building markup) stays in the
-nodes. (Event deletion moves here with the callback-event-node slice.)
+nodes.
 """
 from Data.DataAccess import DataAccess
 
@@ -42,6 +42,9 @@ class EventService:
 
     def update_field(self, event_type: Event, doc_id: str, new_value, field_type: CallbackOption):
         return self.data_access.update_event_field(event_type, doc_id, new_value, field_type)
+
+    def delete_event(self, event_type: Event, doc_id: str) -> None:
+        self.data_access.delete_event(event_type, doc_id)
 
     def reset_attendance(self, event_type: Event, doc_id: str) -> None:
         self.data_access.reset_all_player_event_attendance(event_type, doc_id)

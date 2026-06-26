@@ -3,7 +3,6 @@ from Data.DataAccess import DataAccess
 from Enums.CallbackOption import CallbackOption
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
-from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 
 from Nodes.CallbackNode import CallbackNode
@@ -13,7 +12,6 @@ from Services.TriggerService import TriggerService
 from Services.UserStateService import UserStateService
 
 from Utils import CallbackUtils
-from Utils import PrintUtils
 
 from telegram import Update
 
@@ -30,23 +28,24 @@ def get_user_state_from_event_type(event_type: Event):
 
 class AddEventCallbackNode(CallbackNode):
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
-                 node_handler, user_state_service: UserStateService):
+                 node_handler, user_state_service: UserStateService, event_service):
         super().__init__(telegram_service, data_access, trigger_service)
         self.node_handler = node_handler
         self.user_state_service = user_state_service
+        self.event_service = event_service
 
     async def handle(self, update: Update):
         query = update.callback_query
         _, event_type, callback_option, _ = CallbackUtils.try_parse_callback_message(query.data)
 
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
-        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
+        temp_data = self.event_service.get_draft(user_to_state.user_id)
 
         match callback_option:
             case CallbackOption.CANCEL:
                 await update.callback_query.answer()
 
-                self.data_access.delete(temp_data)
+                self.event_service.discard_draft(temp_data)
 
                 admin_node = self.node_handler.get_node(UserState.ADMIN)
                 sent_message = await self.telegram_service.send_message(
@@ -64,7 +63,7 @@ class AddEventCallbackNode(CallbackNode):
             case CallbackOption.RESTART:
                 await update.callback_query.answer()
 
-                self.data_access.delete(temp_data)
+                self.event_service.discard_draft(temp_data)
 
                 message = 'Sure, let\'s restart...'
                 sent_message = await self.telegram_service.send_message_with_normal_keyboard(update, message)
@@ -88,24 +87,3 @@ class AddEventCallbackNode(CallbackNode):
                 user_state = get_user_state_from_event_type(temp_data.event_type)
                 add_event_fields_node = self.node_handler.get_node(user_state)
                 await add_event_fields_node.handle_save(UserState.ADMIN, temp_data, update, user_to_state)
-
-    async def notify_all_players(self, new_event, event_type: Event):
-        all_players = self.data_access.get_all_players()
-
-        for player in all_players:
-            await self.telegram_service.send_message(
-                update=player,
-                all_buttons=None,
-                message_type=MessageType.EVENT_ADDED)
-
-            pretty_print_event = PrintUtils.pretty_print(new_event, AttendanceState.UNSURE)
-            reply_markup = CallbackUtils.get_edit_event_reply_markup(
-                UserState.EDIT,
-                event_type,
-                new_event.doc_id)
-            message_text = PrintUtils.event_label(event_type) + ' | ' + pretty_print_event
-            await self.telegram_service.send_message(
-                update=player,
-                all_buttons=None,
-                message=message_text,
-                reply_markup=reply_markup)
