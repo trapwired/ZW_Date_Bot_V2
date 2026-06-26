@@ -70,10 +70,12 @@ def make_callback_update(chat_id: int, data: str, message_text: str = "", messag
 
 
 async def drive_callback(node_handler, chat_id: int, data: str, message_text: str = "",
-                         message_id: int = 10) -> None:
-    """Feed one callback-query through the real NodeHandler entry point."""
-    await node_handler.handle_message(
-        make_callback_update(chat_id, data, message_text, message_id), context=None)
+                         message_id: int = 10):
+    """Feed one callback-query through the real NodeHandler entry point; returns the update
+    so tests can inspect the recorded query (answered / edits)."""
+    update = make_callback_update(chat_id, data, message_text, message_id)
+    await node_handler.handle_message(update, context=None)
+    return update
 
 
 def current_state(data_access, telegram_id: int) -> UserState:

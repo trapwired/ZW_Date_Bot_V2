@@ -7,7 +7,10 @@ from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
 
 from databaseEntities.UsersToState import UsersToState
-from databaseEntities.TempData import TempData
+
+from Services.TelegramService import TelegramService
+from Services.UserStateService import UserStateService
+from Data.DataAccess import DataAccess
 
 from Utils import UpdateEventUtils
 from Utils import PrintUtils
@@ -36,6 +39,11 @@ def get_first_add_user_state(event_type: Event):
 
 class AdminAddNode(Node):
 
+    def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
+                 data_access: DataAccess, event_service):
+        super().__init__(state, telegram_service, user_state_service, data_access)
+        self.event_service = event_service
+
     async def handle_add_game(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self._handle_add_event(Event.GAME, update, user_to_state)
 
@@ -47,16 +55,15 @@ class AdminAddNode(Node):
 
 
     async def _handle_add_event(self, event_type, update, user_to_state):
-        temp_date = TempData(user_to_state.user_id, event_type) # to delete
-        temp_data = self.data_access.add(temp_date)
+        temp_data = self.event_service.create_draft(user_to_state.user_id, event_type)
         event_summary = PrintUtils.pretty_print(temp_data, event_type)
         pretty_print = UpdateEventUtils.get_inline_message('Adding new', event_type, event_summary)
         reply_markup = CallbackUtils.get_add_event_reply_markup(get_reply_markup_user_state(event_type), event_type,
                                                                 temp_data.doc_id)
         query = await self.telegram_service.send_message(update=update, all_buttons=[], reply_markup=reply_markup,
                                                          message=pretty_print)
-        temp_data = temp_data.add_inline_information(query.chat.id, query.id)
-        self.data_access.update(temp_data)
+        temp_data.add_inline_information(query.chat.id, query.id)
+        self.event_service.save_draft(temp_data)
         self.user_state_service.update_user_state(user_to_state, get_first_add_user_state(event_type))
         message = PrintUtils.get_update_attribute_message(CallbackOption.DATETIME)
         await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
