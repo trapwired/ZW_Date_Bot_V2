@@ -272,6 +272,28 @@ Exit criteria: diagram matches the shipped code; README links to it.
 
 ---
 
+## Phase 7 — Comment cleanup pass (closing deliverable)
+
+During the refactor, docstrings and comments accumulate **historical narration** —
+"used to do inline against DataAccess", "replaces the old str-union", "extracted
+in Phase 2", "moved here in 2b". That framing helps reviewers mid-migration but
+is noise once it ships: a comment should describe what the class/function **does
+now**, not what it used to be or which phase changed it.
+
+Final sweep once the architecture has settled:
+- Rewrite every docstring/comment to describe present behavior and intent only.
+- Remove phase references, "previously/used to/replaces/migrated from" wording,
+  and before/after comparisons.
+- Keep genuinely useful *why* comments (invariants, gotchas, cross-module
+  contracts) — the rule is "explain the non-obvious why", not "narrate history".
+
+Do this LAST so comments reflect the final design, not an intermediate step.
+
+Exit criteria: no comment references a refactor phase or prior implementation;
+comments describe current behavior only.
+
+---
+
 ## Sequencing rationale
 
 Tests → dedup → drain logic → collapse states → reslice. Each phase de-risks the

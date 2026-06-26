@@ -1,9 +1,9 @@
 """Application service for the event-management slice.
 
-Owns the data orchestration the event nodes used to do inline against DataAccess
-(drafts, event CRUD, attendance reset, recipient lookup), so those nodes stay
-thin and Telegram-facing. Presentation (sending messages, building markup) stays
-in the nodes.
+Owns the event-management data orchestration (drafts, event reads and updates,
+attendance reset, recipient lookup) so the event nodes stay thin and
+Telegram-facing. Presentation (sending messages, building markup) stays in the
+nodes. (Event deletion moves here with the callback-event-node slice.)
 """
 from Data.DataAccess import DataAccess
 

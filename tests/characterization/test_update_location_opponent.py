@@ -2,8 +2,8 @@
 
 Text-driven (handle_help -> handle_event_location_or_opponent), so the user is
 seeded directly into the field-edit state with the inline-message context in
-additional_info, as the update callback step would leave it. Pins the flow
-before Phase 2b routes its persistence through EventService.
+additional_info, as the update callback step would leave it. Persistence runs
+through EventService.
 """
 from Enums.Role import Role
 from Enums.UserState import UserState
