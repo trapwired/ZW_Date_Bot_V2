@@ -20,12 +20,14 @@ def make_text_update(chat_id: int, text: str, first_name: str = "Test",
 
 
 def seed_user(data_access, telegram_id: int, role: Role, state: UserState,
-              first_name: str = "Test") -> None:
-    """Create a user already past /start, in a known role + state."""
+              first_name: str = "Test", additional_info: str = ""):
+    """Create a user already past /start, in a known role + state. Returns the UsersToState."""
     user_to_state = data_access.add(TelegramUser(telegram_id, first_name, "User"))
     user_to_state.role = role
     user_to_state.state = state
+    user_to_state.additional_info = additional_info
     data_access.update(user_to_state)
+    return user_to_state
 
 
 async def drive(node_handler, chat_id: int, text: str) -> None:

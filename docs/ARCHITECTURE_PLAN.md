@@ -168,6 +168,33 @@ calls `DataAccess` directly** after this phase.
 
 Exit criteria: grep shows no `self.data_access.` inside `Nodes/`; suite green.
 
+### Phase 2 — split into 2a (done) and 2b (todo)
+
+The full "no node touches DataAccess" sweep is too large for one reviewable PR,
+so Phase 2 is split.
+
+**Phase 2a — domain extraction (done, branch `phase-2-drain-logic-from-nodes`):**
+- New `src/domain/` package.
+- `EventDateTimeParser.parse()` replaces `UpdateEventUtils.parse_datetime_string`.
+  Returns a `ParsedDateTime` result (`.ok`/`.value`/`.error`) instead of the
+  str-or-Timestamp union — callers branch on `.ok`, not `type(x) is str`.
+  Old function + `split_multiple` deleted; callers (AddEventFieldsNode,
+  EditEventTimestampNode, PrintUtils) migrated.
+- `AttendanceResetPolicy.requires_attendance_reset(old, new)` extracts the 2h
+  rule out of EditEventTimestampNode (was a bare `pd.Timedelta(hours=2)` check in
+  the view).
+- Tests: characterization pin for the >2h / <2h reset flow added first; unit pins
+  for the parser (new API) and the policy. 32 green.
+
+**Phase 2b — node-thinning sweep (todo, next PR):**
+- Introduce `eventmgmt` / `attendance` feature services that own the
+  get→mutate→persist→notify orchestration nodes currently do.
+- Move remaining `data_access` calls out of every node into those services.
+- Right-size the pass-through services (`UserStateService` / `AdminService` /
+  `StatisticsService`).
+- Needs a callback-query Update factory in the test harness to pin the
+  edit-attendance / update-event callback flows before moving them.
+
 ---
 
 ## Phase 3 — Collapse the UserState explosion

@@ -1,6 +1,8 @@
 from Nodes.Node import Node
 from telegram import Update
-import pandas as pd
+
+from domain import EventDateTimeParser
+from domain import AttendanceResetPolicy
 
 from Enums.UserState import UserState
 from Enums.MessageType import MessageType
@@ -41,15 +43,15 @@ class EditEventTimestampNode(Node):
     async def handle_event_timestamp(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         message = update.message.text.lower()
 
-        parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
-        if type(parsed_datetime) is str:
+        parsed = EventDateTimeParser.parse_future(message)
+        if not parsed.ok:
             # Error case, send message without changing anything
             await self.telegram_service.send_message_with_normal_keyboard(
                 update=update,
-                message=parsed_datetime)
+                message=parsed.error)
             return
 
-        new_datetime = parsed_datetime
+        new_datetime = parsed.value
 
         try_parse = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
         if not try_parse:
@@ -75,7 +77,7 @@ class EditEventTimestampNode(Node):
 
         self.node_handler.recalculate_node_transitions()
 
-        if abs(old_event.timestamp - updated_event.timestamp) > pd.Timedelta(hours=2):
+        if AttendanceResetPolicy.requires_attendance_reset(old_event.timestamp, updated_event.timestamp):
             await self.notify_all_players(doc_id, updated_event, old_event)
             text = 'Since the event was moved by more than 2 hours, I invalidated all previous answers and let all players know...'
             await self.telegram_service.send_message_with_normal_keyboard(

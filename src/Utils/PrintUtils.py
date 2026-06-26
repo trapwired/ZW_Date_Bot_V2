@@ -16,6 +16,8 @@ from Enums.CallbackOption import CallbackOption
 from Utils import UpdateEventUtils
 from Utils import Format
 
+from domain import EventDateTimeParser
+
 from databaseEntities.PlayerMetric import PlayerMetric
 
 EVENT_EMOJI = {Event.GAME: '🤾', Event.TRAINING: '🏃', Event.TIMEKEEPING: '⏱️'}
@@ -136,7 +138,7 @@ def _attendance(state: AttendanceState) -> str:
 
 @dispatch(TempData, Event)
 def pretty_print(temp_data: TempData, event_type: Event) -> str:
-    timestamp = temp_data.timestamp if temp_data.timestamp else UpdateEventUtils.parse_datetime_string('01.01.2000 00:00')
+    timestamp = temp_data.timestamp if temp_data.timestamp else EventDateTimeParser.parse('01.01.2000 00:00').value
     opponent = temp_data.opponent if temp_data.opponent else 'XXX'
     location = temp_data.location if temp_data.location else 'XXX'
     match event_type:
