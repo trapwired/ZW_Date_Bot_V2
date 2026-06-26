@@ -23,11 +23,12 @@ from Services.UserStateService import UserStateService
 
 class EditEventTimestampNode(Node):
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, event_type: Event, node_handler):
+                 data_access: DataAccess, event_type: Event, node_handler, event_service):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.event_type = event_type
         self.add_cancel_transition()
         self.node_handler = node_handler
+        self.event_service = event_service
 
     def add_cancel_transition(self):
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.ADMIN)
@@ -59,10 +60,10 @@ class EditEventTimestampNode(Node):
 
         message_id, chat_id, doc_id = try_parse
 
-        old_event = self.data_access.get_event(self.event_type, doc_id)
+        old_event = self.event_service.get_event(self.event_type, doc_id)
 
-        updated_event = self.data_access.update_event_field(self.event_type, doc_id, new_datetime,
-                                                            CallbackOption.DATETIME)
+        updated_event = self.event_service.update_field(self.event_type, doc_id, new_datetime,
+                                                        CallbackOption.DATETIME)
 
         # Update inline_message with new string
         new_inline_message = UpdateEventUtils.get_inline_message('Updated', self.event_type, updated_event)
@@ -87,10 +88,10 @@ class EditEventTimestampNode(Node):
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
 
     async def notify_all_players(self, doc_id: str, updated_event: Event, old_event: Event):
-        self.data_access.reset_all_player_event_attendance(self.event_type, doc_id)
+        self.event_service.reset_attendance(self.event_type, doc_id)
         # notify all players, give option to vote again
 
-        all_players = self.data_access.get_all_players()
+        all_players = self.event_service.get_all_players()
 
         pretty_print_old_event = PrintUtils.pretty_print_event_datetime(old_event)
 

@@ -20,6 +20,7 @@ from Services.IcsService import IcsService
 from Services.UserStateService import UserStateService
 from Services.TelegramService import TelegramService
 from Services.TriggerService import TriggerService
+from Services.EventService import EventService
 
 from Nodes.Node import Node
 from Nodes.DefaultNode import DefaultNode
@@ -88,13 +89,14 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
     def __init__(self, bot: telegram.Bot, api_config: ApiConfig, telegram_service: TelegramService,
                  user_state_service: UserStateService, admin_service: AdminService, ics_service: IcsService,
-                 data_access: DataAccess, trigger_service: TriggerService):
+                 data_access: DataAccess, trigger_service: TriggerService, event_service: EventService):
         super().__init__(self.handle_message)
         self.bot = bot
         self.user_state_service = user_state_service
         self.admin_service = admin_service
         self.data_access = data_access
         self.telegram_service = telegram_service
+        self.event_service = event_service
 
         self.node_transition_arguments = {}
 
@@ -276,11 +278,12 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                       allowed_roles=RoleSet.PLAYERS)
 
         admin_add_game_node = AddEventFieldsNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service,
-                                                 data_access, Event.GAME, self)
+                                                 data_access, Event.GAME, self, self.event_service)
         admin_add_training_node = AddEventFieldsNode(UserState.ADMIN_ADD_TRAINING, telegram_service, user_state_service,
-                                                     data_access, Event.TRAINING, self)
+                                                     data_access, Event.TRAINING, self, self.event_service)
         admin_add_timekeeping_node = AddEventFieldsNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service,
-                                                        user_state_service, data_access, Event.TIMEKEEPING, self)
+                                                        user_state_service, data_access, Event.TIMEKEEPING, self,
+                                                        self.event_service)
 
         admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access)
         admin_update_node.add_continue_later()
@@ -321,31 +324,32 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                            update_timekeepings_node.handle_event_id)
 
         admin_update_game_timestamp_node = EditEventTimestampNode(
-            UserState.ADMIN_UPDATE_GAME_TIMESTAMP, telegram_service, user_state_service, data_access, Event.GAME, self)
+            UserState.ADMIN_UPDATE_GAME_TIMESTAMP, telegram_service, user_state_service, data_access, Event.GAME, self,
+            self.event_service)
 
         admin_update_training_timestamp_node = EditEventTimestampNode(
             UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP, telegram_service, user_state_service, data_access,
-            Event.TRAINING, self)
+            Event.TRAINING, self, self.event_service)
 
         admin_update_timekeeping_timestamp_node = EditEventTimestampNode(
             UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP, telegram_service, user_state_service, data_access,
-            Event.TIMEKEEPING, self)
+            Event.TIMEKEEPING, self, self.event_service)
 
         admin_update_game_opponent_node = EditEventLocationOrOpponentNode(
             UserState.ADMIN_UPDATE_GAME_OPPONENT, telegram_service, user_state_service, data_access, Event.GAME,
-            CallbackOption.OPPONENT, self)
+            CallbackOption.OPPONENT, self, self.event_service)
 
         admin_update_game_location_node = EditEventLocationOrOpponentNode(
             UserState.ADMIN_UPDATE_GAME_LOCATION, telegram_service, user_state_service, data_access, Event.GAME,
-            CallbackOption.LOCATION, self)
+            CallbackOption.LOCATION, self, self.event_service)
 
         admin_update_training_location_node = EditEventLocationOrOpponentNode(
             UserState.ADMIN_UPDATE_TRAINING_LOCATION, telegram_service, user_state_service, data_access, Event.TRAINING,
-            CallbackOption.LOCATION, self)
+            CallbackOption.LOCATION, self, self.event_service)
 
         admin_update_timekeeping_location_node = EditEventLocationOrOpponentNode(
             UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION, telegram_service, user_state_service, data_access,
-            Event.TIMEKEEPING, CallbackOption.LOCATION, self)
+            Event.TIMEKEEPING, CallbackOption.LOCATION, self, self.event_service)
 
         all_nodes_dict = {
             UserState.INIT: init_node,

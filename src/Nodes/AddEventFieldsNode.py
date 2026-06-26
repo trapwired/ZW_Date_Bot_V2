@@ -58,18 +58,19 @@ _ADD_USER_STATE = {
 
 class AddEventFieldsNode(Node):
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, event_type: Event, node_handler):
+                 data_access: DataAccess, event_type: Event, node_handler, event_service):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.event_type = event_type
         self.add_cancel_transition()
         self.node_handler = node_handler
+        self.event_service = event_service
 
     def add_cancel_transition(self):
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.ADMIN)
 
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
-        self.data_access.delete(temp_data)
+        temp_data = self.event_service.get_draft(user_to_state.user_id)
+        self.event_service.discard_draft(temp_data)
         self.user_state_service.update_user_state(user_to_state, new_state)
         await self.telegram_service.send_message(
             update=update,
@@ -78,7 +79,7 @@ class AddEventFieldsNode(Node):
 
     async def handle_user_input(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         message = update.message.text.lower()
-        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
+        temp_data = self.event_service.get_draft(user_to_state.user_id)
         finish_state = _FINISH_STATE[self.event_type]
 
         # On the finish step, 'save' commits; anything else just re-prompts to save.
@@ -104,7 +105,7 @@ class AddEventFieldsNode(Node):
             temp_data.location = message
         elif field == CallbackOption.OPPONENT:
             temp_data.opponent = message
-        self.data_access.update(temp_data)
+        self.event_service.save_draft(temp_data)
 
         if index + 1 < len(steps):
             next_state, next_attribute = steps[index + 1]
@@ -130,9 +131,8 @@ class AddEventFieldsNode(Node):
         self.user_state_service.update_user_state(user_to_state, next_state)
 
     async def handle_save(self, new_state, temp_data, update, user_to_state):
-        new_game = self.data_access.add(temp_data.get_finished_event())
+        new_game = self.event_service.finalize_draft(temp_data)
         await self.update_inline_message(temp_data, 'Saved', AddEventMarkup.NONE)
-        self.data_access.delete(temp_data)
         self.node_handler.recalculate_node_transitions()
         await self.notify_all_players(new_game)
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
@@ -173,7 +173,7 @@ class AddEventFieldsNode(Node):
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
 
     async def notify_all_players(self, new_event):
-        all_players = self.data_access.get_all_players()
+        all_players = self.event_service.get_all_players()
 
         for player in all_players:
             await self.telegram_service.send_message(
