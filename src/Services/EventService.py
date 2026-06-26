@@ -19,6 +19,9 @@ class EventService:
 
     # --- event drafts (the add-event wizard scratch state) ---
 
+    def create_draft(self, user_id: str, event_type: Event) -> TempData:
+        return self.data_access.add(TempData(user_id, event_type))
+
     def get_draft(self, user_id: str) -> TempData:
         return self.data_access.get_temp_data(user_id)
 

@@ -51,6 +51,7 @@ def services(data_access, bot, api_config):
     from Services.IcsService import IcsService
     from Services.TriggerService import TriggerService
     from Services.EventService import EventService
+    from Services.AttendanceService import AttendanceService
 
     admin_service = AdminService(data_access)
     telegram_service = TelegramService(bot, api_config, admin_service)
@@ -61,6 +62,7 @@ def services(data_access, bot, api_config):
         "ics_service": IcsService(data_access),
         "trigger_service": TriggerService(data_access, telegram_service),
         "event_service": EventService(data_access),
+        "attendance_service": AttendanceService(data_access),
     }
 
 
@@ -71,4 +73,5 @@ def node_handler(bot, api_config, data_access, services):
         bot, api_config,
         services["telegram_service"], services["user_state_service"], services["admin_service"],
         services["ics_service"], data_access, services["trigger_service"], services["event_service"],
+        services["attendance_service"],
     )

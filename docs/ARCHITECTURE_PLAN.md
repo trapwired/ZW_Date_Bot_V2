@@ -208,10 +208,16 @@ through a feature service.
   `EventService.delete_event` (now has a caller). Deleted the dead
   `AddEventCallbackNode.notify_all_players` (no caller) and its orphaned imports.
   Eventmgmt vertical complete: 5 nodes `data_access`-free. 44 green.
-- **2b-iii — other slices (todo):** AttendanceService (EditCallbackNode),
-  RoleService (AssignRolesCallbackNode), WebsiteService (UpdateWebsiteCallbackNode),
-  StatsService (StatsNode / AdminNode statistics). Plus the small reads in
-  Node.py base / InitNode / DefaultNode / EditNode / UpdateNode.
+- **2b-iii-a — attendance (done, branch `phase-2b-iii-feature-services`):**
+  new `AttendanceService`; EditCallbackNode (player YES/NO/UNSURE + calendar)
+  routed through it — zero `data_access`. Also finished the eventmgmt vertical:
+  AdminAddNode's draft creation now uses `EventService.create_draft`. Added the
+  callback-attendance + calendar-export pins. 7 nodes `data_access`-free. 48 green.
+- **2b-iii — remaining slices (todo):** RoleService (AssignRolesCallbackNode),
+  WebsiteService (UpdateWebsiteCallbackNode + AdminNode.handle_update_website),
+  StatsService (StatsNode / AdminNode statistics / ResetStatisticsCallbackNode).
+  Plus the small reads in Node.py base / InitNode / DefaultNode / EditNode /
+  UpdateNode.
 - **2b-iv — right-size the pass-through services** (`UserStateService` /
   `AdminService` / `StatisticsService`).
 

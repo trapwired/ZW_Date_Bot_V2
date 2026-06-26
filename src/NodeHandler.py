@@ -21,6 +21,7 @@ from Services.UserStateService import UserStateService
 from Services.TelegramService import TelegramService
 from Services.TriggerService import TriggerService
 from Services.EventService import EventService
+from Services.AttendanceService import AttendanceService
 
 from Nodes.Node import Node
 from Nodes.DefaultNode import DefaultNode
@@ -89,7 +90,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
     def __init__(self, bot: telegram.Bot, api_config: ApiConfig, telegram_service: TelegramService,
                  user_state_service: UserStateService, admin_service: AdminService, ics_service: IcsService,
-                 data_access: DataAccess, trigger_service: TriggerService, event_service: EventService):
+                 data_access: DataAccess, trigger_service: TriggerService, event_service: EventService,
+                 attendance_service: AttendanceService):
         super().__init__(self.handle_message)
         self.bot = bot
         self.user_state_service = user_state_service
@@ -97,6 +99,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.data_access = data_access
         self.telegram_service = telegram_service
         self.event_service = event_service
+        self.attendance_service = attendance_service
 
         self.node_transition_arguments = {}
 
@@ -266,7 +269,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         admin_statistics_node.add_transition('/reset_statistics', admin_statistics_node.handle_reset_statistics,
                                              allowed_roles=RoleSet.ADMINS)
 
-        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access)
+        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access,
+                                      self.event_service)
         admin_add_node.add_continue_later()
         admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
         admin_add_node.add_transition('/game', admin_add_node.handle_add_game,
@@ -397,7 +401,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
                                   trigger_service: TriggerService, ics_service: IcsService, user_state_service: UserStateService):
-        edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service, ics_service)
+        edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service, ics_service,
+                                              self.attendance_service)
         update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self,
                                                        user_state_service, self.event_service)
         add_callback_node = AddEventCallbackNode(telegram_service, data_access, trigger_service, self,
