@@ -126,6 +126,25 @@ Run: `./venv/bin/python -m pytest -q`
 
 Exit criteria: suite still green, duplication gone, markup bug fixed.
 
+### Phase 1 — STATUS: done (branch `phase-1-kill-duplication`)
+
+- AddEventFieldsNode: 3 copy-pasted flow handlers → one data-driven flow over a
+  per-event-type step list (`_ADD_STEPS`). ~145 LOC → ~50.
+- Markup bug fixed: `update_inline_message` now encodes the node's own event type
+  instead of hardcoding `ADMIN_ADD_GAME`/`Event.GAME`. New regression test
+  `test_add_event_markup.py` pins correct per-type callback_data.
+- AdminNode: 3 identical `handle_*_statistics` → thin wrappers over
+  `_handle_event_statistics(event_type)`.
+- PrintUtils: the per-event single-line + attendance renderers collapsed via
+  multipledispatch tuple types `(Game, Training, TimekeepingEvent)` — 9 defs → 3.
+- **Callback codec merge: NOT done, deliberately.** `CallbackUtils`
+  (`UserState#Event#CallbackOption#doc_id`) and `RoleAssignment`
+  (`ROLES#code#args`) share only the `#` delimiter — different schemas, arities,
+  value types, and routing. Merging two separate callback channels would be a
+  leaky abstraction over incidental duplication (WET-when-right). Left separate;
+  the earlier "duplicate codec" finding was over-stated.
+- 28 tests green.
+
 ---
 
 ## Phase 2 — Drain logic out of nodes

@@ -21,6 +21,39 @@ from Utils import PrintUtils
 from Utils import CallbackUtils
 
 
+# Ordered field-collection steps per event type. The only thing that differs
+# between game/training/timekeeping is this list (games additionally collect an
+# opponent), so a single flow walks it instead of three copy-pasted handlers.
+_ADD_STEPS = {
+    Event.GAME: [
+        (UserState.ADMIN_ADD_GAME_TIMESTAMP, CallbackOption.DATETIME),
+        (UserState.ADMIN_ADD_GAME_LOCATION, CallbackOption.LOCATION),
+        (UserState.ADMIN_ADD_GAME_OPPONENT, CallbackOption.OPPONENT),
+    ],
+    Event.TRAINING: [
+        (UserState.ADMIN_ADD_TRAINING_TIMESTAMP, CallbackOption.DATETIME),
+        (UserState.ADMIN_ADD_TRAINING_LOCATION, CallbackOption.LOCATION),
+    ],
+    Event.TIMEKEEPING: [
+        (UserState.ADMIN_ADD_TIMEKEEPING_TIMESTAMP, CallbackOption.DATETIME),
+        (UserState.ADMIN_ADD_TIMEKEEPING_LOCATION, CallbackOption.LOCATION),
+    ],
+}
+
+_FINISH_STATE = {
+    Event.GAME: UserState.ADMIN_FINISH_ADD_GAME,
+    Event.TRAINING: UserState.ADMIN_FINISH_ADD_TRAINING,
+    Event.TIMEKEEPING: UserState.ADMIN_FINISH_ADD_TIMEKEEPING,
+}
+
+# The UserState encoded into the inline-keyboard callback channel for the add flow.
+_ADD_USER_STATE = {
+    Event.GAME: UserState.ADMIN_ADD_GAME,
+    Event.TRAINING: UserState.ADMIN_ADD_TRAINING,
+    Event.TIMEKEEPING: UserState.ADMIN_ADD_TIMEKEEPING,
+}
+
+
 class AddEventFieldsNode(Node):
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
                  data_access: DataAccess, event_type: Event, node_handler):
@@ -42,13 +75,57 @@ class AddEventFieldsNode(Node):
             message_type=MessageType.ADMIN)
 
     async def handle_user_input(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
-        match self.event_type:
-            case Event.GAME:
-                await self.handle_game_flow(update, user_to_state, new_state)
-            case Event.TRAINING:
-                await self.handle_training_flow(update, user_to_state, new_state)
-            case Event.TIMEKEEPING:
-                await self.handle_timekeeping_flow(update, user_to_state, new_state)
+        message = update.message.text.lower()
+        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
+        finish_state = _FINISH_STATE[self.event_type]
+
+        # On the finish step, 'save' commits; anything else just re-prompts to save.
+        if user_to_state.state == finish_state:
+            if message == 'save':
+                await self.handle_save(new_state, temp_data, update, user_to_state)
+                return
+            await self._prompt_next(update, user_to_state, CallbackOption.SAVE, finish_state)
+            return
+
+        steps = _ADD_STEPS[self.event_type]
+        index = self._step_index(steps, user_to_state.state)
+        _, field = steps[index]
+
+        if field == CallbackOption.DATETIME:
+            parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
+            if type(parsed_datetime) is str:
+                # Parsing failed - report and stay on this step without mutating anything.
+                await self.telegram_service.send_message_with_normal_keyboard(update=update, message=parsed_datetime)
+                return
+            temp_data.timestamp = parsed_datetime
+        elif field == CallbackOption.LOCATION:
+            temp_data.location = message
+        elif field == CallbackOption.OPPONENT:
+            temp_data.opponent = message
+        self.data_access.update(temp_data)
+
+        if index + 1 < len(steps):
+            next_state, next_attribute = steps[index + 1]
+            markup = AddEventMarkup.DEFAULT
+        else:
+            next_state, next_attribute = finish_state, CallbackOption.SAVE
+            markup = AddEventMarkup.SAVE
+
+        await self.update_inline_message(temp_data, 'Adding new', markup)
+        await self._prompt_next(update, user_to_state, next_attribute, next_state)
+
+    @staticmethod
+    def _step_index(steps, state: UserState) -> int:
+        for index, (step_state, _) in enumerate(steps):
+            if step_state == state:
+                return index
+        raise ValueError(f'No add-event step for state {state}')
+
+    async def _prompt_next(self, update: Update, user_to_state: UsersToState, attribute: CallbackOption,
+                           next_state: UserState) -> None:
+        message = PrintUtils.get_update_attribute_message(attribute)
+        await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
+        self.user_state_service.update_user_state(user_to_state, next_state)
 
     async def handle_save(self, new_state, temp_data, update, user_to_state):
         new_game = self.data_access.add(temp_data.get_finished_event())
@@ -68,167 +145,18 @@ class AddEventFieldsNode(Node):
         event_summary = PrintUtils.pretty_print(temp_data, self.event_type)
         pretty_print = UpdateEventUtils.get_inline_message(prefix, self.event_type, event_summary)
 
+        user_state = _ADD_USER_STATE[self.event_type]
         match markup_type:
             case AddEventMarkup.DEFAULT:
-                reply_markup = CallbackUtils.get_add_event_reply_markup(UserState.ADMIN_ADD_GAME, Event.GAME,
-                                                                        temp_data.doc_id)
-                pass
+                reply_markup = CallbackUtils.get_add_event_reply_markup(user_state, self.event_type, temp_data.doc_id)
             case AddEventMarkup.SAVE:
-                reply_markup = CallbackUtils.get_finish_add_event_reply_markup(UserState.ADMIN_ADD_GAME, Event.GAME,
+                reply_markup = CallbackUtils.get_finish_add_event_reply_markup(user_state, self.event_type,
                                                                                temp_data.doc_id)
-                pass
             case _:
                 reply_markup = None
 
         await self.telegram_service.edit_inline_message_text(pretty_print, temp_data.query_id, temp_data.chat_id,
                                                              reply_markup)
-
-    async def handle_game_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        message = update.message.text.lower()
-        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
-
-        match user_to_state.state:
-            case UserState.ADMIN_ADD_GAME_TIMESTAMP:
-                parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
-                if type(parsed_datetime) is str:
-                    # Error case, send message without changing anything
-                    await self.telegram_service.send_message_with_normal_keyboard(
-                        update=update,
-                        message=parsed_datetime)
-                    return
-
-                temp_data.timestamp = parsed_datetime
-                self.data_access.update(temp_data)
-
-                next_attribute = CallbackOption.LOCATION
-                next_state = UserState.ADMIN_ADD_GAME_LOCATION
-
-                await self.update_inline_message(temp_data, 'Adding new', AddEventMarkup.DEFAULT)
-
-            case UserState.ADMIN_ADD_GAME_LOCATION:
-                temp_data.location = message
-                self.data_access.update(temp_data)
-
-                next_attribute = CallbackOption.OPPONENT
-                next_state = UserState.ADMIN_ADD_GAME_OPPONENT
-
-                await self.update_inline_message(temp_data, 'Adding new', AddEventMarkup.DEFAULT)
-
-            case UserState.ADMIN_ADD_GAME_OPPONENT:
-                temp_data.opponent = message
-                self.data_access.update(temp_data)
-
-                await self.update_inline_message(temp_data, 'Adding new', AddEventMarkup.SAVE)
-
-                next_attribute = CallbackOption.SAVE
-                next_state = UserState.ADMIN_FINISH_ADD_GAME
-
-            case UserState.ADMIN_FINISH_ADD_GAME:
-                if message == 'save':
-                    await self.handle_save(new_state, temp_data, update, user_to_state)
-                    return
-                else:
-                    next_attribute = CallbackOption.SAVE
-                    next_state = UserState.ADMIN_FINISH_ADD_GAME
-
-        # send next instruction
-        message = PrintUtils.get_update_attribute_message(next_attribute)
-        await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
-
-        # update userState to next one
-        self.user_state_service.update_user_state(user_to_state, next_state)
-
-    async def handle_training_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        message = update.message.text.lower()
-        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
-
-        match user_to_state.state:
-            case UserState.ADMIN_ADD_TRAINING_TIMESTAMP:
-                parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
-                if type(parsed_datetime) is str:
-                    # Error case, send message without changing anything
-                    await self.telegram_service.send_message_with_normal_keyboard(
-                        update=update,
-                        message=parsed_datetime)
-                    return
-
-                temp_data.timestamp = parsed_datetime
-                self.data_access.update(temp_data)
-
-                next_attribute = CallbackOption.LOCATION
-                next_state = UserState.ADMIN_ADD_TRAINING_LOCATION
-
-                await self.update_inline_message(temp_data, 'Adding new', AddEventMarkup.DEFAULT)
-
-            case UserState.ADMIN_ADD_TRAINING_LOCATION:
-                temp_data.location = message
-                self.data_access.update(temp_data)
-
-                await self.update_inline_message(temp_data, 'Adding new', AddEventMarkup.SAVE)
-
-                next_attribute = CallbackOption.SAVE
-                next_state = UserState.ADMIN_FINISH_ADD_TRAINING
-
-            case UserState.ADMIN_FINISH_ADD_TRAINING:
-                if message == 'save':
-                    await self.handle_save(new_state, temp_data, update, user_to_state)
-                    return
-                else:
-                    next_attribute = CallbackOption.SAVE
-                    next_state = UserState.ADMIN_FINISH_ADD_TRAINING
-
-        # send next instruction
-        message = PrintUtils.get_update_attribute_message(next_attribute)
-        await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
-
-        # update userState to next one
-        self.user_state_service.update_user_state(user_to_state, next_state)
-
-    async def handle_timekeeping_flow(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        message = update.message.text.lower()
-        temp_data = self.data_access.get_temp_data(user_to_state.user_id)
-
-        match user_to_state.state:
-            case UserState.ADMIN_ADD_TIMEKEEPING_TIMESTAMP:
-                parsed_datetime = UpdateEventUtils.parse_datetime_string(message)
-                if type(parsed_datetime) is str:
-                    # Error case, send message without changing anything
-                    await self.telegram_service.send_message_with_normal_keyboard(
-                        update=update,
-                        message=parsed_datetime)
-                    return
-
-                temp_data.timestamp = parsed_datetime
-                self.data_access.update(temp_data)
-
-                next_attribute = CallbackOption.LOCATION
-                next_state = UserState.ADMIN_ADD_TIMEKEEPING_LOCATION
-
-                await self.update_inline_message(temp_data, 'Adding new', AddEventMarkup.DEFAULT)
-
-            case UserState.ADMIN_ADD_TIMEKEEPING_LOCATION:
-                temp_data.location = message
-                self.data_access.update(temp_data)
-
-                await self.update_inline_message(temp_data, 'Adding new', AddEventMarkup.SAVE)
-
-                next_attribute = CallbackOption.SAVE
-                next_state = UserState.ADMIN_FINISH_ADD_TIMEKEEPING
-
-            case UserState.ADMIN_FINISH_ADD_TIMEKEEPING:
-                if message == 'save':
-                    await self.handle_save(new_state, temp_data, update, user_to_state)
-                    return
-                else:
-                    next_attribute = CallbackOption.SAVE
-                    next_state = UserState.ADMIN_FINISH_ADD_TIMEKEEPING
-
-        # send next instruction
-        message = PrintUtils.get_update_attribute_message(next_attribute)
-        await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
-
-        # update userState to next one
-        self.user_state_service.update_user_state(user_to_state, next_state)
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         # use default transition for anything that can't be predicted
