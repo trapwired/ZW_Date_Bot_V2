@@ -8,8 +8,11 @@ import pandas as pd
 from Utils import DateTimeUtils
 
 DATE_SEPARATORS = '.,-'
-TIME_SEPARATORS = '-:;'
+TIME_SEPARATORS = '-:;.'
 INPUT_FORMAT_HINT = '20.03.2023 19:38'
+
+# Two-digit years are interpreted as 20xx (e.g. '25' -> 2025).
+SHORT_YEAR_PREFIX = '20'
 
 
 class ParsedDateTime:
@@ -53,6 +56,8 @@ def parse(datetime_string: str) -> ParsedDateTime:
             f'Tried to split date ({date}) into 3 parts, using the following separators: ({DATE_SEPARATORS}) '
             f'- that did not work - wrong length: {len(date_split)}')
     day_str, month_str, year_str = date_split
+    if len(year_str) == 2:
+        year_str = SHORT_YEAR_PREFIX + year_str
     try:
         day, month, year = int(day_str), int(month_str), int(year_str)
     except Exception as e:
@@ -73,11 +78,23 @@ def parse(datetime_string: str) -> ParsedDateTime:
             f'Tried to parse hour / minute into a number - that did not work, please try again (Exception for '
             f'reference: : {e.args})')
 
-    # The numbers parsed but may not form a real date/time (month 13, day 32, hour 25, ...).
-    # pd.Timestamp raises on those; turn it into a failure result so the flow never crashes.
+    # The numbers parsed but may not form a real instant: out-of-range fields (month 13,
+    # day 32, hour 25), or a wall-clock time that does not exist in Europe/Zurich because of
+    # the spring-forward DST gap. Both raise ValueError; turn them into a failure result so
+    # the flow never crashes.
     try:
         date_time = pd.Timestamp(year, month, day, hour, minute, 0, 0)
+        return ParsedDateTime.success(DateTimeUtils.add_zurich_timezone(date_time))
     except (ValueError, OverflowError) as e:
         return ParsedDateTime.failure(
             f'That date/time does not exist, please try again (Exception for reference: {e.args})')
-    return ParsedDateTime.success(DateTimeUtils.add_zurich_timezone(date_time))
+
+
+def parse_future(datetime_string: str) -> ParsedDateTime:
+    """parse() plus the event rule that an event can only be scheduled in the future."""
+    result = parse(datetime_string)
+    if not result.ok:
+        return result
+    if result.value <= DateTimeUtils.get_local_now():
+        return ParsedDateTime.failure('That date/time is in the past - please enter a date in the future')
+    return result

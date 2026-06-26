@@ -5,7 +5,7 @@ The old str-or-value contract is gone: parse() now returns a ParsedDateTime with
 """
 import pandas as pd
 
-from domain.EventDateTimeParser import parse
+from domain.EventDateTimeParser import parse, parse_future
 
 
 def _assert_ok(result, expected):
@@ -47,3 +47,24 @@ def test_numeric_but_invalid_calendar_values_fail_instead_of_crashing():
         assert not result.ok
         assert result.value is None
         assert isinstance(result.error, str) and result.error
+
+
+def test_two_digit_year_is_interpreted_as_20xx():
+    _assert_ok(parse("1.1.30 15:15"), (2030, 1, 1, 15, 15))
+
+
+def test_dot_is_accepted_as_time_separator():
+    _assert_ok(parse("24.12.2030 14.14"), (2030, 12, 24, 14, 14))
+
+
+def test_dst_nonexistent_time_fails_instead_of_crashing():
+    # Europe/Zurich spring-forward 2023-03-26: 02:00 jumps to 03:00, so 02:30 does not exist.
+    result = parse("26.3.2023 02:30")
+    assert not result.ok
+    assert result.value is None
+
+
+def test_parse_future_rejects_past_and_accepts_future():
+    assert not parse_future("1.1.2020 12:00").ok          # clearly past
+    assert not parse_future("1.1.20 12:00").ok            # 2020 via two-digit year, still past
+    assert parse_future("1.1.2099 12:00").ok              # clearly future

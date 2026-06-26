@@ -94,7 +94,7 @@ class AddEventFieldsNode(Node):
         _, field = steps[index]
 
         if field == CallbackOption.DATETIME:
-            parsed = EventDateTimeParser.parse(message)
+            parsed = EventDateTimeParser.parse_future(message)
             if not parsed.ok:
                 # Parsing failed - report and stay on this step without mutating anything.
                 await self.telegram_service.send_message_with_normal_keyboard(update=update, message=parsed.error)

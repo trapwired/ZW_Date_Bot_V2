@@ -43,7 +43,7 @@ class EditEventTimestampNode(Node):
     async def handle_event_timestamp(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         message = update.message.text.lower()
 
-        parsed = EventDateTimeParser.parse(message)
+        parsed = EventDateTimeParser.parse_future(message)
         if not parsed.ok:
             # Error case, send message without changing anything
             await self.telegram_service.send_message_with_normal_keyboard(

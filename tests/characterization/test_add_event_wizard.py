@@ -87,6 +87,18 @@ async def test_add_timekeeping_persists(node_handler, data_access, bot):
     assert_no_error_reported(bot)
 
 
+async def test_past_timestamp_is_rejected_and_stays_on_step(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_ADD)
+
+    await drive(node_handler, ADMIN_ID, "/game")
+    await drive(node_handler, ADMIN_ID, "1.1.2020 12:00")  # in the past
+
+    # Stays on the timestamp step; nothing advances, nothing saved.
+    assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_ADD_GAME_TIMESTAMP
+    assert any("past" in m.text for m in bot.sent)
+    assert_no_error_reported(bot)
+
+
 async def test_cancel_during_wizard_returns_to_admin(node_handler, data_access, bot):
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_ADD)
 
