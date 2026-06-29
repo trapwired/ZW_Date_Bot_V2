@@ -9,27 +9,31 @@ from Enums.AttendanceState import AttendanceState
 
 from databaseEntities.UsersToState import UsersToState
 
+from Services.TelegramService import TelegramService
+from Services.UserStateService import UserStateService
+from Data.DataAccess import DataAccess
+
 from Utils import PrintUtils
 from Utils import CallbackUtils
 
 
 class EditNode(Node):
+    def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
+                 data_access: DataAccess, event_service, attendance_service):
+        super().__init__(state, telegram_service, user_state_service, data_access)
+        self.event_service = event_service
+        self.attendance_service = attendance_service
+
     async def handle_event_id(self, update: Update, user_to_state: UsersToState, new_state: UserState,
                               document_id: str, event_type: Event):
-        match event_type:
-            case Event.GAME:
-                event = self.data_access.get_game(document_id)
-            case Event.TRAINING:
-                event = self.data_access.get_training(document_id)
-            case Event.TIMEKEEPING:
-                event = self.data_access.get_timekeeping(document_id)
-                yes, _, _ = self.data_access.get_stats_event(document_id, Event.TIMEKEEPING)
+        event = self.event_service.get_event(event_type, document_id)
+        yes_count = self.attendance_service.yes_count(document_id, event_type) if event_type is Event.TIMEKEEPING else 0
 
-        attendance = self.data_access.get_attendance(update.effective_user.id, document_id, event_type)
+        attendance = self.attendance_service.get_attendance(update.effective_user.id, document_id, event_type)
 
         if attendance.state != AttendanceState.YES and \
                 event_type == Event.TIMEKEEPING and \
-                event.people_required <= len(yes):
+                event.people_required <= yes_count:
             await self.telegram_service.send_message(
                 update=update,
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),

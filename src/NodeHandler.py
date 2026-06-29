@@ -229,7 +229,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.add_event_transitions_to_node(Event.TIMEKEEPING, stats_timekeepings_node,
                                            stats_timekeepings_node.handle_event_id)
 
-        edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access)
+        edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access,
+                             self.event_service, self.attendance_service)
         edit_node.add_continue_later()
         edit_node.add_transition(
             '/games', message_type=MessageType.EDIT_TO_GAMES,
@@ -244,19 +245,21 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             new_state=UserState.EDIT_TIMEKEEPINGS, allowed_roles=RoleSet.PLAYERS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
 
-        edit_games_node = EditNode(UserState.EDIT_GAMES, telegram_service, user_state_service, data_access)
+        edit_games_node = EditNode(UserState.EDIT_GAMES, telegram_service, user_state_service, data_access,
+                                   self.event_service, self.attendance_service)
         edit_games_node.add_continue_later()
         edit_games_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
         self.add_event_transitions_to_node(Event.GAME, edit_games_node, edit_games_node.handle_event_id)
 
-        edit_trainings_node = EditNode(UserState.EDIT_TRAININGS, telegram_service, user_state_service, data_access)
+        edit_trainings_node = EditNode(UserState.EDIT_TRAININGS, telegram_service, user_state_service, data_access,
+                                       self.event_service, self.attendance_service)
         edit_trainings_node.add_continue_later()
         edit_trainings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
         self.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
                                            edit_trainings_node.handle_event_id)
 
         edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
-                                          data_access)
+                                          data_access, self.event_service, self.attendance_service)
         edit_timekeepings_node.add_continue_later()
         edit_timekeepings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW,
                                               new_state=UserState.EDIT)
@@ -324,14 +327,15 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             new_state=UserState.ADMIN_UPDATE_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS,
             is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
 
-        update_games_node = UpdateNode(UserState.ADMIN_UPDATE_GAME, telegram_service, user_state_service, data_access)
+        update_games_node = UpdateNode(UserState.ADMIN_UPDATE_GAME, telegram_service, user_state_service, data_access,
+                                       self.event_service)
         update_games_node.add_continue_later()
         update_games_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
                                          new_state=UserState.ADMIN_UPDATE)
         self.add_event_transitions_to_node(Event.GAME, update_games_node, update_games_node.handle_event_id)
 
         update_trainings_node = UpdateNode(UserState.ADMIN_UPDATE_TRAINING, telegram_service, user_state_service,
-                                           data_access)
+                                           data_access, self.event_service)
         update_trainings_node.add_continue_later()
         update_trainings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
                                              new_state=UserState.ADMIN_UPDATE)
@@ -339,7 +343,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                            update_trainings_node.handle_event_id)
 
         update_timekeepings_node = UpdateNode(UserState.ADMIN_UPDATE_TIMEKEEPING, telegram_service, user_state_service,
-                                              data_access)
+                                              data_access, self.event_service)
         update_timekeepings_node.add_continue_later()
         update_timekeepings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
                                                 new_state=UserState.ADMIN_UPDATE)

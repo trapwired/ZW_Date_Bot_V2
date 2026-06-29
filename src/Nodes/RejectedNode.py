@@ -12,8 +12,9 @@ from databaseEntities.UsersToState import UsersToState
 class RejectedNode(Node):
 
     async def handle_correct_password(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        # The role change is persisted by the framework's post-transition update_user_state
+        # (this transition has update_state=True), so no explicit write is needed here.
         user_to_state = user_to_state.add_role(Role.SPECTATOR)
-        self.data_access.update(user_to_state)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
