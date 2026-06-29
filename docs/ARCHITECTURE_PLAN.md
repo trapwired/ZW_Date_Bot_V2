@@ -225,10 +225,18 @@ through a feature service.
   `NodeHandler.is_caller_allowed`. Admin callback nodes declare `RoleSet.ADMINS`.
   Also fixed a duplicate `case Event.GAME` in AddEventCallbackNode RESTART
   (timekeeping restart was unreachable). 52 green.
-- **2b-iii — remaining slices (todo):** WebsiteService (UpdateWebsiteCallbackNode
-  + AdminNode.handle_update_website), StatsService (StatsNode / AdminNode
+- **2b-iii-c — website (done, branch `phase-2b-iii-c-website`):** new
+  `WebsiteService` owns the player-facing URL plus the admin update flow
+  (commit/discard of the URL staged in `additional_info`, folded so a committed
+  URL can't be re-applied). UpdateWebsiteCallbackNode, AdminNode.handle_update_website
+  and DefaultNode.handle_website routed through it — all three now zero
+  `data_access` for the website slice (the callback's redundant `get_user`
+  re-render fetch dropped: the callback Update already carries the admin's chat).
+  Added the website-flow pin (confirm yes/no, admin display, player button,
+  unconfigured). 9 nodes `data_access`-free. 58 green.
+- **2b-iii — remaining slices (todo):** StatsService (StatsNode / AdminNode
   statistics / ResetStatisticsCallbackNode). Plus the small reads in Node.py base
-  / InitNode / DefaultNode / EditNode / UpdateNode.
+  / InitNode / EditNode / UpdateNode.
 - **2b-iv — right-size the pass-through services** (`UserStateService` /
   `AdminService` / `StatisticsService`).
 

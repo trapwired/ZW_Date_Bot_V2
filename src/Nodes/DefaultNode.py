@@ -7,11 +7,20 @@ from Enums.UserState import UserState
 
 from databaseEntities.UsersToState import UsersToState
 
+from Services.TelegramService import TelegramService
+from Services.UserStateService import UserStateService
+from Data.DataAccess import DataAccess
+
 
 class DefaultNode(Node):
 
+    def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
+                 data_access: DataAccess, website_service):
+        super().__init__(state, telegram_service, user_state_service, data_access)
+        self.website_service = website_service
+
     async def handle_website(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        website = self.data_access.get_website()
+        website = self.website_service.get_url()
         if website is None:
             await self.telegram_service.send_message(
                 update=update,
