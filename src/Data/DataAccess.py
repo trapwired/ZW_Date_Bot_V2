@@ -253,16 +253,17 @@ class DataAccess(object):
         no = []
         unsure = []
 
-        active_player_ids = {
+        active_player_ids = [
             UsersToState.from_dict(element.id, element.to_dict()).user_id
             for element in self.firebase_repository.get_all_active_players_to_state()
-        }
+        ]
+        active_player_id_set = set(active_player_ids)
 
         event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=TABLES[event_type])
         for attendance in event_attendance_list:
             new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
             user_id = new_attendance.user_id
-            is_active = user_id in active_player_ids
+            is_active = user_id in active_player_id_set
             match new_attendance.state:
                 case AttendanceState.YES:
                     yes.append(user_id)
@@ -274,7 +275,7 @@ class DataAccess(object):
                         unsure.append(user_id)
 
         placed_players = set(yes + no + unsure)
-        for user_id in active_player_ids:
+        for user_id in active_player_ids:  # ordered list — keeps summary output stable across runs
             if user_id not in placed_players:
                 unsure.append(user_id)
 
