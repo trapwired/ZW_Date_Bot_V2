@@ -238,9 +238,18 @@ through a feature service.
   (closes a pre-existing gap where an empty/malformed URL was stored and later
   crashed the player `/website` button render with a Telegram BadRequest);
   invalid input tells the admin and leaves the link unchanged. 60 green.
-- **2b-iii — remaining slices (todo):** StatsService (StatsNode / AdminNode
-  statistics / ResetStatisticsCallbackNode). Plus the small reads in Node.py base
-  / InitNode / EditNode / UpdateNode.
+- **2b-iii-d — stats (done, branch `phase-2b-iii-d-stats`):** expanded the stub
+  `StatisticsService` with the stats read surface (`get_player_reminder_metrics`,
+  `get_attendance_statistics`, `get_event_attendance_summary` folding the always-paired
+  `get_stats_event`+`get_names`, `reset_reminder_statistics`). Routed StatsNode (its
+  event read goes through the existing `EventService.get_event`), AdminNode's two
+  statistics handlers, and ResetStatisticsCallbackNode through the services — all
+  three now zero `data_access`. AdminNode is now fully `data_access`-free. Wired
+  StatisticsService through main.py / NodeHandler / the test fixture. Added the
+  stats-flow pins (reset yes/no, reminder + event statistics render). 12 nodes
+  `data_access`-free. 65 green.
+- **2b-iii — remaining slices (todo):** the small reads in Node.py base /
+  InitNode / EditNode / UpdateNode.
 - **2b-iv — right-size the pass-through services** (`UserStateService` /
   `AdminService` / `StatisticsService`).
 
