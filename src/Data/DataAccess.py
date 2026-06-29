@@ -244,27 +244,39 @@ class DataAccess(object):
         return self.firebase_repository.get_user_state(user)
 
     def get_stats_event(self, event_id: str, event_type: Event) -> (list, list, list):
+        # Summary rules:
+        # - YES lists everyone who said yes, including retired/inactive players.
+        # - NO and UNSURE list only active players (ADMIN/PLAYER); a retired/inactive
+        #   player surfaces in a summary only by explicitly saying yes.
+        # - Active players with no attendance record default to UNSURE.
         yes = []
         no = []
         unsure = []
 
+        active_player_ids = [
+            UsersToState.from_dict(element.id, element.to_dict()).user_id
+            for element in self.firebase_repository.get_all_active_players_to_state()
+        ]
+        active_player_id_set = set(active_player_ids)
+
         event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=TABLES[event_type])
         for attendance in event_attendance_list:
             new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
+            user_id = new_attendance.user_id
+            is_active = user_id in active_player_id_set
             match new_attendance.state:
                 case AttendanceState.YES:
-                    yes.append(new_attendance.user_id)
+                    yes.append(user_id)
                 case AttendanceState.NO:
-                    no.append(new_attendance.user_id)
+                    if is_active:
+                        no.append(user_id)
                 case AttendanceState.UNSURE:
-                    unsure.append(new_attendance.user_id)
+                    if is_active:
+                        unsure.append(user_id)
 
-        all_added_players = set(yes + no + unsure)
-        all_users_to_state = self.firebase_repository.get_all_active_players_to_state()
-        for element in all_users_to_state:
-            user_to_state = UsersToState.from_dict(element.id, element.to_dict())
-            user_id = user_to_state.user_id
-            if user_id not in all_added_players:
+        placed_players = set(yes + no + unsure)
+        for user_id in active_player_ids:  # ordered list — keeps summary output stable across runs
+            if user_id not in placed_players:
                 unsure.append(user_id)
 
         return yes, no, unsure
