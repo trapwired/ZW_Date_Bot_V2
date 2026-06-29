@@ -20,10 +20,11 @@ class UpdateWebsiteCallbackNode(CallbackNode):
     required_roles = RoleSet.ADMINS
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
-                 user_state_service: UserStateService, node_handler):
+                 user_state_service: UserStateService, node_handler, website_service):
         super().__init__(telegram_service, data_access, trigger_service)
         self.user_state_service = user_state_service
         self.node_handler = node_handler
+        self.website_service = website_service
 
     async def handle(self, update: Update):
         query = update.callback_query
@@ -32,26 +33,28 @@ class UpdateWebsiteCallbackNode(CallbackNode):
         await query.answer()
 
         telegram_id = query.from_user.id
-        user_to_state = self.data_access.get_user_state(telegram_id)
 
         match callback_option:
             case CallbackOption.YES:
-                new_url = user_to_state.additional_info
-                self.data_access.set_website(new_url)
-                message = f'✅ The website link was updated to:\n{new_url}'
+                new_url, user_to_state = self.website_service.commit_pending_url(telegram_id)
+                if new_url is None:
+                    message = ('⚠️ That doesn\'t look like a valid URL - it must start with http:// or https://.\n'
+                               'The website link was not changed.')
+                else:
+                    message = f'✅ The website link was updated to:\n{new_url}'
             case CallbackOption.NO:
+                user_to_state = self.website_service.discard_pending_url(telegram_id)
                 message = 'Cancelled - the website link was not changed.'
             case _:
                 return
 
-        user_to_state.additional_info = ''
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
         await self.telegram_service.edit_callback_message(query, message)
 
         # The admin left the admin menu to type the URL, so re-render it with the correct keyboard.
-        admin = self.data_access.get_user(telegram_id)
+        # The callback's chat is the admin's DM, so `update` carries the right recipient.
         admin_node = self.node_handler.get_node(UserState.ADMIN)
         await self.telegram_service.send_message(
-            update=admin,
+            update=update,
             all_buttons=admin_node.get_commands_for_buttons(user_to_state.role, UserState.ADMIN, telegram_id),
             message_type=MessageType.ADMIN)

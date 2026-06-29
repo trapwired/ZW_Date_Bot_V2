@@ -23,6 +23,7 @@ from Services.TriggerService import TriggerService
 from Services.EventService import EventService
 from Services.AttendanceService import AttendanceService
 from Services.RoleService import RoleService
+from Services.WebsiteService import WebsiteService
 
 from Nodes.Node import Node
 from Nodes.DefaultNode import DefaultNode
@@ -92,7 +93,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
     def __init__(self, bot: telegram.Bot, api_config: ApiConfig, telegram_service: TelegramService,
                  user_state_service: UserStateService, admin_service: AdminService, ics_service: IcsService,
                  data_access: DataAccess, trigger_service: TriggerService, event_service: EventService,
-                 attendance_service: AttendanceService, role_service: RoleService):
+                 attendance_service: AttendanceService, role_service: RoleService, website_service: WebsiteService):
         super().__init__(self.handle_message)
         self.bot = bot
         self.user_state_service = user_state_service
@@ -102,6 +103,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.event_service = event_service
         self.attendance_service = attendance_service
         self.role_service = role_service
+        self.website_service = website_service
 
         self.node_transition_arguments = {}
 
@@ -176,7 +178,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             allowed_roles=RoleSet.REJECTED,
             needs_description=False)
 
-        default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access)
+        default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access,
+                                   self.website_service)
         default_node.add_transition('/website', default_node.handle_website)
         default_node.add_transition('/privacy', default_node.handle_privacy, allowed_roles=RoleSet.REALLY_EVERYONE)
         default_node.add_transition('/stats', new_state=UserState.STATS, message_type=MessageType.STATS_OVERVIEW)
@@ -254,7 +257,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
                                            edit_timekeepings_node.handle_event_id)
 
-        admin_node = AdminNode(UserState.ADMIN, telegram_service, user_state_service, data_access, self.role_service)
+        admin_node = AdminNode(UserState.ADMIN, telegram_service, user_state_service, data_access, self.role_service,
+                               self.website_service)
         admin_node.add_continue_later()
         admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
         admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
@@ -267,7 +271,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                                 data_access)
 
         admin_statistics_node = AdminNode(UserState.ADMIN_STATISTICS, telegram_service, user_state_service, data_access,
-                                          self.role_service)
+                                          self.role_service, self.website_service)
         admin_statistics_node.add_continue_later()
 
         admin_statistics_node.add_transition('/reminder_statistics', admin_statistics_node.handle_statistics)
@@ -298,7 +302,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                                         self.event_service)
 
         admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access,
-                                      self.role_service)
+                                      self.role_service, self.website_service)
         admin_update_node.add_continue_later()
         admin_update_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
         admin_update_node.add_transition(
@@ -420,7 +424,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.assign_roles_callback_node = AssignRolesCallbackNode(telegram_service, data_access, trigger_service,
                                                                   user_state_service, self, self.role_service)
         update_website_callback_node = UpdateWebsiteCallbackNode(telegram_service, data_access, trigger_service,
-                                                                 user_state_service, self)
+                                                                 user_state_service, self, self.website_service)
 
         callback_nodes_dict = {
             UserState.EDIT: edit_callback_node,

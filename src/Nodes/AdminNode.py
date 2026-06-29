@@ -20,9 +20,10 @@ from Utils import RoleAssignment
 class AdminNode(Node):
 
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, role_service):
+                 data_access: DataAccess, role_service, website_service):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.role_service = role_service
+        self.website_service = website_service
 
     async def handle_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         all_statistics = self.data_access.get_user_to_player_metric()
@@ -68,7 +69,7 @@ class AdminNode(Node):
             reply_markup=RoleAssignment.build_overview_markup(counts))
 
     async def handle_update_website(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        current = self.data_access.get_website()
+        current = self.website_service.get_url()
         current_text = current if current else 'not set'
         message = (f'The website link shown to players is currently:\n{current_text}\n\n'
                    'Send me the new URL, or /cancel to abort.')
