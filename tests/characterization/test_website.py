@@ -51,6 +51,17 @@ async def test_confirm_no_keeps_existing_url(node_handler, data_access, bot):
     assert_no_error_reported(bot)
 
 
+async def test_confirm_yes_normalizes_schemeless_host(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="www.google.com")
+
+    update = await drive_callback(node_handler, ADMIN_ID, _confirm_data(CallbackOption.YES))
+
+    assert data_access.get_website() == "https://www.google.com"   # scheme defaulted to https
+    assert data_access.get_user_state(ADMIN_ID).additional_info == ''
+    assert any("https://www.google.com" in e.text for e in update.callback_query.edits)
+    assert_no_error_reported(bot)
+
+
 async def test_confirm_yes_rejects_invalid_url(node_handler, data_access, bot):
     data_access.set_website(OLD_URL)
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="not a url")
