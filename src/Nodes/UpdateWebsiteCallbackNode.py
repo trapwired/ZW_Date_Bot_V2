@@ -37,7 +37,11 @@ class UpdateWebsiteCallbackNode(CallbackNode):
         match callback_option:
             case CallbackOption.YES:
                 new_url, user_to_state = self.website_service.commit_pending_url(telegram_id)
-                message = f'✅ The website link was updated to:\n{new_url}'
+                if new_url is None:
+                    message = ('⚠️ That doesn\'t look like a valid URL - it must start with http:// or https://.\n'
+                               'The website link was not changed.')
+                else:
+                    message = f'✅ The website link was updated to:\n{new_url}'
             case CallbackOption.NO:
                 user_to_state = self.website_service.discard_pending_url(telegram_id)
                 message = 'Cancelled - the website link was not changed.'

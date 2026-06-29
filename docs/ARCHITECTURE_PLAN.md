@@ -233,7 +233,11 @@ through a feature service.
   `data_access` for the website slice (the callback's redundant `get_user`
   re-render fetch dropped: the callback Update already carries the admin's chat).
   Added the website-flow pin (confirm yes/no, admin display, player button,
-  unconfigured). 9 nodes `data_access`-free. 58 green.
+  unconfigured). 9 nodes `data_access`-free. Review follow-up: `commit_pending_url`
+  now validates the staged value is an http(s) URL and refuses anything else
+  (closes a pre-existing gap where an empty/malformed URL was stored and later
+  crashed the player `/website` button render with a Telegram BadRequest);
+  invalid input tells the admin and leaves the link unchanged. 60 green.
 - **2b-iii — remaining slices (todo):** StatsService (StatsNode / AdminNode
   statistics / ResetStatisticsCallbackNode). Plus the small reads in Node.py base
   / InitNode / EditNode / UpdateNode.

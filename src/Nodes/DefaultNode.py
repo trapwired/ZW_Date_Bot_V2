@@ -21,7 +21,7 @@ class DefaultNode(Node):
 
     async def handle_website(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         website = self.website_service.get_url()
-        if website is None:
+        if not website:
             await self.telegram_service.send_message(
                 update=update,
                 all_buttons=None,

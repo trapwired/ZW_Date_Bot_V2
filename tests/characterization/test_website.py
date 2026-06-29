@@ -51,6 +51,29 @@ async def test_confirm_no_keeps_existing_url(node_handler, data_access, bot):
     assert_no_error_reported(bot)
 
 
+async def test_confirm_yes_rejects_invalid_url(node_handler, data_access, bot):
+    data_access.set_website(OLD_URL)
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="not a url")
+
+    update = await drive_callback(node_handler, ADMIN_ID, _confirm_data(CallbackOption.YES))
+
+    assert data_access.get_website() == OLD_URL         # invalid input not stored
+    staged = data_access.get_user_state(ADMIN_ID)
+    assert staged.additional_info == ''                 # staging field still cleared
+    assert any("valid URL" in e.text for e in update.callback_query.edits)
+    assert_no_error_reported(bot)
+
+
+async def test_confirm_yes_rejects_whitespace_url(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="   ")
+
+    await drive_callback(node_handler, ADMIN_ID, _confirm_data(CallbackOption.YES))
+
+    assert data_access.get_website() is None            # nothing committed
+    assert data_access.get_user_state(ADMIN_ID).additional_info == ''
+    assert_no_error_reported(bot)
+
+
 async def test_admin_menu_shows_current_url(node_handler, data_access, bot):
     data_access.set_website(OLD_URL)
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN)
