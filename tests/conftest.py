@@ -54,6 +54,7 @@ def services(data_access, bot, api_config):
     from Services.AttendanceService import AttendanceService
     from Services.RoleService import RoleService
     from Services.WebsiteService import WebsiteService
+    from Services.StatisticsService import StatisticsService
 
     admin_service = AdminService(data_access)
     telegram_service = TelegramService(bot, api_config, admin_service)
@@ -67,6 +68,7 @@ def services(data_access, bot, api_config):
         "attendance_service": AttendanceService(data_access),
         "role_service": RoleService(data_access),
         "website_service": WebsiteService(data_access),
+        "statistics_service": StatisticsService(data_access),
     }
 
 
@@ -78,4 +80,5 @@ def node_handler(bot, api_config, data_access, services):
         services["telegram_service"], services["user_state_service"], services["admin_service"],
         services["ics_service"], data_access, services["trigger_service"], services["event_service"],
         services["attendance_service"], services["role_service"], services["website_service"],
+        services["statistics_service"],
     )

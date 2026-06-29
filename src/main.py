@@ -45,7 +45,7 @@ def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _role_service = RoleService(_data_access)
     _website_service = WebsiteService(_data_access)
     return _telegram_service, _user_state_service, _admin_service, _ics_service, _data_access, _scheduling_service, \
-        _trigger_service, _event_service, _attendance_service, _role_service, _website_service
+        _trigger_service, _event_service, _attendance_service, _role_service, _website_service, _statistics_service
 
 
 async def send_hi(context: ContextTypes.DEFAULT_TYPE):
@@ -107,13 +107,14 @@ if __name__ == "__main__":
     application = ApplicationBuilder().token(api_config.get_key('Telegram', 'api_token')).build()
 
     telegram_service, user_state_service, admin_service, ics_service, data_access, scheduling_service, trigger_service, \
-        event_service, attendance_service, role_service, website_service = initialize_services(application.bot, api_config)
+        event_service, attendance_service, role_service, website_service, statistics_service = \
+        initialize_services(application.bot, api_config)
 
     # use_one_time_setup(data_access)
 
     node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service, admin_service,
                                ics_service, data_access, trigger_service, event_service, attendance_service,
-                               role_service, website_service)
+                               role_service, website_service, statistics_service)
     application.add_handler(node_handler)
 
     run_job_queue()

@@ -20,13 +20,14 @@ from Utils import RoleAssignment
 class AdminNode(Node):
 
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, role_service, website_service):
+                 data_access: DataAccess, role_service, website_service, statistics_service):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.role_service = role_service
         self.website_service = website_service
+        self.statistics_service = statistics_service
 
     async def handle_statistics(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        all_statistics = self.data_access.get_user_to_player_metric()
+        all_statistics = self.statistics_service.get_player_reminder_metrics()
         message = PrintUtils.pretty_print_statistics(all_statistics)
         await self.telegram_service.send_message(
             update=update,
@@ -45,7 +46,7 @@ class AdminNode(Node):
 
     async def _handle_event_statistics(self, event_type: Event, update: Update, user_to_state: UsersToState,
                                        new_state: UserState):
-        statistics = self.data_access.get_attendance_statistics(event_type)
+        statistics = self.statistics_service.get_attendance_statistics(event_type)
         message = PrintUtils.pretty_print_event_statistics(statistics, event_type)
         await self.telegram_service.send_message(
             update=update,
