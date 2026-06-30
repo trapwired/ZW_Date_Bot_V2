@@ -3,7 +3,27 @@
 Scope chosen: **Full reslice (Phases 0–4)**, **characterization tests first**.
 Secrets confirmed dummy/safe — no secret remediation in this plan.
 
-Status: PLAN ONLY. No code changed yet.
+## CURRENT STATUS (pick up here)
+
+As of 2026-06-30 (`main` @ PR #12 merged):
+
+- **Phases 0, 1, 2a, 2b-i…2b-iii-e: DONE.** Every *feature* node is
+  `data_access`-free; all data access goes node → service → `DataAccess`. 65 tests green
+  (`./venv/bin/python -m pytest -q`).
+- **One accepted exception** to "no `data_access` in `Nodes/`": the base
+  `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
+  in Phase 4 when base infra moves to `platform/`.
+- **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
+  user ↔ one team; scope at the data boundary). Implementation is post-reslice.
+
+**NEXT TASK → Phase 2b-iv** (right-size the pass-through services). Then Phase 3
+(collapse the 31→~12 `UserState` explosion), Phase 4 (physical reslice), Phase 6
+(diagram), Phase 7 (comment cleanup). Each increment: branch off `main`, pin the
+flow first where behavior is touched, one reviewable PR.
+
+Convention this far: one vertical/concern per PR; `do_checks` runs at
+`NodeHandler` construction so wiring errors fail the whole suite; commit trailer
+`Co-Authored-By: Claude Opus 4.8 (1M context)`.
 
 ---
 
@@ -266,8 +286,16 @@ through a feature service.
     feature slice). Revisit in Phase 4 when base infra moves to `platform/`.
     This is the one accepted exception to the "no `data_access` in Nodes/" exit
     criterion.
-- **2b-iv — right-size the pass-through services** (`UserStateService` /
-  `AdminService` / `StatisticsService`).
+- **2b-iv — right-size the pass-through services (TODO — next task).**
+  Re-evaluate the thin delegators: either give them real responsibility or inline them.
+  - `StatisticsService` — **no longer a stub** after 2b-iii-d (now owns the stats
+    read/reset surface); likely already right-sized. Confirm, don't churn.
+  - `UserStateService` — small (`get_user_state`, `update_user_state`,
+    `register_user`); judge whether it earns its keep or folds into callers.
+  - `AdminService` — inspect; it predates this sweep. Check current
+    responsibility and callers before deciding inline vs keep.
+  Approach: read each + its call sites first, propose keep/inline per service,
+  then act. Don't add ceremony; don't remove a seam that has real callers.
 
 ---
 
