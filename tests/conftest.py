@@ -46,7 +46,6 @@ def data_access(monkeypatch, fake_firestore, api_config):
 def services(data_access, bot, api_config):
     """The service stack, wired exactly like main.initialize_services but with the fake bot."""
     from Services.UserStateService import UserStateService
-    from Services.AdminService import AdminService
     from Services.TelegramService import TelegramService
     from Services.IcsService import IcsService
     from Services.TriggerService import TriggerService
@@ -56,11 +55,10 @@ def services(data_access, bot, api_config):
     from Services.WebsiteService import WebsiteService
     from Services.StatisticsService import StatisticsService
 
-    admin_service = AdminService(data_access)
-    telegram_service = TelegramService(bot, api_config, admin_service)
+    user_state_service = UserStateService(data_access)
+    telegram_service = TelegramService(bot, api_config, user_state_service)
     return {
-        "user_state_service": UserStateService(data_access),
-        "admin_service": admin_service,
+        "user_state_service": user_state_service,
         "telegram_service": telegram_service,
         "ics_service": IcsService(data_access),
         "trigger_service": TriggerService(data_access, telegram_service),
@@ -77,7 +75,7 @@ def node_handler(bot, api_config, data_access, services):
     from NodeHandler import NodeHandler
     return NodeHandler(
         bot, api_config,
-        services["telegram_service"], services["user_state_service"], services["admin_service"],
+        services["telegram_service"], services["user_state_service"],
         services["ics_service"], data_access, services["trigger_service"], services["event_service"],
         services["attendance_service"], services["role_service"], services["website_service"],
         services["statistics_service"],

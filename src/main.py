@@ -9,7 +9,6 @@ from Utils.ApiConfig import ApiConfig
 from NodeHandler import NodeHandler
 from Data.DataAccess import DataAccess
 
-from Services.AdminService import AdminService
 from Services.IcsService import IcsService
 from Services.TelegramService import TelegramService
 from Services.UserStateService import UserStateService
@@ -34,8 +33,7 @@ def initialize_logging():
 def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _data_access = DataAccess(api_config)
     _user_state_service = UserStateService(_data_access)
-    _admin_service = AdminService(_data_access)
-    _telegram_service = TelegramService(bot, api_config, _admin_service)
+    _telegram_service = TelegramService(bot, api_config, _user_state_service)
     _ics_service = IcsService(_data_access)
     _statistics_service = StatisticsService(_data_access)
     _scheduling_service = SchedulingService(_data_access, _telegram_service, _statistics_service, api_config)
@@ -44,7 +42,7 @@ def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _attendance_service = AttendanceService(_data_access)
     _role_service = RoleService(_data_access)
     _website_service = WebsiteService(_data_access)
-    return _telegram_service, _user_state_service, _admin_service, _ics_service, _data_access, _scheduling_service, \
+    return _telegram_service, _user_state_service, _ics_service, _data_access, _scheduling_service, \
         _trigger_service, _event_service, _attendance_service, _role_service, _website_service, _statistics_service
 
 
@@ -106,13 +104,13 @@ if __name__ == "__main__":
 
     application = ApplicationBuilder().token(api_config.get_key('Telegram', 'api_token')).build()
 
-    telegram_service, user_state_service, admin_service, ics_service, data_access, scheduling_service, trigger_service, \
+    telegram_service, user_state_service, ics_service, data_access, scheduling_service, trigger_service, \
         event_service, attendance_service, role_service, website_service, statistics_service = \
         initialize_services(application.bot, api_config)
 
     # use_one_time_setup(data_access)
 
-    node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service, admin_service,
+    node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service,
                                ics_service, data_access, trigger_service, event_service, attendance_service,
                                role_service, website_service, statistics_service)
     application.add_handler(node_handler)

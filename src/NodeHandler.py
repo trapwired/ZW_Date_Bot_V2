@@ -15,7 +15,6 @@ from Enums.Event import Event
 from Enums.MessageType import MessageType
 from Enums.CallbackOption import CallbackOption
 
-from Services.AdminService import AdminService
 from Services.IcsService import IcsService
 from Services.UserStateService import UserStateService
 from Services.TelegramService import TelegramService
@@ -92,14 +91,13 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
     GROUP_TYPES = [ChatType.GROUP, ChatType.SUPERGROUP]
 
     def __init__(self, bot: telegram.Bot, api_config: ApiConfig, telegram_service: TelegramService,
-                 user_state_service: UserStateService, admin_service: AdminService, ics_service: IcsService,
+                 user_state_service: UserStateService, ics_service: IcsService,
                  data_access: DataAccess, trigger_service: TriggerService, event_service: EventService,
                  attendance_service: AttendanceService, role_service: RoleService, website_service: WebsiteService,
                  statistics_service: StatisticsService):
         super().__init__(self.handle_message)
         self.bot = bot
         self.user_state_service = user_state_service
-        self.admin_service = admin_service
         self.data_access = data_access
         self.telegram_service = telegram_service
         self.event_service = event_service
