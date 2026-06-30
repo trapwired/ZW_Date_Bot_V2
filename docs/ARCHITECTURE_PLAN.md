@@ -248,8 +248,24 @@ through a feature service.
   StatisticsService through main.py / NodeHandler / the test fixture. Added the
   stats-flow pins (reset yes/no, reminder + event statistics render). 12 nodes
   `data_access`-free. 65 green.
-- **2b-iii — remaining slices (todo):** the small reads in Node.py base /
-  InitNode / EditNode / UpdateNode.
+- **2b-iii-e — base reads (done, branch `phase-2b-iii-e-base-node-reads`):**
+  routed the leftover feature-node reads through services - InitNode (new-user
+  registration → `UserStateService.register_user`), EditNode (event read →
+  `EventService.get_event`; attendance + TKE yes-count → new
+  `AttendanceService.get_attendance`/`yes_count`), UpdateNode (event read →
+  `EventService.get_event`). RejectedNode's explicit `data_access.update` was a
+  redundant write - the framework's post-transition `update_user_state` already
+  persists the role change - so it was deleted, not routed. Init/Rejected stay
+  covered by the existing `test_init_flow` pin; Edit/Update are pure read-routing
+  swaps. 65 green.
+  - **Deferred (decision): the base `Node.get_commands_for_buttons` reads**
+    (`get_user` + `get_all_event_attendances` for button rendering) stay on
+    `data_access`. They live in the shared base class every node extends, so
+    routing them through a feature service would inject that service into ~25
+    node constructions and invert the layering (base infra depending on a
+    feature slice). Revisit in Phase 4 when base infra moves to `platform/`.
+    This is the one accepted exception to the "no `data_access` in Nodes/" exit
+    criterion.
 - **2b-iv — right-size the pass-through services** (`UserStateService` /
   `AdminService` / `StatisticsService`).
 

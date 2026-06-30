@@ -40,7 +40,7 @@ class InitNode(Node):
             users_to_state = self.user_state_service.get_user_state(telegram_id)
         except ObjectNotFoundException:
             user = create_user(update)
-            users_to_state = self.data_access.add(user)
+            users_to_state = self.user_state_service.register_user(user)
         await super().handle(update, users_to_state)
 
     async def handle_start(self, update: Update, user_to_state: UsersToState, new_state: UserState):

@@ -20,3 +20,10 @@ class AttendanceService:
         attendance = self.data_access.update_attendance(Attendance(user.doc_id, doc_id, state), event_type)
         event = self.data_access.get_event(event_type, doc_id)
         return attendance, event
+
+    def get_attendance(self, telegram_id: int, doc_id: str, event_type: Event) -> Attendance:
+        return self.data_access.get_attendance(telegram_id, doc_id, event_type)
+
+    def yes_count(self, doc_id: str, event_type: Event) -> int:
+        yes, _, _ = self.data_access.get_stats_event(doc_id, event_type)
+        return len(yes)
