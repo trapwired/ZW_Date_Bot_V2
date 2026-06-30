@@ -367,5 +367,7 @@ state collapse is safest once flows are already single-path.
 - Trigger system is wired but underused (`TriggerService.initialize_triggers`
   has a commented stub) — revisit when a second trigger is needed.
 - Multi-team support (`todos.md`) — large feature; do it *after* the reslice, as a
-  new slice, not before.
+  new slice, not before. Approach decided in
+  [ADR 0001](adr/0001-multi-team-tenancy.md): scope at the data boundary off an
+  ambient tenant context; assume one Telegram user ↔ one team.
 </content>
