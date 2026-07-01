@@ -16,7 +16,7 @@ from Utils.ApiConfig import ApiConfig
 from databaseEntities.TelegramUser import TelegramUser
 from telegram.error import BadRequest, Forbidden
 
-from Services.UserStateService import UserStateService
+from framework.Services.UserStateService import UserStateService
 
 
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):

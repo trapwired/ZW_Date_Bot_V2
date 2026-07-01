@@ -45,10 +45,10 @@ def data_access(monkeypatch, fake_firestore, api_config):
 @pytest.fixture
 def services(data_access, bot, api_config):
     """The service stack, wired exactly like main.initialize_services but with the fake bot."""
-    from Services.UserStateService import UserStateService
-    from Services.TelegramService import TelegramService
+    from framework.Services.UserStateService import UserStateService
+    from framework.Services.TelegramService import TelegramService
     from features.attendance.IcsService import IcsService
-    from Services.TriggerService import TriggerService
+    from framework.Services.TriggerService import TriggerService
     from features.eventmgmt.EventService import EventService
     from features.attendance.AttendanceService import AttendanceService
     from features.roles.RoleService import RoleService
@@ -72,7 +72,7 @@ def services(data_access, bot, api_config):
 
 @pytest.fixture
 def node_handler(bot, api_config, data_access, services):
-    from NodeHandler import NodeHandler
+    from framework.NodeHandler import NodeHandler
     return NodeHandler(
         bot, api_config,
         services["telegram_service"], services["user_state_service"],

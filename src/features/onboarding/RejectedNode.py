@@ -4,7 +4,7 @@ from Enums.MessageType import MessageType
 from Enums.Role import Role
 from Enums.UserState import UserState
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 
 from databaseEntities.UsersToState import UsersToState
 

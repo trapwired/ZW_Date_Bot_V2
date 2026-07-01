@@ -1,6 +1,6 @@
 from telegram import Update
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 
 from Enums.UserState import UserState
 from Enums.MessageType import MessageType

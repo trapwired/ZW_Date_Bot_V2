@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
@@ -9,8 +9,8 @@ from Enums.AttendanceState import AttendanceState
 
 from databaseEntities.UsersToState import UsersToState
 
-from Services.TelegramService import TelegramService
-from Services.UserStateService import UserStateService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.UserStateService import UserStateService
 from Data.DataAccess import DataAccess
 
 from Utils import PrintUtils

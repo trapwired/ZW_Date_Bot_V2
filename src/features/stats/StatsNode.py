@@ -1,14 +1,14 @@
 from telegram import Update
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 
 from Enums.UserState import UserState
 from Enums.Event import Event
 
 from databaseEntities.UsersToState import UsersToState
 
-from Services.TelegramService import TelegramService
-from Services.UserStateService import UserStateService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.UserStateService import UserStateService
 from Data.DataAccess import DataAccess
 
 from Utils import PrintUtils

@@ -1,9 +1,9 @@
 from telegram import Update
 
-from Nodes.CallbackNode import CallbackNode
+from framework.Nodes.CallbackNode import CallbackNode
 
-from Services.TelegramService import TelegramService
-from Services.TriggerService import TriggerService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.TriggerService import TriggerService
 from Data.DataAccess import DataAccess
 
 from Utils import CallbackUtils

@@ -14,22 +14,20 @@ As of 2026-07-01:
   10 states deleted); **Phase 3b** collapsed the update-event field states (field/type →
   `additional_info`, two edit nodes merged into `EditEventFieldNode`, 7 states → 1).
   `UserState` is down **39 → 23**. **Phase 4** (physical reslice) is in progress,
-  features-first: **all feature/shell nodes** are now under `features/` (website, stats,
-  roles, attendance, eventmgmt, onboarding, menu); `Nodes/` holds only the framework base.
-  91 tests green (`./venv/bin/python -m pytest -q`).
+  features-first: **all feature/shell nodes** are under `features/`, and the framework
+  leftovers (`Node`/`CallbackNode`/`NodeHandler`/`Transitions`/framework services/
+  `NodeUtils`/`CommandDescriptions`) are under `framework/`. Only `databaseEntities`+
+  `Data` still await the `domain/`+`data/` rename. 91 tests green.
 - **One accepted exception** to "no `data_access` in `Nodes/`": the base
   `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
   in Phase 4 when base infra moves to `framework/`.
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 4 final: the `framework/`+`domain/`+`data/` rename.** Move the
-leftovers out of the layer folders: `Nodes/Node.py`+`CallbackNode.py`, `NodeHandler`,
-`Transitions/`, `Services/`(`TelegramService`, `UserStateService`, `TriggerService`,
-`SchedulingService`), `Utils/NodeUtils`+`CommandDescriptions` → `framework/`;
-`databaseEntities/` + `domain/` → `domain/`; `Data/` → `data/`; update `main.py`. Likely
-2 PRs (framework, then domain+data) to keep each reviewable. Then Phase 6 (diagram),
-Phase 7 (comment cleanup).
+**NEXT TASK → Phase 4 final (2/2): the `domain/`+`data/` rename.** Move
+`databaseEntities/` (the entities) + the existing `domain/` package together under
+`domain/`; move `Data/` → `data/`; update `main.py` + all importers. Then Phase 6
+(diagram), Phase 7 (comment cleanup).
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -401,11 +399,20 @@ Slice order (smallest first, as a mechanics canary):
     into `features.roles` (and injected website/stats services) are legitimate hub→feature
     dependencies — a menu depends on what it routes to. After this, `Nodes/` holds only the
     framework base (`Node`, `CallbackNode`). 91 green.
-17. Rename the leftovers: `Nodes/Node.py`+`CallbackNode.py`+`NodeHandler`+`Transitions`+
-    `TelegramService`+`NodeUtils`+`CommandDescriptions` → `framework/`; `databaseEntities`
-    + `domain` → `domain/`; `Data/` → `data/`. Update `main.py` composition root.
-    (`.github/workflows/deploy.yml`, `runtime.txt` unaffected; `pythonpath=src` so all
-    imports are `src`-relative.)
+17f. **framework rename (done, branch `phase-4g-framework-rename`).** Moved the
+    framework leftovers → `framework/`: `Node`+`CallbackNode` → `framework/Nodes/`,
+    `Transition`+`EventTransition` → `framework/Transitions/`, `TelegramService`+
+    `UserStateService`+`TriggerService`+`SchedulingService` → `framework/Services/`,
+    and `NodeHandler`+`NodeUtils`+`CommandDescriptions` → `framework/` root. Global import
+    rewrite across src+tests (~40 lines: TelegramService alone was imported in 22 files).
+    `Nodes/ Services/ Transitions/` deleted. 91 green.
+    - **Still open** (the accepted exception): base `framework/Nodes/Node.py`
+      `get_commands_for_buttons` still reads `data_access` directly. The move relocated
+      it out of `Nodes/` but did **not** resolve the read — that's a logic change (route
+      through a service / make it tenant-aware), tracked for the tenancy work, not this move.
+17. Remaining rename: `databaseEntities/` + `domain/` → `domain/`; `Data/` → `data/`.
+    Update `main.py`. (`.github/workflows/deploy.yml`, `runtime.txt` unaffected;
+    `pythonpath=src` so all imports are `src`-relative.)
 18. Update `README.md` + the excalidraw `ArchitectureOverview` to the new layout.
 
 Naming note: the framework layer is `framework/`, **not** `platform/` — a top-level

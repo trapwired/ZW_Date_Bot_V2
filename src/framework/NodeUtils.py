@@ -6,7 +6,7 @@ import pytz
 from Enums.Event import Event
 from Enums.RoleSet import RoleSet
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 
 from Utils import PrintUtils
 from Utils.CustomExceptions import NoEventFoundException

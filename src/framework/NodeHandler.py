@@ -15,16 +15,16 @@ from Enums.Event import Event
 from Enums.MessageType import MessageType
 
 from features.attendance.IcsService import IcsService
-from Services.UserStateService import UserStateService
-from Services.TelegramService import TelegramService
-from Services.TriggerService import TriggerService
+from framework.Services.UserStateService import UserStateService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.TriggerService import TriggerService
 from features.eventmgmt.EventService import EventService
 from features.attendance.AttendanceService import AttendanceService
 from features.roles.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
 from features.stats.StatisticsService import StatisticsService
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 from features.menu.DefaultNode import DefaultNode
 from features.onboarding.InitNode import InitNode
 from features.onboarding.RejectedNode import RejectedNode
@@ -47,8 +47,8 @@ from features.eventmgmt.UpdateEventCallbackNode import UpdateEventCallbackNode
 from Data.DataAccess import DataAccess
 
 from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundException, MissingCommandDescriptionException
-from Utils.CommandDescriptions import CommandDescriptions
-from Utils import NodeUtils
+from framework.CommandDescriptions import CommandDescriptions
+from framework import NodeUtils
 from Utils import CallbackUtils
 from features.roles import RoleAssignment
 from Utils.ApiConfig import ApiConfig

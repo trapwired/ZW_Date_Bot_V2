@@ -1,6 +1,6 @@
 from telegram import Update
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 
 from domain import EventDateTimeParser
 from domain import AttendanceResetPolicy
@@ -18,8 +18,8 @@ from Utils import CallbackUtils
 from Utils import PrintUtils
 
 from Data.DataAccess import DataAccess
-from Services.TelegramService import TelegramService
-from Services.UserStateService import UserStateService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.UserStateService import UserStateService
 
 
 class EditEventFieldNode(Node):

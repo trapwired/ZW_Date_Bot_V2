@@ -2,7 +2,7 @@ import os
 
 from telegram import Update, InputFile
 
-from Nodes.CallbackNode import CallbackNode
+from framework.Nodes.CallbackNode import CallbackNode
 
 from Utils import CallbackUtils
 from Utils import PrintUtils
@@ -12,8 +12,8 @@ from Enums.UserState import UserState
 
 from Data.DataAccess import DataAccess
 
-from Services.TelegramService import TelegramService
-from Services.TriggerService import TriggerService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.TriggerService import TriggerService
 from features.attendance.IcsService import IcsService
 
 from Triggers.TriggerPayload import TriggerPayload
