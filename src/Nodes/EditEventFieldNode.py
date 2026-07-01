@@ -44,50 +44,39 @@ class EditEventFieldNode(Node):
             message_type=MessageType.ADMIN)
 
     async def handle_event_field(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        try_parse = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
-        if not try_parse:
+        edit = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
+        if not edit:
             return await self.handle_parse_additional_info_failed(user_to_state, update)
 
-        message_id, chat_id, doc_id, event_type, field = try_parse
         message = update.message.text.lower()
 
-        if field == CallbackOption.DATETIME:
-            await self._update_timestamp(update, user_to_state, event_type, doc_id, message_id, chat_id, message)
+        old_event = None
+        if edit.field == CallbackOption.DATETIME:
+            parsed = EventDateTimeParser.parse_future(message)
+            if not parsed.ok:
+                # Parsing failed - report and stay on this step without changing anything.
+                await self.telegram_service.send_message_with_normal_keyboard(update=update, message=parsed.error)
+                return
+            old_event = self.event_service.get_event(edit.event_type, edit.doc_id)
+            new_value = parsed.value
         else:
-            await self._update_string(update, user_to_state, event_type, doc_id, message_id, chat_id, field, message)
+            new_value = message
 
-    async def _update_string(self, update: Update, user_to_state: UsersToState, event_type: Event, doc_id: str,
-                             message_id: int, chat_id: int, field: CallbackOption, new_value: str):
-        updated_event = self.event_service.update_field(event_type, doc_id, new_value, field)
-        await self._finish_update(update, user_to_state, event_type, updated_event, message_id, chat_id)
+        updated_event = self.event_service.update_field(edit.event_type, edit.doc_id, new_value, edit.field)
 
-    async def _update_timestamp(self, update: Update, user_to_state: UsersToState, event_type: Event, doc_id: str,
-                                message_id: int, chat_id: int, message: str):
-        parsed = EventDateTimeParser.parse_future(message)
-        if not parsed.ok:
-            # Parsing failed - report and stay on this step without changing anything.
-            await self.telegram_service.send_message_with_normal_keyboard(update=update, message=parsed.error)
-            return
+        new_inline_message = UpdateEventUtils.get_inline_message('Updated', edit.event_type, updated_event)
+        await self.telegram_service.edit_inline_message_text(new_inline_message, edit.message_id, edit.chat_id)
+        await self.telegram_service.send_message_with_normal_keyboard(update=update, message="Updated event successfully!")
+        self.node_handler.recalculate_node_transitions()
 
-        old_event = self.event_service.get_event(event_type, doc_id)
-        updated_event = self.event_service.update_field(event_type, doc_id, parsed.value, CallbackOption.DATETIME)
-        await self._finish_update(update, user_to_state, event_type, updated_event, message_id, chat_id)
-
-        if AttendanceResetPolicy.requires_attendance_reset(old_event.timestamp, updated_event.timestamp):
-            await self.notify_all_players(event_type, doc_id, updated_event, old_event)
+        if old_event is not None and AttendanceResetPolicy.requires_attendance_reset(old_event.timestamp,
+                                                                                     updated_event.timestamp):
+            await self.notify_all_players(edit.event_type, edit.doc_id, updated_event, old_event)
             text = ('Since the event was moved by more than 2 hours, I invalidated all previous answers and let all '
                     'players know...')
             await self.telegram_service.send_message_with_normal_keyboard(update=update, message=text)
 
-    async def _finish_update(self, update: Update, user_to_state: UsersToState, event_type: Event, updated_event,
-                             message_id: int, chat_id: int):
-        new_inline_message = UpdateEventUtils.get_inline_message('Updated', event_type, updated_event)
-        await self.telegram_service.edit_inline_message_text(new_inline_message, message_id, chat_id)
-
-        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
-        await self.telegram_service.send_message_with_normal_keyboard(update=update, message="Updated event successfully!")
-
-        self.node_handler.recalculate_node_transitions()
+        # handle_cancel does the authoritative reset: state -> ADMIN, clear additional_info, render the admin menu.
         await self.handle_cancel(update, user_to_state, UserState.ADMIN)
 
     async def notify_all_players(self, event_type: Event, doc_id: str, updated_event, old_event):

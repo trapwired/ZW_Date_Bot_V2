@@ -10,11 +10,13 @@ from Enums.UserState import UserState
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
 from databaseEntities.Game import Game
+from databaseEntities.Training import Training
 from databaseEntities.TempData import TempData
 from Utils import CallbackUtils
 from Utils.CustomExceptions import ObjectNotFoundException, NoTempDataFoundException
 from domain.EventDateTimeParser import parse
-from tests.helpers import drive_callback, seed_user, current_state, assert_no_error_reported
+from tests.helpers import (drive_callback, make_callback_update, seed_user, current_state,
+                           assert_no_error_reported)
 
 ADMIN_ID = 1000
 FUTURE = "24.12.2030 18:30"
@@ -66,3 +68,21 @@ async def test_add_save_callback_creates_event_and_clears_draft(node_handler, da
         data_access.get_temp_data(uts.user_id)
     assert current_state(data_access, ADMIN_ID) == UserState.ADMIN
     assert_no_error_reported(bot)
+
+
+async def test_opponent_edit_on_non_game_is_rejected(node_handler, data_access):
+    # OPPONENT is only a game field; a training/timekeeping OPPONENT edit can only come from
+    # a forged or stale callback. The node raises (NodeHandler turns that into a maintainer
+    # alert in production) rather than transitioning into the edit state and later writing a
+    # phantom attribute. Driven at the node so the assertion isn't the harness's maintainer
+    # path (send_maintainer_message dispatches on a real telegram.Update, which the fake isn't).
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE)
+    training = data_access.add(Training(parse(FUTURE).value, "sporthalle"))
+
+    update = make_callback_update(ADMIN_ID, _cb(UserState.ADMIN_UPDATE, Event.TRAINING,
+                                                CallbackOption.OPPONENT, training.doc_id))
+    callback_node = node_handler.get_callback_node(update)
+    with pytest.raises(ValueError):
+        await callback_node.handle(update)
+
+    assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_UPDATE  # no transition to the edit state

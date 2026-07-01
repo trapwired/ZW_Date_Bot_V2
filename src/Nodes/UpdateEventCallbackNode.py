@@ -92,6 +92,11 @@ class UpdateEventCallbackNode(CallbackNode):
                 return
 
         if callback_option in [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT]:
+            if callback_option == CallbackOption.OPPONENT and event_type is not Event.GAME:
+                # Only games have an opponent. The UI never offers this button for other
+                # types, so an OPPONENT edit on a training/timekeeping is a forged or stale
+                # callback - fail loudly (maintainer alert) instead of writing a phantom field.
+                raise ValueError(f'{event_type} has no opponent field to edit')
             updated_event_summary = UpdateEventUtils.mark_updating_in_event_string(event_type, event_summary,
                                                                                    callback_option)
             callback_message = 'Updating ' + event_label + ': ' + updated_event_summary
