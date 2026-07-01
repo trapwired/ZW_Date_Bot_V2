@@ -1,4 +1,4 @@
-"""Pin the two callback codecs Phase 1 merges into one.
+"""Pin the callback codecs (CallbackUtils, RoleAssignment).
 
 The wire format is a PERSISTENCE contract: callback_data lives inside Telegram
 messages already delivered to users, so a merge must reproduce these exact strings
@@ -36,7 +36,7 @@ def test_additional_information_roundtrip_and_format():
     built = CallbackUtils.build_additional_information(5, 10, "d1", Event.GAME, CallbackOption.LOCATION)
     assert built == "5#10#d1#0#20"
     assert CallbackUtils.try_parse_additional_information(built) == (5, 10, "d1", Event.GAME, CallbackOption.LOCATION)
-    assert CallbackUtils.try_parse_additional_information("5#10#d1") is None  # pre-3b 3-field format
+    assert CallbackUtils.try_parse_additional_information("5#10#d1") is None  # legacy 3-field format
     assert CallbackUtils.try_parse_additional_information("bad") is None
 
 

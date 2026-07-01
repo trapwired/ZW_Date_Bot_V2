@@ -3,11 +3,11 @@
 - **Status:** Accepted
 - **Date:** 2026-07-01
 - **Deciders:** Dominic Weibel
-- **Context phase:** decided during Phase 3a (the `UserState` collapse).
+- **Context:** decided during the `UserState` collapse.
 
 ## Context
 
-The refactor changes persisted shapes. Phase 3a deleted 10 `UserState` enum values
+The refactor changes persisted shapes. Collapsing the add-event wizard deleted 10 `UserState` enum values
 (the per-field add-event wizard states) and added a `TempData.step` field. Both the
 `UserState` of a user and the in-progress `TempData` draft are persisted in Firestore,
 so at deploy time there can be **live records carrying the old shape**:
@@ -34,7 +34,7 @@ Two strategies were considered:
 the deserialization boundary rather than by a bulk migration script.
 
 - `UserState._missing_` maps deleted legacy ints to their surviving parent state
-  (the pre-3a add-wizard values → `ADMIN_ADD_GAME` / `_TRAINING` / `_TIMEKEEPING`).
+  (the legacy add-wizard values → `ADMIN_ADD_GAME` / `_TRAINING` / `_TIMEKEEPING`).
   Genuinely unknown values still raise, so typos/corruption are not silently masked.
 - `TempData.from_dict` infers `step` from which fields are already filled when the
   persisted draft has none, so an in-flight wizard resumes where it left off instead
@@ -76,6 +76,6 @@ intervention.
 
 ## Related
 
-- `docs/ARCHITECTURE_PLAN.md` — Phase 3a (the `UserState` collapse this covers).
-- `src/Enums/UserState.py` (`_missing_`), `src/databaseEntities/TempData.py`
+- `docs/ARCHITECTURE.md` — the `UserState` collapse this covers.
+- `src/Enums/UserState.py` (`_missing_`), `src/domain/entities/TempData.py`
   (`from_dict` / `infer_step`).

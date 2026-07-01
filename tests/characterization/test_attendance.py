@@ -1,7 +1,6 @@
 """Characterization: a player setting attendance + exporting an event to calendar.
 
-Pins EditCallbackNode before Phase 2b-iii routes its persistence through
-AttendanceService. Callback-driven (EDIT#<event>#<state>#<doc_id>).
+Pins EditCallbackNode (persistence via AttendanceService). Callback-driven (EDIT#<event>#<state>#<doc_id>).
 """
 import pytest
 

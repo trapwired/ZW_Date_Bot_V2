@@ -33,9 +33,8 @@ to **Firestore**; the reply is sent back out via `TelegramService`.
 reminders and trainer summaries, reading events via `data` and sending via
 `TelegramService`.
 
-The refactor that produced this structure is documented in
-[`docs/ARCHITECTURE_PLAN.md`](docs/ARCHITECTURE_PLAN.md), with key decisions in
-[`docs/adr/`](docs/adr).
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full description, with key
+decisions in [`docs/adr/`](docs/adr).
 
 ## Setup
 

@@ -1,7 +1,6 @@
-"""Unit tests for the event datetime parser (moved to domain in Phase 2).
+"""Unit tests for the event datetime parser (domain.EventDateTimeParser).
 
-The old str-or-value contract is gone: parse() now returns a ParsedDateTime with
-.ok / .value / .error.
+parse() returns a ParsedDateTime with .ok / .value / .error.
 """
 import pandas as pd
 

@@ -1,4 +1,4 @@
-"""Pin the per-event renderers Phase 1 de-triplicates.
+"""Pin the per-event renderers (PrintUtils).
 
 Expected values are composed from the real Format helpers so the test pins the
 COMPOSITION ('bold(datetime) | escape(location)' etc.), staying robust to the

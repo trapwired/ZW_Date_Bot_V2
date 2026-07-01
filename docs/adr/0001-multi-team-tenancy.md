@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-30
 - **Deciders:** Dominic Weibel
-- **Context phase:** decided during Phase 2b (node-thinning), to be *implemented* after the Phase 0–4 reslice.
+- **Context:** decided during the node-thinning work; implemented after the physical reslice (now complete).
 
 ## Context
 
@@ -22,7 +22,7 @@ Two questions had to be settled before tenancy can be designed:
 1. **Where does the team filter live?** (the scoping mechanism)
 2. **Can one Telegram user belong to more than one team?** (the identity model)
 
-The Phase 2 node-thinning sweep (PRs #8–#11) is the relevant enabler: every
+The node-thinning sweep (PRs #8–#11) is the relevant enabler: every
 *feature* node now reaches data through a small set of services
 (`EventService`, `AttendanceService`, `StatisticsService`, `RoleService`,
 `WebsiteService`, `UserStateService`) rather than calling `DataAccess` directly.
@@ -36,7 +36,7 @@ methods on top of the single `DataAccess`/`FirebaseRepository` boundary.
 A `(telegram_id) → team` lookup is a **total function**. We do **not** support a
 person belonging to multiple teams at once. This keeps team resolution stateless
 (no per-interaction "current team" selector) and avoids entangling tenancy with
-the Phase 3 `UserState` collapse.
+the `UserState` collapse.
 
 If the multi-team-per-user requirement ever appears, it is a **new ADR that
 supersedes this one** — it would reintroduce a per-interaction current-team
@@ -64,12 +64,12 @@ moves the "easy to forget" leak from nodes to services.
 ## Consequences
 
 **Positive**
-- The Phase 2 service layer is the right shape for this: tenant scoping lands in
+- The service layer is the right shape for this: tenant scoping lands in
   a handful of seams plus the data boundary, not in 18 view nodes.
 - `UserStateService.register_user(user)` is the single place a user is created —
   the natural spot to stamp the user's team on join.
-- Single-team-per-user keeps team resolution a pure function and keeps Phase 3
-  (state collapse) independent of tenancy.
+- Single-team-per-user keeps team resolution a pure function and keeps the state collapse
+  independent of tenancy.
 
 **Negative / cost**
 - The data layer is the heavy lift: `FirebaseRepository` must move from global
@@ -81,13 +81,13 @@ moves the "easy to forget" leak from nodes to services.
 
 **Follow-ups to close before/with implementation**
 - The base `Node.get_commands_for_buttons` still reads `data_access` directly
-  (`get_user`, `get_all_event_attendances`) — the one accepted exception from
-  Phase 2b-iii-e. It must become tenant-aware too; cleanest once base infra moves
-  to `platform/` in Phase 4. It's a single known location, not scatter.
+  (`get_user`, `get_all_event_attendances`) — the one accepted exception.
+  It must become tenant-aware too; it lives in `framework/Nodes/Node.py`, a single
+  known location, not scatter.
 - Decide team-partitioning strategy at the Firestore level (subcollections per
   team vs. a `teamId` field + composite indexes).
 
 ## Related
 
-- `docs/ARCHITECTURE_PLAN.md` — Phase 2b (the service seams), Phase 4 (reslice +
-  base-Node read), and the "Out of scope: multi-team" note that this ADR refines.
+- `docs/ARCHITECTURE.md` — the service seams, the reslice, and the base-Node read that
+  this ADR refines.
