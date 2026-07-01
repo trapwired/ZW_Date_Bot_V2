@@ -7,22 +7,24 @@ Secrets confirmed dummy/safe — no secret remediation in this plan.
 
 As of 2026-07-01:
 
-- **Phases 0, 1, 2a, 2b-i…2b-iv, 3a: DONE.** Every *feature* node is
+- **Phases 0, 1, 2a, 2b-i…2b-iv, 3a, 3b: DONE.** Every *feature* node is
   `data_access`-free; all data access goes node → service → `DataAccess`. The
   pass-through services are right-sized (`AdminService` inlined into
-  `UserStateService`). **Phase 3a** collapsed the add-event wizard: the step moved
-  into `TempData.step` and the 10 add-field `UserState`s were deleted (**39 → 29**).
-  67 tests green (`./venv/bin/python -m pytest -q`).
+  `UserStateService`). **Phase 3a** collapsed the add-event wizard (step → `TempData.step`,
+  10 states deleted); **Phase 3b** collapsed the update-event field states (field/type →
+  `additional_info`, two edit nodes merged into `EditEventFieldNode`, 7 states → 1).
+  `UserState` is down **39 → 23**. 90 tests green (`./venv/bin/python -m pytest -q`).
 - **One accepted exception** to "no `data_access` in `Nodes/`": the base
   `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
   in Phase 4 when base infra moves to `platform/`.
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 3b** (collapse the 7 update-field `UserState`s; **29 → 22**).
-Then optional deeper state collapse, Phase 4 (physical reslice), Phase 6 (diagram),
-Phase 7 (comment cleanup). Each increment: branch off `main`, pin the flow first
-where behavior is touched, one reviewable PR.
+**NEXT TASK → Phase 4** (physical reslice into `platform/ domain/ features/ data/`).
+Optional deeper state collapse (per-type `ADMIN_ADD_*` / `STATS_*` / `EDIT_*` → single
+states with the type in context) can precede it if we want to approach ~12. Then
+Phase 6 (diagram), Phase 7 (comment cleanup). Each increment: branch off `main`, pin
+the flow first where behavior is touched, one reviewable PR.
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -327,12 +329,19 @@ overview was approximate.) Too large for one PR, so split like Phase 2b:
   parent state. **39 → 29** states. Wizard tests now pin `state` + `temp_data.step`.
   67 green.
 
-**3b — update-event flow (TODO — next task).** Collapse the **7** update-field states
-(`ADMIN_UPDATE_*_{LOCATION,OPPONENT,TIMESTAMP}`, wired to per-field
-`EditEventTimestampNode`/`EditEventLocationOrOpponentNode` instances) into the 3
-parent update states. Those nodes already discover their field from `self.string_type`
-/ `self.event_type` + `additional_info`, not from the state, so the state is
-vestigial there. **29 → 22.**
+**3b — update-event flow (done, branch `phase-3b-update-field-states`).** The 7
+update-field states each routed to a dedicated node instance
+(`EditEventTimestampNode`×3 / `EditEventLocationOrOpponentNode`×4) whose field +
+event type were baked into the instance. Since the field/type are context, not state:
+- Merged the two near-identical node classes into one `EditEventFieldNode` at a single
+  new state `ADMIN_UPDATE_EVENT_FIELD`; the event type and field now travel in
+  `additional_info` (extended from 3 fields to 5), so one node handles every
+  event-type/field combination (the DATETIME branch keeps the >2h attendance-reset
+  policy). `UpdateEventCallbackNode` sets the single state and stashes type+field;
+  `get_new_user_state` deleted.
+- Deleted the **7** field states + their wiring. **29 → 23** (one unified edit state
+  rather than folding into the parent list states, which already mean "browsing the
+  event list"). Per ADR 0002 the 7 legacy ints self-heal to `ADMIN_UPDATE`.
 
 Deeper collapse (per-type `ADMIN_ADD_*` / `ADMIN_UPDATE_*` / `STATS_*` / `EDIT_*` →
 single states with the type in context) can follow if we want to approach ~12, but

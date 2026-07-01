@@ -31,8 +31,16 @@ def test_legacy_add_state_int_coerces_to_parent(legacy_value, expected):
     assert UserState(legacy_value) is expected
 
 
+@pytest.mark.parametrize("legacy_value", [100, 101, 102, 110, 112, 120, 122])
+def test_legacy_update_field_state_int_coerces_to_update_menu(legacy_value):
+    # Phase 3b collapsed the per-field update states; a user mid-edit drops back to the
+    # update menu (their old additional_info can't resume under the new format).
+    assert UserState(legacy_value) is UserState.ADMIN_UPDATE
+
+
 def test_current_states_still_resolve():
     assert UserState(56) is UserState.ADMIN_ADD_GAME
+    assert UserState(140) is UserState.ADMIN_UPDATE_EVENT_FIELD
     assert UserState(999) is UserState.REJECTED
 
 
