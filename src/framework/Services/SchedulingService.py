@@ -13,7 +13,6 @@ from Enums.Event import Event
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
 
-from Utils.CustomExceptions import ObjectNotFoundException
 from Utils import PrintUtils
 from Utils import CallbackUtils
 from Utils.ApiConfig import ApiConfig

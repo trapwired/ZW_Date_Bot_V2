@@ -1,4 +1,3 @@
-import logging
 from abc import ABC
 from functools import partial
 from typing import Callable

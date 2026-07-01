@@ -1,4 +1,3 @@
-import configparser
 
 import telegram
 from telegram import Update, ChatMemberRestricted, ChatMemberMember, ChatMemberAdministrator, ChatMemberOwner

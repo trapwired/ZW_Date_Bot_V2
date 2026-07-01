@@ -1,5 +1,4 @@
 from datetime import datetime
-import pandas as pd
 from multipledispatch import dispatch
 
 import firebase_admin
@@ -24,7 +23,7 @@ from databaseEntities.PlayerMetric import PlayerMetric
 from databaseEntities.TempData import TempData
 from databaseEntities.Settings import Settings
 
-from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, NoEventFoundException, \
+from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, \
     NoTempDataFoundException, TooManyObjectsFoundException
 from Utils import PathUtils
 from Utils.ApiConfig import ApiConfig
