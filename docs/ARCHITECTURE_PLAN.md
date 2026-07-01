@@ -24,11 +24,10 @@ As of 2026-07-01:
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 6** (final architecture diagram: update `README.md` + the excalidraw
-`ArchitectureOverview` to the resliced `framework/features/domain/data` layout) and
-**Phase 7** (comment cleanup: strip phase-narration comments now that the design has
-settled). Optional follow-ups: the deeper `UserState` collapse (~12), and resolving the
-base-`Node` `data_access` read as part of the tenancy work (ADR 0001).
+**NEXT TASK → Phase 7** (comment cleanup: strip phase-narration comments now that the
+design has settled). Phase 6 (architecture diagram + README) is DONE. Optional
+follow-ups: Phase 5 (observability), the deeper `UserState` collapse (~12), and
+resolving the base-`Node` `data_access` read as part of the tenancy work (ADR 0001).
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -452,12 +451,22 @@ It should capture:
   `StateMachine.excalidraw` / `NodesInheritance.excalidraw`.
 - **Background jobs:** the APScheduler reminders/summaries off SchedulingService.
 
-Save as `docs/ArchitectureOverview.excalidraw` (replacing the stale one; remove
-`StateMachine.excalidraw` / `NodesInheritance.excalidraw` if fully superseded).
-Can be authored via the Excalidraw MCP or hand-written `.excalidraw` JSON. Do this
-LAST so the diagram reflects the final structure, not an intermediate one.
+### Phase 6 — STATUS: DONE (branch `phase-6-architecture-diagram`)
 
-Exit criteria: diagram matches the shipped code; README links to it.
+Authored a fresh **Excalidraw** scene (cloud, via the Excalidraw MCP) showing the
+request pipeline (Telegram → NodeHandler → feature slice → domain → data → Firestore
++ response), the seven `features/` slices, the shared `framework`/`domain`/`data`
+layers, the background-jobs path (APScheduler → SchedulingService → TelegramService),
+and a state-machine note (UserState 39 → 23). Rewrote `README.md`: fixed the stale
+"telepot" line, linked the diagram, and added a concise self-contained architecture
+section. Deleted the three stale 2023/2024 files (`ArchitectureOverview.excalidraw`,
+`StateMachine.excalidraw`, `NodesInheritance.excalidraw`).
+
+Diagram: https://app.excalidraw.com/s/3a3Hj2SHqi7/eD5BdVpW7v (owner's Excalidraw
+workspace; enable link-sharing for external viewers). Note: reality is **23** states,
+not the "~12" the plan aspired to — the diagram/README reflect the shipped number.
+
+Exit criteria met: diagram matches the shipped code; README links to it.
 
 ---
 
