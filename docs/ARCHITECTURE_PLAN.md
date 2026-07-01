@@ -424,4 +424,15 @@ state collapse is safest once flows are already single-path.
   new slice, not before. Approach decided in
   [ADR 0001](adr/0001-multi-team-tenancy.md): scope at the data boundary off an
   ambient tenant context; assume one Telegram user ↔ one team.
+- Admin "what's new" broadcast (`todos.md`) — a small `announce` slice reusing the
+  existing player fan-out; build after the refactor, not folded into it.
+
+## Deployment & migration
+
+Schema-affecting state changes (deleted `UserState`s, new persisted fields) **self-heal
+on read** rather than via bulk migration scripts — decided in
+[ADR 0002](adr/0002-state-migration-strategy.md). Phase 3a is the worked example:
+`UserState._missing_` coerces legacy add-wizard ints to their parent state and
+`TempData.from_dict` infers a missing `step`, so a user mid-wizard at deploy time is
+restored with no manual reset or broadcast.
 </content>
