@@ -5,22 +5,24 @@ Secrets confirmed dummy/safe — no secret remediation in this plan.
 
 ## CURRENT STATUS (pick up here)
 
-As of 2026-06-30 (`main` @ PR #12 merged):
+As of 2026-07-01:
 
-- **Phases 0, 1, 2a, 2b-i…2b-iv: DONE.** Every *feature* node is
+- **Phases 0, 1, 2a, 2b-i…2b-iv, 3a: DONE.** Every *feature* node is
   `data_access`-free; all data access goes node → service → `DataAccess`. The
-  pass-through services are right-sized: `StatisticsService` + `UserStateService`
-  kept, `AdminService` inlined into `UserStateService` and deleted. 65 tests green
-  (`./venv/bin/python -m pytest -q`).
+  pass-through services are right-sized (`AdminService` inlined into
+  `UserStateService`). **Phase 3a** collapsed the add-event wizard: the step moved
+  into `TempData.step` and the 10 add-field `UserState`s were deleted (**39 → 29**).
+  67 tests green (`./venv/bin/python -m pytest -q`).
 - **One accepted exception** to "no `data_access` in `Nodes/`": the base
   `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
   in Phase 4 when base infra moves to `platform/`.
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 3** (collapse the 31→~12 `UserState` explosion). Then Phase 4
-(physical reslice), Phase 6 (diagram), Phase 7 (comment cleanup). Each increment:
-branch off `main`, pin the flow first where behavior is touched, one reviewable PR.
+**NEXT TASK → Phase 3b** (collapse the 7 update-field `UserState`s; **29 → 22**).
+Then optional deeper state collapse, Phase 4 (physical reslice), Phase 6 (diagram),
+Phase 7 (comment cleanup). Each increment: branch off `main`, pin the flow first
+where behavior is touched, one reviewable PR.
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -308,22 +310,39 @@ through a feature service.
 
 ## Phase 3 — Collapse the UserState explosion
 
-Goal: `UserState` 31 → ~12. Wizard step lives in `TempData`, not the enum.
+Goal: shrink the `UserState` explosion by moving wizard/field steps out of the enum
+and into context. (The enum actually had **39** members, not 31 — the "31" in the
+overview was approximate.) Too large for one PR, so split like Phase 2b:
 
-12. **Add a `step` field to `TempData`** (already the natural home — it persists the
-    in-progress event and even has `get_finished_event()`). The wizard advances
-    `temp_data.step` instead of switching `UserState`.
-13. **Merge states:** `ADMIN_ADD_GAME_{TIMESTAMP,LOCATION,OPPONENT,FINISH}` →
-    single `ADMIN_ADD_GAME`; same for TRAINING / TIMEKEEPING. Update `NodeHandler`
-    wiring (the big `all_nodes_dict`) and the callback state maps in
-    `AddEventCallbackNode` / `UpdateEventCallbackNode` accordingly.
-14. Re-run characterization tests — externally observable behavior must be identical.
+**3a — add-event wizard (done, branch `phase-3a-add-wizard-step`).**
+- Added `TempData.step` (a `CallbackOption`: DATETIME → LOCATION → [OPPONENT] → SAVE);
+  round-trips through `to_dict`/`from_dict`, defaults to DATETIME on draft creation.
+- The whole add wizard now runs on a single per-type state (`ADMIN_ADD_GAME` /
+  `_TRAINING` / `_TIMEKEEPING`); `AddEventFieldsNode` reads/advances `temp_data.step`
+  instead of `_step_index(user_to_state.state)`, and `_prompt_next` no longer mutates
+  UserState. `AdminAddNode` / `AddEventCallbackNode` helpers point at the parent state.
+- Deleted the **10** add-field states
+  (`ADMIN_ADD_*_{TIMESTAMP,LOCATION,OPPONENT}`, `ADMIN_FINISH_ADD_*`) and their
+  `all_nodes_dict` entries; the `/game|/training|/timekeeping` transitions target the
+  parent state. **39 → 29** states. Wizard tests now pin `state` + `temp_data.step`.
+  67 green.
+
+**3b — update-event flow (TODO — next task).** Collapse the **7** update-field states
+(`ADMIN_UPDATE_*_{LOCATION,OPPONENT,TIMESTAMP}`, wired to per-field
+`EditEventTimestampNode`/`EditEventLocationOrOpponentNode` instances) into the 3
+parent update states. Those nodes already discover their field from `self.string_type`
+/ `self.event_type` + `additional_info`, not from the state, so the state is
+vestigial there. **29 → 22.**
+
+Deeper collapse (per-type `ADMIN_ADD_*` / `ADMIN_UPDATE_*` / `STATS_*` / `EDIT_*` →
+single states with the type in context) can follow if we want to approach ~12, but
+each is its own increment — don't fold into 3a/3b.
 
 > DDD note: the wizard is now an aggregate that owns its own step/invariant
 > ("save only when required fields valid"). The invariant is enforced in one place
 > instead of across 4 states × 3 nodes.
 
-Exit criteria: ~12 states, `do_checks` green, suite green.
+Exit criteria per increment: `do_checks` green, suite green.
 
 ---
 
@@ -405,4 +424,15 @@ state collapse is safest once flows are already single-path.
   new slice, not before. Approach decided in
   [ADR 0001](adr/0001-multi-team-tenancy.md): scope at the data boundary off an
   ambient tenant context; assume one Telegram user ↔ one team.
+- Admin "what's new" broadcast (`todos.md`) — a small `announce` slice reusing the
+  existing player fan-out; build after the refactor, not folded into it.
+
+## Deployment & migration
+
+Schema-affecting state changes (deleted `UserState`s, new persisted fields) **self-heal
+on read** rather than via bulk migration scripts — decided in
+[ADR 0002](adr/0002-state-migration-strategy.md). Phase 3a is the worked example:
+`UserState._missing_` coerces legacy add-wizard ints to their parent state and
+`TempData.from_dict` infers a missing `step`, so a user mid-wizard at deploy time is
+restored with no manual reset or broadcast.
 </content>

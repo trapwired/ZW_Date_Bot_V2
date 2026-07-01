@@ -293,11 +293,11 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         admin_add_node.add_continue_later()
         admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
         admin_add_node.add_transition('/game', admin_add_node.handle_add_game,
-                                      new_state=UserState.ADMIN_ADD_GAME_TIMESTAMP)
+                                      new_state=UserState.ADMIN_ADD_GAME)
         admin_add_node.add_transition('/training', admin_add_node.handle_add_training,
-                                      new_state=UserState.ADMIN_ADD_TRAINING_TIMESTAMP)
+                                      new_state=UserState.ADMIN_ADD_TRAINING)
         admin_add_node.add_transition('/timekeeping', admin_add_node.handle_add_timekeeping,
-                                      new_state=UserState.ADMIN_ADD_TIMEKEEPING_TIMESTAMP,
+                                      new_state=UserState.ADMIN_ADD_TIMEKEEPING,
                                       allowed_roles=RoleSet.PLAYERS)
 
         admin_add_game_node = AddEventFieldsNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service,
@@ -404,18 +404,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION: admin_update_timekeeping_location_node,
             UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP: admin_update_timekeeping_timestamp_node,
             UserState.ADMIN_ADD_GAME: admin_add_game_node,
-            UserState.ADMIN_ADD_GAME_TIMESTAMP: admin_add_game_node,
-            UserState.ADMIN_ADD_GAME_LOCATION: admin_add_game_node,
-            UserState.ADMIN_ADD_GAME_OPPONENT: admin_add_game_node,
-            UserState.ADMIN_FINISH_ADD_GAME: admin_add_game_node,
             UserState.ADMIN_ADD_TRAINING: admin_add_training_node,
-            UserState.ADMIN_ADD_TRAINING_TIMESTAMP: admin_add_training_node,
-            UserState.ADMIN_ADD_TRAINING_LOCATION: admin_add_training_node,
-            UserState.ADMIN_FINISH_ADD_TRAINING: admin_add_training_node,
-            UserState.ADMIN_ADD_TIMEKEEPING: admin_add_timekeeping_node,
-            UserState.ADMIN_ADD_TIMEKEEPING_TIMESTAMP: admin_add_timekeeping_node,
-            UserState.ADMIN_ADD_TIMEKEEPING_LOCATION: admin_add_timekeeping_node,
-            UserState.ADMIN_FINISH_ADD_TIMEKEEPING: admin_add_timekeeping_node
+            UserState.ADMIN_ADD_TIMEKEEPING: admin_add_timekeeping_node
         }
 
         return all_nodes_dict

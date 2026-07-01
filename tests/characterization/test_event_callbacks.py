@@ -38,7 +38,7 @@ async def test_delete_game_callback_removes_the_event(node_handler, data_access,
 
 
 async def test_add_cancel_callback_discards_draft(node_handler, data_access, bot):
-    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_ADD_GAME_TIMESTAMP)
+    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_ADD_GAME)
     draft = data_access.add(TempData(uts.user_id, Event.GAME, chat_id=ADMIN_ID, query_id=10))
 
     await drive_callback(node_handler, ADMIN_ID,
@@ -51,10 +51,10 @@ async def test_add_cancel_callback_discards_draft(node_handler, data_access, bot
 
 
 async def test_add_save_callback_creates_event_and_clears_draft(node_handler, data_access, bot):
-    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_FINISH_ADD_GAME)
+    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_ADD_GAME)
     draft = data_access.add(TempData(uts.user_id, Event.GAME, timestamp=parse(FUTURE).value,
                                      location="home arena", opponent="rivals fc",
-                                     chat_id=ADMIN_ID, query_id=10))
+                                     step=CallbackOption.SAVE, chat_id=ADMIN_ID, query_id=10))
 
     await drive_callback(node_handler, ADMIN_ID,
                          _cb(UserState.ADMIN_ADD_GAME, Event.GAME, CallbackOption.SAVE, draft.doc_id))
