@@ -10,6 +10,7 @@ from Enums.AttendanceState import AttendanceState
 from Enums.AddEventMarkup import AddEventMarkup
 
 from databaseEntities.UsersToState import UsersToState
+from databaseEntities.TempData import FIELD_ORDER
 
 from Data.DataAccess import DataAccess
 
@@ -23,16 +24,10 @@ from Utils import CallbackUtils
 from domain import EventDateTimeParser
 
 
-# Ordered field-collection steps per event type. The only thing that differs
-# between game/training/timekeeping is this list (games additionally collect an
-# opponent), so a single flow walks it instead of three copy-pasted handlers.
-# The current step lives in temp_data.step, not in UserState, so the whole wizard
-# runs on a single per-type state (ADMIN_ADD_GAME etc.); SAVE marks the finish step.
-_ADD_STEPS = {
-    Event.GAME: [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT],
-    Event.TRAINING: [CallbackOption.DATETIME, CallbackOption.LOCATION],
-    Event.TIMEKEEPING: [CallbackOption.DATETIME, CallbackOption.LOCATION],
-}
+# The wizard walks TempData.FIELD_ORDER (games additionally collect an opponent), so a
+# single flow handles all three event types instead of three copy-pasted handlers. The
+# current step lives in temp_data.step, not in UserState, so the whole wizard runs on a
+# single per-type state (ADMIN_ADD_GAME etc.); SAVE marks the finish step.
 
 # The UserState encoded into the inline-keyboard callback channel for the add flow.
 _ADD_USER_STATE = {
@@ -75,7 +70,7 @@ class AddEventFieldsNode(Node):
             await self._prompt_next(update, CallbackOption.SAVE)
             return
 
-        steps = _ADD_STEPS[self.event_type]
+        steps = FIELD_ORDER[self.event_type]
         field = temp_data.step
 
         if field == CallbackOption.DATETIME:

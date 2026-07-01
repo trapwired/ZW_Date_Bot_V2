@@ -39,3 +39,26 @@ class UserState(IntEnum):
     ADMIN_UPDATE_WEBSITE = 131
 
     REJECTED = 999
+
+    @classmethod
+    def _missing_(cls, value):
+        # Phase 3a collapsed the per-field add-event states into the per-type parent and
+        # moved the step into TempData.step. Coerce any persisted pre-3a value so a user
+        # who was mid-wizard at deploy time reads back as the parent state instead of
+        # crashing on UserState(int(state)). Returning None keeps genuinely unknown values
+        # a ValueError.
+        return _LEGACY_ADD_STATES.get(value)
+
+
+_LEGACY_ADD_STATES = {
+    103: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_TIMESTAMP
+    104: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_LOCATION
+    105: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_OPPONENT
+    106: UserState.ADMIN_ADD_GAME,        # ADMIN_FINISH_ADD_GAME
+    113: UserState.ADMIN_ADD_TRAINING,    # ADMIN_ADD_TRAINING_LOCATION
+    114: UserState.ADMIN_ADD_TRAINING,    # ADMIN_ADD_TRAINING_TIMESTAMP
+    115: UserState.ADMIN_ADD_TRAINING,    # ADMIN_FINISH_ADD_TRAINING
+    123: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_ADD_TIMEKEEPING_LOCATION
+    124: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_ADD_TIMEKEEPING_TIMESTAMP
+    125: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_FINISH_ADD_TIMEKEEPING
+}

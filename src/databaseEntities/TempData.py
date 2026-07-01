@@ -12,6 +12,16 @@ from databaseEntities.TimekeepingEvent import TimekeepingEvent
 from databaseEntities.Training import Training
 
 
+# Ordered fields the add-event wizard collects per event type (games also collect an
+# opponent). Single source of truth for both the wizard's step traversal
+# (AddEventFieldsNode) and TempData.infer_step, so the two can't drift.
+FIELD_ORDER = {
+    Event.GAME: (CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT),
+    Event.TRAINING: (CallbackOption.DATETIME, CallbackOption.LOCATION),
+    Event.TIMEKEEPING: (CallbackOption.DATETIME, CallbackOption.LOCATION),
+}
+
+
 class TempData(DatabaseEntity):
 
     def __init__(self, user_doc_id: str, event_type: Event, timestamp: pd.Timestamp | str = None, location: str = None,
@@ -35,9 +45,25 @@ class TempData(DatabaseEntity):
 
     @staticmethod
     def from_dict(doc_id: str, source: dict):
-        return TempData(source['userDocId'], source['eventType'], source['timestamp'], source['location'],
-                        source['opponent'], source['chatId'], source['queryId'],
-                        source.get('step', CallbackOption.DATETIME), doc_id)
+        temp_data = TempData(source['userDocId'], source['eventType'], source['timestamp'], source['location'],
+                             source['opponent'], source['chatId'], source['queryId'], doc_id=doc_id)
+        stored_step = source.get('step')
+        # Legacy drafts (created before TempData.step existed) have no persisted step;
+        # infer it from which fields are already filled so an in-flight wizard resumes
+        # where it left off instead of restarting at the timestamp prompt.
+        temp_data.step = CallbackOption(int(stored_step)) if stored_step is not None else temp_data.infer_step()
+        return temp_data
+
+    def infer_step(self) -> CallbackOption:
+        """The wizard step implied by which fields are already collected: the first
+        field in the collection order that is still empty, or SAVE once all are set."""
+        collected = {CallbackOption.DATETIME: self.timestamp,
+                     CallbackOption.LOCATION: self.location,
+                     CallbackOption.OPPONENT: self.opponent}
+        for step in FIELD_ORDER[self.event_type]:
+            if collected[step] is None:
+                return step
+        return CallbackOption.SAVE
 
     def to_dict(self):
         return {'userDocId': self.user_doc_id,
