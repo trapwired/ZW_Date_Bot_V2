@@ -220,7 +220,10 @@ class TelegramService(object):
         messages_to_send = PrintUtils.split_message(message)
         if len(messages_to_send) > 1:
             await self.send_maintainer_message('Message too long (2): \n\n' + message)
-        await self._send_message(chat_id=chat_id, message=messages_to_send[0], reply_markup=ReplyKeyboardRemove())
+        # Return the sent message so callers (e.g. the add-event RESTART flow) can act on it,
+        # matching send_message; without this it returned None and delete_previous_message crashed.
+        return await self._send_message(chat_id=chat_id, message=messages_to_send[0],
+                                        reply_markup=ReplyKeyboardRemove())
 
     async def send_info_message_to_trainers(self, message: str, event_type: Event):
         messages_to_send = PrintUtils.split_message(message)
@@ -309,6 +312,8 @@ class TelegramService(object):
                                       parse_mode=telegram.constants.ParseMode.HTML)
 
     async def delete_previous_message(self, message: Message):
+        if message is None:
+            return
         await self._delete_message(message.message_id - 1, message.chat_id)
 
     async def delete_message(self, update: Update):
