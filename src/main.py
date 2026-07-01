@@ -17,7 +17,7 @@ from Services.TriggerService import TriggerService
 from features.stats.StatisticsService import StatisticsService
 from Services.EventService import EventService
 from Services.AttendanceService import AttendanceService
-from Services.RoleService import RoleService
+from features.roles.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
 
 from OneTimeSetup import OneTimeSetup

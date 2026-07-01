@@ -20,7 +20,7 @@ from Services.TelegramService import TelegramService
 from Services.TriggerService import TriggerService
 from Services.EventService import EventService
 from Services.AttendanceService import AttendanceService
-from Services.RoleService import RoleService
+from features.roles.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
 from features.stats.StatisticsService import StatisticsService
 
@@ -37,7 +37,7 @@ from Nodes.UpdateNode import UpdateNode
 from Nodes.EditEventFieldNode import EditEventFieldNode
 from Nodes.AddEventCallbackNode import AddEventCallbackNode
 from features.stats.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
-from Nodes.AssignRolesCallbackNode import AssignRolesCallbackNode
+from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
 from features.website.UpdateWebsiteNode import UpdateWebsiteNode
 from features.website.UpdateWebsiteCallbackNode import UpdateWebsiteCallbackNode
 
@@ -50,7 +50,7 @@ from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundExceptio
 from Utils.CommandDescriptions import CommandDescriptions
 from Utils import NodeUtils
 from Utils import CallbackUtils
-from Utils import RoleAssignment
+from features.roles import RoleAssignment
 from Utils.ApiConfig import ApiConfig
 
 

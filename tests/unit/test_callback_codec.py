@@ -10,7 +10,7 @@ from Enums.CallbackOption import CallbackOption
 from Enums.Role import Role
 
 from Utils import CallbackUtils
-from Utils import RoleAssignment
+from features.roles import RoleAssignment
 
 
 # --- event-attendance codec (CallbackUtils) ---------------------------------
