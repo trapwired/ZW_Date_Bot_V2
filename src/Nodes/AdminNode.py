@@ -14,7 +14,7 @@ from Data.DataAccess import DataAccess
 
 from Utils import CallbackUtils
 from Utils import PrintUtils
-from Utils import RoleAssignment
+from features.roles import RoleAssignment
 
 
 class AdminNode(Node):

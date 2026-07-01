@@ -51,7 +51,7 @@ def services(data_access, bot, api_config):
     from Services.TriggerService import TriggerService
     from Services.EventService import EventService
     from Services.AttendanceService import AttendanceService
-    from Services.RoleService import RoleService
+    from features.roles.RoleService import RoleService
     from features.website.WebsiteService import WebsiteService
     from features.stats.StatisticsService import StatisticsService
 

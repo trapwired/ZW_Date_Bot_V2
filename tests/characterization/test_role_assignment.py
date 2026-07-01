@@ -7,7 +7,7 @@ seeded as an admin for the positive cases.
 """
 from Enums.Role import Role
 from Enums.UserState import UserState
-from Utils import RoleAssignment
+from features.roles import RoleAssignment
 from tests.helpers import drive, drive_callback, seed_user, assert_no_error_reported
 
 ADMIN_ID = 1200

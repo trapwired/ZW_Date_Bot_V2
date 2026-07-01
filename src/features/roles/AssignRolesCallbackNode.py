@@ -16,7 +16,7 @@ from Services.TriggerService import TriggerService
 from Services.UserStateService import UserStateService
 
 from Utils import PrintUtils
-from Utils import RoleAssignment
+from features.roles import RoleAssignment
 from Utils import Format
 
 
