@@ -262,7 +262,7 @@ class TelegramService(object):
             await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
                                         parse_mode=telegram.constants.ParseMode.HTML)
 
-    async def report_exception(self, description: str, error: Exception, update: Update = None):
+    async def report_exception(self, description: str, error: Exception, update: Update | None = None):
         """Report an unhandled exception: log it with a traceback, then best-effort alert the
         maintainer. The log happens first and unconditionally, so a failure stays visible in
         the logs (greppable, alertable) even when the alert send itself fails or the maintainer
