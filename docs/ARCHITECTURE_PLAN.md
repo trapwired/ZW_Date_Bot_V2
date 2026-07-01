@@ -14,19 +14,19 @@ As of 2026-07-01:
   10 states deleted); **Phase 3b** collapsed the update-event field states (field/type →
   `additional_info`, two edit nodes merged into `EditEventFieldNode`, 7 states → 1).
   `UserState` is down **39 → 23**. **Phase 4** (physical reslice) is in progress,
-  features-first: **website**, **stats**, **roles**, **attendance** slices are moved into
-  `features/`. 91 tests green (`./venv/bin/python -m pytest -q`).
+  features-first: **website**, **stats**, **roles**, **attendance**, **eventmgmt** slices
+  are moved into `features/`. 91 tests green (`./venv/bin/python -m pytest -q`).
 - **One accepted exception** to "no `data_access` in `Nodes/`": the base
   `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
   in Phase 4 when base infra moves to `framework/`.
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 4 cont.** — next slice: **eventmgmt** (the biggest:
-`AddEventFieldsNode`, `AddEventCallbackNode`, `AdminAddNode`, `UpdateNode`,
-`UpdateEventCallbackNode`, `EditEventFieldNode`, `EventService`, + `Utils/UpdateEventUtils`
-→ `features/eventmgmt/`), then onboarding/admin, then the `framework/`+`domain/`+`data/`
-rename. Then Phase 6 (diagram), Phase 7 (comment cleanup). One reviewable PR per slice.
+**NEXT TASK → Phase 4 cont.** — next slice: **onboarding/admin** (`InitNode`,
+`RejectedNode`, `DefaultNode`, and the `AdminNode` hub → `features/onboarding/` or
+`admin/`; this also resolves the transitional `AdminNode → features.roles` edge). Then
+the `framework/`+`domain/`+`data/` rename of the leftovers. Then Phase 6 (diagram),
+Phase 7 (comment cleanup). One reviewable PR per slice.
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -385,6 +385,13 @@ Slice order (smallest first, as a mechanics canary):
     `EditCallbackNode`, `AttendanceService`, `IcsService` → `features/attendance/`;
     rewired `NodeHandler`, `main.py`, `conftest`, and `EditCallbackNode`'s own
     `IcsService` import. 91 green.
+17d. **eventmgmt (done, branch `phase-4e-eventmgmt-slice`).** The 6 event nodes
+    (`AddEventFieldsNode`, `AddEventCallbackNode`, `AdminAddNode`, `UpdateNode`,
+    `UpdateEventCallbackNode`, `EditEventFieldNode`) + `EventService` →
+    `features/eventmgmt/`; rewired `NodeHandler`, `main.py`, `conftest`. **`UpdateEventUtils`
+    stayed in `Utils/`** (not moved as originally listed): it and `PrintUtils` mutually
+    import, and `PrintUtils` is shared — moving it would make a shared util depend on a
+    feature. So it's a shared presentation helper. Zero internal import changes. 91 green.
 17. Rename the leftovers: `Nodes/Node.py`+`CallbackNode.py`+`NodeHandler`+`Transitions`+
     `TelegramService`+`NodeUtils`+`CommandDescriptions` → `framework/`; `databaseEntities`
     + `domain` → `domain/`; `Data/` → `data/`. Update `main.py` composition root.
