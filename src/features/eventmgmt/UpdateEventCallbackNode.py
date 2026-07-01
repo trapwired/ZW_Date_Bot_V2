@@ -11,7 +11,7 @@ from Enums.Role import Role
 from Enums.RoleSet import RoleSet
 from Enums.UserState import UserState
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from framework.Services.TelegramService import TelegramService
 from framework.Services.TriggerService import TriggerService

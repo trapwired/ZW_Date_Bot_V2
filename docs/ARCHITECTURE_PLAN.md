@@ -14,20 +14,21 @@ As of 2026-07-01:
   10 states deleted); **Phase 3b** collapsed the update-event field states (field/type →
   `additional_info`, two edit nodes merged into `EditEventFieldNode`, 7 states → 1).
   `UserState` is down **39 → 23**. **Phase 4** (physical reslice) is in progress,
-  features-first: **all feature/shell nodes** are under `features/`, and the framework
-  leftovers (`Node`/`CallbackNode`/`NodeHandler`/`Transitions`/framework services/
-  `NodeUtils`/`CommandDescriptions`) are under `framework/`. Only `databaseEntities`+
-  `Data` still await the `domain/`+`data/` rename. 91 tests green.
+  **Phase 4 (physical reslice) is DONE:** `framework/ features/ domain/ data/` (+ shared
+  `Enums/`, `Utils/`). Every capability lives in one `features/<name>/` folder; the
+  framework, domain models, and data layer are separated. `import main` boots. 91 tests
+  green (`./venv/bin/python -m pytest -q`).
 - **One accepted exception** to "no `data_access` in `Nodes/`": the base
   `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
   in Phase 4 when base infra moves to `framework/`.
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 4 final (2/2): the `domain/`+`data/` rename.** Move
-`databaseEntities/` (the entities) + the existing `domain/` package together under
-`domain/`; move `Data/` → `data/`; update `main.py` + all importers. Then Phase 6
-(diagram), Phase 7 (comment cleanup).
+**NEXT TASK → Phase 6** (final architecture diagram: update `README.md` + the excalidraw
+`ArchitectureOverview` to the resliced `framework/features/domain/data` layout) and
+**Phase 7** (comment cleanup: strip phase-narration comments now that the design has
+settled). Optional follow-ups: the deeper `UserState` collapse (~12), and resolving the
+base-`Node` `data_access` read as part of the tenancy work (ADR 0001).
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -410,9 +411,17 @@ Slice order (smallest first, as a mechanics canary):
       `get_commands_for_buttons` still reads `data_access` directly. The move relocated
       it out of `Nodes/` but did **not** resolve the read — that's a logic change (route
       through a service / make it tenant-aware), tracked for the tenancy work, not this move.
-17. Remaining rename: `databaseEntities/` + `domain/` → `domain/`; `Data/` → `data/`.
-    Update `main.py`. (`.github/workflows/deploy.yml`, `runtime.txt` unaffected;
-    `pythonpath=src` so all imports are `src`-relative.)
+17g. **domain + data rename (done, branch `phase-4h-domain-data-rename`).**
+    `databaseEntities/` → `domain/entities/` (+ `__init__.py`, joining the existing
+    `domain/` policies/parser); `Data/` → `data/` (a case-only rename on macOS's
+    case-insensitive FS — done via a two-step `git mv Data → _datatmp → data` so git
+    records a real rename). Global rewrite (`databaseEntities` was imported in 47 files);
+    also caught `import data.FirebaseRepository as fr` in conftest. Boot smoke `import main`
+    passes. 91 green. **Phase 4 structure done** — a capability now lives in one
+    `features/<name>/` folder; framework/domain/data are separated.
+    - Leftovers still shared (intended or minor): `Enums/` + `Utils/` are shared layers;
+      `Triggers/` (trigger domain objects) and root `OneTimeSetup.py` (dev script) weren't
+      placed — minor, revisit if they earn a home.
 18. Update `README.md` + the excalidraw `ArchitectureOverview` to the new layout.
 
 Naming note: the framework layer is `framework/`, **not** `platform/` — a top-level

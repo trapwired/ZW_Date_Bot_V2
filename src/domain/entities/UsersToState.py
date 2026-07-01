@@ -1,7 +1,7 @@
 from Enums.Role import Role
 from Enums.UserState import UserState
 
-from databaseEntities.DatabaseEntity import DatabaseEntity
+from domain.entities.DatabaseEntity import DatabaseEntity
 
 
 def get_role(role: Role | str | int) -> Role:

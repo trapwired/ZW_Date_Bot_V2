@@ -8,13 +8,13 @@ from Enums.MessageType import MessageType
 from Enums.Role import Role
 from Enums.UserState import UserState
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from framework.Services.UserStateService import UserStateService
 from framework.Services.TelegramService import TelegramService
 
-from databaseEntities.TelegramUser import TelegramUser
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.TelegramUser import TelegramUser
+from domain.entities.UsersToState import UsersToState
 
 from Utils.CustomExceptions import ObjectNotFoundException
 from Utils.ApiConfig import ApiConfig

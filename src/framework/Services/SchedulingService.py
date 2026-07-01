@@ -1,7 +1,7 @@
 import datetime
 import random
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from framework.Services.TelegramService import TelegramService
 from features.stats.StatisticsService import StatisticsService
@@ -17,7 +17,7 @@ from Utils import PrintUtils
 from Utils import CallbackUtils
 from Utils.ApiConfig import ApiConfig
 
-from databaseEntities.TelegramUser import TelegramUser
+from domain.entities.TelegramUser import TelegramUser
 
 
 def get_events_in_x_days(all_future_events, reminder_frequency):

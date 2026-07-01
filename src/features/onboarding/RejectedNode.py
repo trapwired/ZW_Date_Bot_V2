@@ -6,7 +6,7 @@ from Enums.UserState import UserState
 
 from framework.Nodes.Node import Node
 
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.UsersToState import UsersToState
 
 
 class RejectedNode(Node):

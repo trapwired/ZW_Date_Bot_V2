@@ -1,9 +1,9 @@
-from Data import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.Role import Role
 from Enums.UserState import UserState
-from databaseEntities.TelegramUser import TelegramUser
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.TelegramUser import TelegramUser
+from domain.entities.UsersToState import UsersToState
 
 
 class UserStateService(object):

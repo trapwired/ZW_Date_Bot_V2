@@ -9,10 +9,10 @@ from Enums.CallbackOption import CallbackOption
 from Enums.AttendanceState import AttendanceState
 from Enums.AddEventMarkup import AddEventMarkup
 
-from databaseEntities.UsersToState import UsersToState
-from databaseEntities.TempData import FIELD_ORDER
+from domain.entities.UsersToState import UsersToState
+from domain.entities.TempData import FIELD_ORDER
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from framework.Services.TelegramService import TelegramService
 from framework.Services.UserStateService import UserStateService

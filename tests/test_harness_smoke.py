@@ -4,7 +4,7 @@ If these pass, the in-memory Firestore + FakeBot stack is sound and NodeHandler'
 startup invariants (do_checks) hold — the foundation for the characterization suite.
 """
 from Enums.UserState import UserState
-from databaseEntities.TelegramUser import TelegramUser
+from domain.entities.TelegramUser import TelegramUser
 
 
 def test_node_handler_builds_and_passes_do_checks(node_handler):

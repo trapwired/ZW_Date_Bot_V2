@@ -1,4 +1,4 @@
-from databaseEntities.Attendance import Attendance
+from domain.entities.Attendance import Attendance
 
 from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState

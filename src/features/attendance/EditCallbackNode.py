@@ -10,7 +10,7 @@ from Utils import PrintUtils
 from Enums.CallbackOption import CallbackOption
 from Enums.UserState import UserState
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from framework.Services.TelegramService import TelegramService
 from framework.Services.TriggerService import TriggerService

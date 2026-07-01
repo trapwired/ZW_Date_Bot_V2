@@ -1,6 +1,6 @@
 from abc import ABC
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.RoleSet import RoleSet
 

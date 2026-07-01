@@ -1,15 +1,15 @@
 import pandas as pd
 
-from databaseEntities.DatabaseEntity import DatabaseEntity
+from domain.entities.DatabaseEntity import DatabaseEntity
 
 from Utils import DateTimeUtils
 
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
 
-from databaseEntities.Game import Game
-from databaseEntities.TimekeepingEvent import TimekeepingEvent
-from databaseEntities.Training import Training
+from domain.entities.Game import Game
+from domain.entities.TimekeepingEvent import TimekeepingEvent
+from domain.entities.Training import Training
 
 
 # Ordered fields the add-event wizard collects per event type (games also collect an

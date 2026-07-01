@@ -2,12 +2,12 @@ import datetime
 
 from multipledispatch import dispatch
 
-from databaseEntities.TimekeepingEvent import TimekeepingEvent
-from databaseEntities.Training import Training
-from databaseEntities.Attendance import Attendance
-from databaseEntities.Game import Game
-from databaseEntities.TelegramUser import TelegramUser
-from databaseEntities.TempData import TempData
+from domain.entities.TimekeepingEvent import TimekeepingEvent
+from domain.entities.Training import Training
+from domain.entities.Attendance import Attendance
+from domain.entities.Game import Game
+from domain.entities.TelegramUser import TelegramUser
+from domain.entities.TempData import TempData
 
 from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState
@@ -18,7 +18,7 @@ from Utils import Format
 
 from domain import EventDateTimeParser
 
-from databaseEntities.PlayerMetric import PlayerMetric
+from domain.entities.PlayerMetric import PlayerMetric
 
 EVENT_EMOJI = {Event.GAME: '🤾', Event.TRAINING: '🏃', Event.TIMEKEEPING: '⏱️'}
 ATTENDANCE_EMOJI = {AttendanceState.YES: '✅', AttendanceState.NO: '❌', AttendanceState.UNSURE: '❓'}

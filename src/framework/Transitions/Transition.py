@@ -6,7 +6,7 @@ from telegram import Update
 
 from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.UsersToState import UsersToState
 
 from Enums.Role import Role
 

@@ -1,8 +1,8 @@
 import pandas as pd
 from multipledispatch import dispatch
 
-from Data.FirebaseRepository import FirebaseRepository
-from Data.Tables import Tables
+from data.FirebaseRepository import FirebaseRepository
+from data.Tables import Tables
 
 from Enums.UserState import UserState
 from Enums.Table import Table
@@ -11,15 +11,15 @@ from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
 
-from databaseEntities.Game import Game
-from databaseEntities.TelegramUser import TelegramUser
-from databaseEntities.UsersToState import UsersToState
-from databaseEntities.TimekeepingEvent import TimekeepingEvent
-from databaseEntities.Training import Training
-from databaseEntities.Attendance import Attendance
-from databaseEntities.PlayerMetric import PlayerMetric
-from databaseEntities.TempData import TempData
-from databaseEntities.Settings import Settings
+from domain.entities.Game import Game
+from domain.entities.TelegramUser import TelegramUser
+from domain.entities.UsersToState import UsersToState
+from domain.entities.TimekeepingEvent import TimekeepingEvent
+from domain.entities.Training import Training
+from domain.entities.Attendance import Attendance
+from domain.entities.PlayerMetric import PlayerMetric
+from domain.entities.TempData import TempData
+from domain.entities.Settings import Settings
 
 from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException
 from Utils.ApiConfig import ApiConfig
