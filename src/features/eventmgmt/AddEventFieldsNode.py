@@ -1,6 +1,6 @@
 from telegram import Update
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
@@ -14,8 +14,8 @@ from databaseEntities.TempData import FIELD_ORDER
 
 from Data.DataAccess import DataAccess
 
-from Services.TelegramService import TelegramService
-from Services.UserStateService import UserStateService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.UserStateService import UserStateService
 
 from Utils import UpdateEventUtils
 from Utils import PrintUtils

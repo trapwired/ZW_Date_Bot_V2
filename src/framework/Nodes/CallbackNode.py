@@ -4,8 +4,8 @@ from Data.DataAccess import DataAccess
 
 from Enums.RoleSet import RoleSet
 
-from Services.TelegramService import TelegramService
-from Services.TriggerService import TriggerService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.TriggerService import TriggerService
 
 
 class CallbackNode(ABC):

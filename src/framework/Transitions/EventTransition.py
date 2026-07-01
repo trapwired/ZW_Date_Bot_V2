@@ -1,6 +1,6 @@
 from functools import partial
 
-from Transitions.Transition import Transition
+from framework.Transitions.Transition import Transition
 from typing import Callable
 
 from telegram import Update

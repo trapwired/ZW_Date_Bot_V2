@@ -3,8 +3,8 @@ from abc import ABC
 from telegram import Update
 from typing import Callable
 
-from Services.TelegramService import TelegramService
-from Services.UserStateService import UserStateService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.UserStateService import UserStateService
 
 from Data.DataAccess import DataAccess
 
@@ -16,11 +16,11 @@ from Enums.Event import Event
 
 from databaseEntities.UsersToState import UsersToState
 
-from Utils.CommandDescriptions import CommandDescriptions
+from framework.CommandDescriptions import CommandDescriptions
 from Utils import PrintUtils
 
-from Transitions.Transition import Transition
-from Transitions.EventTransition import EventTransition
+from framework.Transitions.Transition import Transition
+from framework.Transitions.EventTransition import EventTransition
 
 
 class Node(ABC):

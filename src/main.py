@@ -6,14 +6,14 @@ from telegram.ext import ApplicationBuilder, ContextTypes
 
 from Utils.ApiConfig import ApiConfig
 
-from NodeHandler import NodeHandler
+from framework.NodeHandler import NodeHandler
 from Data.DataAccess import DataAccess
 
 from features.attendance.IcsService import IcsService
-from Services.TelegramService import TelegramService
-from Services.UserStateService import UserStateService
-from Services.SchedulingService import SchedulingService
-from Services.TriggerService import TriggerService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.UserStateService import UserStateService
+from framework.Services.SchedulingService import SchedulingService
+from framework.Services.TriggerService import TriggerService
 from features.stats.StatisticsService import StatisticsService
 from features.eventmgmt.EventService import EventService
 from features.attendance.AttendanceService import AttendanceService

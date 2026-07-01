@@ -1,6 +1,6 @@
 from telegram import Update, CallbackQuery
 
-from Nodes.CallbackNode import CallbackNode
+from framework.Nodes.CallbackNode import CallbackNode
 
 from Utils import CallbackUtils
 from Utils import PrintUtils
@@ -13,9 +13,9 @@ from Enums.UserState import UserState
 
 from Data.DataAccess import DataAccess
 
-from Services.TelegramService import TelegramService
-from Services.TriggerService import TriggerService
-from Services.UserStateService import UserStateService
+from framework.Services.TelegramService import TelegramService
+from framework.Services.TriggerService import TriggerService
+from framework.Services.UserStateService import UserStateService
 
 from Utils import UpdateEventUtils
 

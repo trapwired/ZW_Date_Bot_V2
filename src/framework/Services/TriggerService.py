@@ -3,7 +3,7 @@ from Data.DataAccess import DataAccess
 from Triggers.TriggerPayload import TriggerPayload
 from Triggers.AttendanceUpdateTrigger import AttendanceUpdateTrigger
 
-from Services.TelegramService import TelegramService
+from framework.Services.TelegramService import TelegramService
 
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event

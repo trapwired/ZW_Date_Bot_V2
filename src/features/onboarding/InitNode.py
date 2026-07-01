@@ -3,7 +3,7 @@ import configparser
 import telegram
 from telegram import Update, ChatMemberRestricted, ChatMemberMember, ChatMemberAdministrator, ChatMemberOwner
 
-from Nodes.Node import Node
+from framework.Nodes.Node import Node
 
 from Enums.MessageType import MessageType
 from Enums.Role import Role
@@ -11,8 +11,8 @@ from Enums.UserState import UserState
 
 from Data.DataAccess import DataAccess
 
-from Services.UserStateService import UserStateService
-from Services.TelegramService import TelegramService
+from framework.Services.UserStateService import UserStateService
+from framework.Services.TelegramService import TelegramService
 
 from databaseEntities.TelegramUser import TelegramUser
 from databaseEntities.UsersToState import UsersToState
