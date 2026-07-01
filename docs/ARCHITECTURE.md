@@ -38,10 +38,11 @@ the services, not the view nodes.
 
 ## Design principles
 
-- **Thin nodes, service-owned data access.** A node never touches `DataAccess`
+- **Thin nodes, service-owned data access.** A feature node never touches `DataAccess`
   directly; it goes node → service → `DataAccess` → Firestore. This keeps the number
   of places that touch data small and auditable — the foundation the tenancy work
-  builds on (see ADR 0001).
+  builds on (see ADR 0001). The one exception is the base `Node.get_commands_for_buttons`
+  button-render read (see Known-open items).
 - **Domain logic in the domain layer.** Business rules (e.g. the ">2h event move
   invalidates attendance" policy, datetime parsing/validation) live in `domain/`, not
   inside view nodes.

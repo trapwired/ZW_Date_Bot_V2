@@ -38,7 +38,8 @@ class UserState(IntEnum):
         # collapsed (the field now lives in TempData.step / additional_info, not the enum).
         # Coerce a persisted legacy value to its surviving state so a user who was mid-flow
         # at deploy time reads back as a valid state instead of crashing on
-        # UserState(int(state)). Returning None keeps genuinely unknown values a ValueError.
+        # UserState(int(state)). Returning None from _missing_ makes a genuinely unknown
+        # value raise ValueError, as usual.
         return _LEGACY_STATES.get(value)
 
 
