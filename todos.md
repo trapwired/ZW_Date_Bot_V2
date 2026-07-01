@@ -22,7 +22,7 @@
     layouts) + the state -> commands rendering; rework as part of Phase 4 once
     nodes live in feature slices
   - goals: fewer/clearer levels, consistent back/overview, discoverable actions
-- [] make `/help` always list AND explain every currently-available option
+- [ ] make `/help` always list AND explain every currently-available option
   - `do_checks.check_all_commands_have_description` already fails the suite if a
     described command lacks a description; extend the guarantee so help renders
     every active transition for the user's state+role with its explanation
