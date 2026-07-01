@@ -20,11 +20,11 @@ from telegram import Update
 def get_user_state_from_event_type(event_type: Event):
     match event_type:
         case Event.GAME:
-            return UserState.ADMIN_FINISH_ADD_GAME
+            return UserState.ADMIN_ADD_GAME
         case Event.TRAINING:
-            return UserState.ADMIN_FINISH_ADD_TRAINING
+            return UserState.ADMIN_ADD_TRAINING
         case Event.TIMEKEEPING:
-            return UserState.ADMIN_FINISH_ADD_TIMEKEEPING
+            return UserState.ADMIN_ADD_TIMEKEEPING
 
 
 class AddEventCallbackNode(CallbackNode):

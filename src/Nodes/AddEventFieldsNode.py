@@ -26,26 +26,12 @@ from domain import EventDateTimeParser
 # Ordered field-collection steps per event type. The only thing that differs
 # between game/training/timekeeping is this list (games additionally collect an
 # opponent), so a single flow walks it instead of three copy-pasted handlers.
+# The current step lives in temp_data.step, not in UserState, so the whole wizard
+# runs on a single per-type state (ADMIN_ADD_GAME etc.); SAVE marks the finish step.
 _ADD_STEPS = {
-    Event.GAME: [
-        (UserState.ADMIN_ADD_GAME_TIMESTAMP, CallbackOption.DATETIME),
-        (UserState.ADMIN_ADD_GAME_LOCATION, CallbackOption.LOCATION),
-        (UserState.ADMIN_ADD_GAME_OPPONENT, CallbackOption.OPPONENT),
-    ],
-    Event.TRAINING: [
-        (UserState.ADMIN_ADD_TRAINING_TIMESTAMP, CallbackOption.DATETIME),
-        (UserState.ADMIN_ADD_TRAINING_LOCATION, CallbackOption.LOCATION),
-    ],
-    Event.TIMEKEEPING: [
-        (UserState.ADMIN_ADD_TIMEKEEPING_TIMESTAMP, CallbackOption.DATETIME),
-        (UserState.ADMIN_ADD_TIMEKEEPING_LOCATION, CallbackOption.LOCATION),
-    ],
-}
-
-_FINISH_STATE = {
-    Event.GAME: UserState.ADMIN_FINISH_ADD_GAME,
-    Event.TRAINING: UserState.ADMIN_FINISH_ADD_TRAINING,
-    Event.TIMEKEEPING: UserState.ADMIN_FINISH_ADD_TIMEKEEPING,
+    Event.GAME: [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT],
+    Event.TRAINING: [CallbackOption.DATETIME, CallbackOption.LOCATION],
+    Event.TIMEKEEPING: [CallbackOption.DATETIME, CallbackOption.LOCATION],
 }
 
 # The UserState encoded into the inline-keyboard callback channel for the add flow.
@@ -80,19 +66,17 @@ class AddEventFieldsNode(Node):
     async def handle_user_input(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         message = update.message.text.lower()
         temp_data = self.event_service.get_draft(user_to_state.user_id)
-        finish_state = _FINISH_STATE[self.event_type]
 
         # On the finish step, 'save' commits; anything else just re-prompts to save.
-        if user_to_state.state == finish_state:
+        if temp_data.step == CallbackOption.SAVE:
             if message == 'save':
                 await self.handle_save(new_state, temp_data, update, user_to_state)
                 return
-            await self._prompt_next(update, user_to_state, CallbackOption.SAVE, finish_state)
+            await self._prompt_next(update, CallbackOption.SAVE)
             return
 
         steps = _ADD_STEPS[self.event_type]
-        index = self._step_index(steps, user_to_state.state)
-        _, field = steps[index]
+        field = temp_data.step
 
         if field == CallbackOption.DATETIME:
             parsed = EventDateTimeParser.parse_future(message)
@@ -105,30 +89,23 @@ class AddEventFieldsNode(Node):
             temp_data.location = message
         elif field == CallbackOption.OPPONENT:
             temp_data.opponent = message
-        self.event_service.save_draft(temp_data)
 
+        index = steps.index(field)
         if index + 1 < len(steps):
-            next_state, next_attribute = steps[index + 1]
+            next_step = steps[index + 1]
             markup = AddEventMarkup.DEFAULT
         else:
-            next_state, next_attribute = finish_state, CallbackOption.SAVE
+            next_step = CallbackOption.SAVE
             markup = AddEventMarkup.SAVE
+        temp_data.step = next_step
+        self.event_service.save_draft(temp_data)
 
         await self.update_inline_message(temp_data, 'Adding new', markup)
-        await self._prompt_next(update, user_to_state, next_attribute, next_state)
+        await self._prompt_next(update, next_step)
 
-    @staticmethod
-    def _step_index(steps, state: UserState) -> int:
-        for index, (step_state, _) in enumerate(steps):
-            if step_state == state:
-                return index
-        raise ValueError(f'No add-event step for state {state}')
-
-    async def _prompt_next(self, update: Update, user_to_state: UsersToState, attribute: CallbackOption,
-                           next_state: UserState) -> None:
+    async def _prompt_next(self, update: Update, attribute: CallbackOption) -> None:
         message = PrintUtils.get_update_attribute_message(attribute)
         await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
-        self.user_state_service.update_user_state(user_to_state, next_state)
 
     async def handle_save(self, new_state, temp_data, update, user_to_state):
         new_game = self.event_service.finalize_draft(temp_data)

@@ -82,6 +82,12 @@ def current_state(data_access, telegram_id: int) -> UserState:
     return data_access.get_user_state(telegram_id).state
 
 
+def current_step(data_access, telegram_id: int):
+    """The add-event wizard step held in the user's draft (TempData.step)."""
+    user_id = data_access.get_user_state(telegram_id).user_id
+    return data_access.get_temp_data(user_id).step
+
+
 def assert_no_error_reported(bot) -> None:
     """Fail if the bot was asked to send a maintainer error report — catches silent failures."""
     errors = [m.text for m in bot.sent if "⚠️ ERROR" in m.text]
