@@ -129,8 +129,8 @@ class DataAccess(object):
             raise DocumentIdNotPresentException()
         return self.firebase_repository.update(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
 
-    def update_attendance(self, attendance: Attendance, eventy_type: Event) -> Attendance:
-        table = TABLES[eventy_type]
+    def update_attendance(self, attendance: Attendance, event_type: Event) -> Attendance:
+        table = TABLES[event_type]
         doc_id = self.firebase_repository.get_event_attendance_doc_id(attendance, table)
         if doc_id is None:
             return self._add_attendance(attendance, table)
