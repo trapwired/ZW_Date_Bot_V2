@@ -33,7 +33,6 @@ class InitNode(Node):
         self.group_chat_id = api_config.get_key('Telegram', 'group_chat_id')
         self.bot = bot
 
-    # Override to add new player
     async def handle(self, update: Update, user_to_state: UsersToState):
         telegram_id = update.effective_chat.id
         try:

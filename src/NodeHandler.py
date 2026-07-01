@@ -444,7 +444,6 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_STATISTICS: reset_statistics_callback_node,
             UserState.ADMIN_UPDATE_WEBSITE: update_website_callback_node
         }
-        # TODO correct, one callback node for 3 states?
         return callback_nodes_dict
 
     def add_event_transitions_to_node(self, event_type: Event, node: Node, event_function: Callable):

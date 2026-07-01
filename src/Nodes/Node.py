@@ -87,8 +87,6 @@ class Node(ABC):
                        message_type: MessageType = None) -> Transition:
         if action is None:
             action = partial(self.handle_default, message_type=message_type)
-            # TODO Add defaultNode-transition to adminNode
-            # refactor - use message_type
 
         new_transition = Transition(command, action, allowed_roles, new_state=new_state,
                                     needs_description=needs_description, is_active_function=is_active_function)
