@@ -9,14 +9,14 @@ from Utils.ApiConfig import ApiConfig
 from NodeHandler import NodeHandler
 from Data.DataAccess import DataAccess
 
-from Services.IcsService import IcsService
+from features.attendance.IcsService import IcsService
 from Services.TelegramService import TelegramService
 from Services.UserStateService import UserStateService
 from Services.SchedulingService import SchedulingService
 from Services.TriggerService import TriggerService
 from features.stats.StatisticsService import StatisticsService
 from Services.EventService import EventService
-from Services.AttendanceService import AttendanceService
+from features.attendance.AttendanceService import AttendanceService
 from features.roles.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
 

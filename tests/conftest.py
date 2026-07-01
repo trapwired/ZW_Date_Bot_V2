@@ -47,10 +47,10 @@ def services(data_access, bot, api_config):
     """The service stack, wired exactly like main.initialize_services but with the fake bot."""
     from Services.UserStateService import UserStateService
     from Services.TelegramService import TelegramService
-    from Services.IcsService import IcsService
+    from features.attendance.IcsService import IcsService
     from Services.TriggerService import TriggerService
     from Services.EventService import EventService
-    from Services.AttendanceService import AttendanceService
+    from features.attendance.AttendanceService import AttendanceService
     from features.roles.RoleService import RoleService
     from features.website.WebsiteService import WebsiteService
     from features.stats.StatisticsService import StatisticsService
