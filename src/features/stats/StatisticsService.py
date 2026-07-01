@@ -1,4 +1,4 @@
-from data import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.Event import Event
 

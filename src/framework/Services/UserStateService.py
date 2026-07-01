@@ -1,4 +1,4 @@
-from data import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.Role import Role
 from Enums.UserState import UserState
