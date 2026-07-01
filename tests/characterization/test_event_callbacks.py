@@ -1,7 +1,6 @@
 """Characterization: the callback-driven event flows (delete, add cancel/save).
 
-Pins UpdateEventCallbackNode and AddEventCallbackNode before Phase 2b-ii routes
-their persistence through EventService. Driven via the callback-query harness.
+Pins UpdateEventCallbackNode and AddEventCallbackNode (persistence via EventService). Driven via the callback-query harness.
 """
 import pytest
 

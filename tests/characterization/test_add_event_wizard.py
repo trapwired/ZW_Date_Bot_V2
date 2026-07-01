@@ -1,7 +1,7 @@
 """Characterization: the admin add-event wizard for all three event types.
 
-This is the most duplicated, most stateful flow (AddEventFieldsNode). Since Phase 3
-the wizard runs on a single per-type state (ADMIN_ADD_GAME etc.) and the current
+This is the most duplicated, most stateful flow (AddEventFieldsNode). The wizard
+runs on a single per-type state (ADMIN_ADD_GAME etc.) and the current
 field is held in the draft (TempData.step: DATETIME -> LOCATION -> [OPPONENT] -> SAVE),
 so the assertions pin both the state and the step.
 """

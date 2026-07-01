@@ -1,6 +1,6 @@
-"""Unit: backward-compat for Phase 3a's add-wizard state collapse.
+"""Unit: backward-compat for removed add- and update-event field states.
 
-A user mid-wizard (or a draft in flight) at deploy time carries pre-3a persisted
+A user mid-wizard (or a draft in flight) at deploy time carries legacy persisted
 values. Reading them back must not crash and must not lose progress.
 """
 import pandas as pd
@@ -33,8 +33,8 @@ def test_legacy_add_state_int_coerces_to_parent(legacy_value, expected):
 
 @pytest.mark.parametrize("legacy_value", [100, 101, 102, 110, 112, 120, 122])
 def test_legacy_update_field_state_int_coerces_to_update_menu(legacy_value):
-    # Phase 3b collapsed the per-field update states; a user mid-edit drops back to the
-    # update menu (their old additional_info can't resume under the new format).
+    # Removed per-field update states map to the update menu; a user mid-edit re-navigates
+    # (their legacy additional_info cannot resume the edit).
     assert UserState(legacy_value) is UserState.ADMIN_UPDATE
 
 
@@ -55,7 +55,7 @@ def _legacy_source(**overrides):
     source = {
         'userDocId': 'user-1', 'eventType': Event.GAME, 'timestamp': None,
         'location': None, 'opponent': None, 'chatId': None, 'queryId': None,
-    }  # note: no 'step' key — pre-3a draft
+    }  # note: no 'step' key — legacy draft
     source.update(overrides)
     return source
 

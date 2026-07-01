@@ -1,4 +1,4 @@
-"""Unit pin for the attendance-reset domain rule extracted in Phase 2."""
+"""Unit pin for the attendance-reset domain rule (AttendanceResetPolicy)."""
 import pandas as pd
 
 from domain.AttendanceResetPolicy import requires_attendance_reset

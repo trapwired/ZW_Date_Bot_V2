@@ -1,9 +1,8 @@
 """Regression test for the inline-markup event-type bug.
 
-Before Phase 1, AddEventFieldsNode.update_inline_message hardcoded
-ADMIN_ADD_GAME / Event.GAME, so training & timekeeping add-flows produced inline
-buttons whose callback_data carried the wrong event type. This pins the fix:
-each event type's inline buttons must encode its OWN type.
+AddEventFieldsNode.update_inline_message must encode each event type's OWN type
+into its inline buttons' callback_data (a single hardcoded GAME type would send
+training and timekeeping add-flows the wrong event type). This pins that.
 """
 import pytest
 
