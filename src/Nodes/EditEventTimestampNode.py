@@ -65,7 +65,6 @@ class EditEventTimestampNode(Node):
         updated_event = self.event_service.update_field(self.event_type, doc_id, new_datetime,
                                                         CallbackOption.DATETIME)
 
-        # Update inline_message with new string
         new_inline_message = UpdateEventUtils.get_inline_message('Updated', self.event_type, updated_event)
         await self.telegram_service.edit_inline_message_text(new_inline_message, message_id, chat_id)
 

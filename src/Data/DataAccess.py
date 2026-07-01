@@ -45,25 +45,21 @@ class DataAccess(object):
         user_doc_id = doc_ref[1].id
         user_to_state = UsersToState(user_doc_id, UserState.INIT)
         doc_id = self.firebase_repository.add(user_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
-        # TODO Add Unsure for each game?
         return user_to_state.add_document_id(doc_id[1].id)
 
     @dispatch(Game)
     def add(self, game: Game) -> Game:
         doc_ref = self.firebase_repository.add(game, self.tables.get(Table.GAMES_TABLE))
-        # TODO add unsure for each player
         return game.add_document_id(doc_ref[1].id)
 
     @dispatch(Training)
     def add(self, training: Training) -> Training:
         doc_ref = self.firebase_repository.add(training, self.tables.get(Table.TRAININGS_TABLE))
-        # TODO add unsure for each player
         return training.add_document_id(doc_ref[1].id)
 
     @dispatch(TimekeepingEvent)
     def add(self, timekeeping_event: TimekeepingEvent) -> TimekeepingEvent:
         doc_ref = self.firebase_repository.add(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
-        # TODO add unsure for each player
         return timekeeping_event.add_document_id(doc_ref[1].id)
 
     @dispatch(TempData)
@@ -112,14 +108,12 @@ class DataAccess(object):
     @dispatch(Game)
     def update(self, game: Game):
         if game.doc_id is None:
-            # TODO: Find / Match / AddDocId
             raise DocumentIdNotPresentException()
         return self.firebase_repository.update(game, self.tables.get(Table.GAMES_TABLE))
 
     @dispatch(Training)
     def update(self, training: Training):
         if training.doc_id is None:
-            # TODO: Find / Match / AddDocId
             raise DocumentIdNotPresentException()
         return self.firebase_repository.update(training, self.tables.get(Table.TRAININGS_TABLE))
 
@@ -132,7 +126,6 @@ class DataAccess(object):
     @dispatch(TimekeepingEvent)
     def update(self, timekeeping_event: TimekeepingEvent):
         if timekeeping_event.doc_id is None:
-            # TODO: Find / Match / AddDocId
             raise DocumentIdNotPresentException()
         return self.firebase_repository.update(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
 
@@ -140,19 +133,23 @@ class DataAccess(object):
         table = TABLES[eventy_type]
         doc_id = self.firebase_repository.get_event_attendance_doc_id(attendance, table)
         if doc_id is None:
-            doc_ref = self.firebase_repository.add(attendance, table)
-            doc_id = doc_ref[1].id
-            return attendance.add_document_id(doc_id)
-        else:
-            attendance.add_document_id(doc_id)
-            # TODO what if update fails?
+            return self._add_attendance(attendance, table)
+        attendance.add_document_id(doc_id)
+        try:
             self.firebase_repository.update(attendance, table)
-            return attendance
+        except ObjectNotFoundException:
+            # The record was deleted between the lookup and the write (a race); recreate it
+            # so the player's attendance vote isn't silently lost.
+            return self._add_attendance(attendance, table)
+        return attendance
+
+    def _add_attendance(self, attendance: Attendance, table: Table) -> Attendance:
+        doc_ref = self.firebase_repository.add(attendance, table)
+        return attendance.add_document_id(doc_ref[1].id)
 
     @dispatch(TempData)
     def update(self, temp_data: TempData):
         if temp_data.doc_id is None:
-            # TODO: Find / Match / AddDocId
             raise DocumentIdNotPresentException()
         return self.firebase_repository.update(temp_data, self.tables.get(Table.TEMP_DATA_TABLE))
 

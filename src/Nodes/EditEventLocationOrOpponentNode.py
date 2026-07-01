@@ -47,16 +47,12 @@ class EditEventLocationOrOpponentNode(Node):
 
         message_id, chat_id, doc_id = try_parse
 
-        # store in db - store response element for pretty print
         updated_event = self.event_service.update_field(self.event_type, doc_id, new_string_value, self.string_type)
 
-        # Update inline_message with new string
         new_inline_message = UpdateEventUtils.get_inline_message('Updated', self.event_type, updated_event)
         await self.telegram_service.edit_inline_message_text(new_inline_message, message_id, chat_id)
 
-        # new user state?
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
-        # send response: update ok
         text = "Updated event successfully!"
         await self.telegram_service.send_message_with_normal_keyboard(
             update=update,

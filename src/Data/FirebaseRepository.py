@@ -126,7 +126,8 @@ class FirebaseRepository(object):
         if len(entries) == 1:
             return PlayerMetric.from_dict(entries[0].id, entries[0].to_dict())
         if len(entries) > 1:
-            # HOW? Delete all but one
+            # A player should only ever have one metric per season; if a race created duplicates,
+            # self-heal by keeping the first and deleting the rest so reads stay deterministic.
             for entry in entries[1:]:
                 self.db.collection(self.tables.get(Table.PLAYER_METRIC)).document(entry.id).delete()
             return PlayerMetric.from_dict(entries[0].id, entries[0].to_dict())
