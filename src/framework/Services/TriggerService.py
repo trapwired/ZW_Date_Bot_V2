@@ -1,3 +1,5 @@
+import logging
+
 from data.DataAccess import DataAccess
 
 from Triggers.TriggerPayload import TriggerPayload
@@ -35,6 +37,8 @@ class TriggerService:
     async def check_triggers(self, trigger_payload: TriggerPayload):
         for trigger in self.triggers:
             if trigger.check(trigger_payload):
+                logging.info('Trigger fired: %s for event %s',
+                             type(trigger).__name__, trigger_payload.doc_id)
                 await trigger.notify_action(trigger_payload)
 
     async def send_event_message(self, trigger_payload: TriggerPayload, msg: str):

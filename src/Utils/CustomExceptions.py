@@ -1,3 +1,9 @@
+class ExpectedException(Exception):
+    """Marker for known, control-flow exceptions (e.g. a lookup miss). These are logged for
+    traceability but do not raise a maintainer alert, so alerts stay reserved for real bugs."""
+    pass
+
+
 class DocumentIdNotPresentException(Exception):
     pass
 
@@ -16,7 +22,7 @@ class NodesMissingException(Exception):
         super().__init__(message)
 
 
-class ObjectNotFoundException(Exception):
+class ObjectNotFoundException(ExpectedException):
     def __init__(self, collection, doc_ref):
         message = f'\"{doc_ref}\" does not exist in \"{collection}\"'
         super().__init__(message)
@@ -26,7 +32,7 @@ class NoEventFoundException(Exception):
     pass
 
 
-class NoTempDataFoundException(Exception):
+class NoTempDataFoundException(ExpectedException):
     pass
 
 

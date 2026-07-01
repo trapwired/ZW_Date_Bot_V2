@@ -20,6 +20,24 @@ async def test_report_exception_logs_at_error_and_alerts_maintainer(services, bo
     assert any("Exception in the flow" in m.text for m in bot.sent)
 
 
+async def test_report_exception_skips_alert_for_expected_exception(services, bot, caplog):
+    """A known control-flow exception (ObjectNotFoundException) is logged but must NOT alert
+    the maintainer, so the alert channel stays reserved for real bugs."""
+    from Utils.CustomExceptions import ObjectNotFoundException
+
+    telegram_service = services["telegram_service"]
+
+    with caplog.at_level(logging.INFO):
+        await telegram_service.report_exception(
+            "Exception in the flow", ObjectNotFoundException("some_table", "doc-1"))
+
+    # No maintainer message of any kind was sent.
+    assert bot.sent == []
+    # It was still logged, at info rather than error.
+    assert any("Exception in the flow" in r.getMessage() for r in caplog.records)
+    assert not any(r.levelno == logging.ERROR for r in caplog.records)
+
+
 async def test_report_exception_survives_a_failing_alert(services, monkeypatch, caplog):
     telegram_service = services["telegram_service"]
 

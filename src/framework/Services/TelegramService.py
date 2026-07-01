@@ -16,6 +16,8 @@ from Utils.ApiConfig import ApiConfig
 from domain.entities.TelegramUser import TelegramUser
 from telegram.error import BadRequest, Forbidden
 
+from Utils.CustomExceptions import ExpectedException
+
 from framework.Services.UserStateService import UserStateService
 
 
@@ -266,7 +268,13 @@ class TelegramService(object):
         """Report an unhandled exception: log it with a traceback, then best-effort alert the
         maintainer. The log happens first and unconditionally, so a failure stays visible in
         the logs (greppable, alertable) even when the alert send itself fails or the maintainer
-        is not watching the chat."""
+        is not watching the chat.
+
+        Expected (control-flow) exceptions are logged at info and do NOT alert the maintainer,
+        so the alert channel stays reserved for real bugs instead of routine misses."""
+        if isinstance(error, ExpectedException):
+            logging.info('%s (expected): %r', description, error)
+            return
         logging.error(description, exc_info=error)
         try:
             if update is None:
