@@ -5,12 +5,12 @@ attendance reset, recipient lookup) so the event nodes stay thin and
 Telegram-facing. Presentation (sending messages, building markup) stays in the
 nodes.
 """
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.CallbackOption import CallbackOption
 from Enums.Event import Event
 
-from databaseEntities.TempData import TempData
+from domain.entities.TempData import TempData
 
 
 class EventService:

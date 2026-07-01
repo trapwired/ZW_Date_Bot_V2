@@ -7,11 +7,11 @@ from Enums.UserState import UserState
 from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState
 
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.UsersToState import UsersToState
 
 from framework.Services.TelegramService import TelegramService
 from framework.Services.UserStateService import UserStateService
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from Utils import PrintUtils
 from Utils import CallbackUtils

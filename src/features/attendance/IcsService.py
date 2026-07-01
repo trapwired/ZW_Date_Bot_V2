@@ -2,7 +2,7 @@ import os.path
 from datetime import timedelta
 from ics import Calendar, Event, alarm
 
-from Data import DataAccess
+from data import DataAccess
 
 from Enums.Event import Event as Ev
 

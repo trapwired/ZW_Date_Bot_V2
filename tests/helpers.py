@@ -7,7 +7,7 @@ from telegram.constants import ChatType
 
 from Enums.Role import Role
 from Enums.UserState import UserState
-from databaseEntities.TelegramUser import TelegramUser
+from domain.entities.TelegramUser import TelegramUser
 
 
 # TelegramService branches on `type(update) is Update`, so tests must pass real

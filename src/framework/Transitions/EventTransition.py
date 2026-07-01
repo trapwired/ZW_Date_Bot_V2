@@ -10,7 +10,7 @@ from Enums.RoleSet import RoleSet
 from Enums.Event import Event
 from Enums.Role import Role
 
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.UsersToState import UsersToState
 
 
 class EventTransition(Transition):

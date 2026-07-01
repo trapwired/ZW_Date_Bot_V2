@@ -31,14 +31,14 @@ def data_access(monkeypatch, fake_firestore, api_config):
     """Real DataAccess + FirebaseRepository on top of the in-memory Firestore client."""
     import firebase_admin
     import firebase_admin.credentials  # noqa: F401 - ensure submodule is importable before patching
-    import Data.FirebaseRepository as fr
+    import data.FirebaseRepository as fr
 
     monkeypatch.setattr("firebase_admin.credentials.Certificate", lambda *a, **k: object())
     monkeypatch.setattr("firebase_admin.initialize_app", lambda *a, **k: object())
     monkeypatch.setattr(fr.firestore, "client", lambda app: fake_firestore)
     monkeypatch.setattr(fr, "FieldFilter", FakeFieldFilter)
 
-    from Data.DataAccess import DataAccess
+    from data.DataAccess import DataAccess
     return DataAccess(api_config)
 
 

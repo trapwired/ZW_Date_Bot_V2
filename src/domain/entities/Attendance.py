@@ -1,6 +1,6 @@
 from Enums.AttendanceState import AttendanceState
 
-from databaseEntities.DatabaseEntity import DatabaseEntity
+from domain.entities.DatabaseEntity import DatabaseEntity
 
 
 class Attendance(DatabaseEntity):

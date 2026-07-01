@@ -6,7 +6,7 @@ from framework.Services.TelegramService import TelegramService
 from framework.Services.TriggerService import TriggerService
 from framework.Services.UserStateService import UserStateService
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.CallbackOption import CallbackOption
 from Enums.MessageType import MessageType

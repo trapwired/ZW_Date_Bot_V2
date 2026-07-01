@@ -1,7 +1,7 @@
 import pandas as pd
 
 from Utils import DateTimeUtils
-from databaseEntities.DatabaseEntity import DatabaseEntity
+from domain.entities.DatabaseEntity import DatabaseEntity
 
 
 class Game(DatabaseEntity):

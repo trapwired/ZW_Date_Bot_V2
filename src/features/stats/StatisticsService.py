@@ -1,8 +1,8 @@
-from Data import DataAccess
+from data import DataAccess
 
 from Enums.Event import Event
 
-from databaseEntities.TelegramUser import TelegramUser
+from domain.entities.TelegramUser import TelegramUser
 
 
 class StatisticsService(object):

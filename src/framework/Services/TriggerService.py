@@ -1,4 +1,4 @@
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from Triggers.TriggerPayload import TriggerPayload
 from Triggers.AttendanceUpdateTrigger import AttendanceUpdateTrigger

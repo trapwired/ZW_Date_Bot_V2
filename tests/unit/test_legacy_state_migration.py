@@ -9,7 +9,7 @@ import pytest
 from Enums.CallbackOption import CallbackOption
 from Enums.Event import Event
 from Enums.UserState import UserState
-from databaseEntities.TempData import TempData
+from domain.entities.TempData import TempData
 
 # Persisted timestamps come back as tz-aware pd.Timestamp objects, not strings.
 TS = pd.Timestamp("2030-12-24 18:30", tz="UTC")

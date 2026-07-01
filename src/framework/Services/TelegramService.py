@@ -13,7 +13,7 @@ from Utils import PrintUtils
 from Utils import Format
 from Utils.ApiConfig import ApiConfig
 
-from databaseEntities.TelegramUser import TelegramUser
+from domain.entities.TelegramUser import TelegramUser
 from telegram.error import BadRequest, Forbidden
 
 from framework.Services.UserStateService import UserStateService

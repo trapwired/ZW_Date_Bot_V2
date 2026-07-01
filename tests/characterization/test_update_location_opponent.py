@@ -9,7 +9,7 @@ from Enums.Role import Role
 from Enums.UserState import UserState
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
-from databaseEntities.Game import Game
+from domain.entities.Game import Game
 from Utils import CallbackUtils
 from domain.EventDateTimeParser import parse
 from tests.helpers import drive, seed_user, current_state, assert_no_error_reported

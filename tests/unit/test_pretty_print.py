@@ -6,9 +6,9 @@ exact HTML dialect while still catching a structural regression.
 """
 import pandas as pd
 
-from databaseEntities.Game import Game
-from databaseEntities.Training import Training
-from databaseEntities.TimekeepingEvent import TimekeepingEvent
+from domain.entities.Game import Game
+from domain.entities.Training import Training
+from domain.entities.TimekeepingEvent import TimekeepingEvent
 from Enums.AttendanceState import AttendanceState
 from Utils import Format
 from Utils import PrintUtils
