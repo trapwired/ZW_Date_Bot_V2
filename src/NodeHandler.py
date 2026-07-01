@@ -21,7 +21,7 @@ from Services.TriggerService import TriggerService
 from Services.EventService import EventService
 from Services.AttendanceService import AttendanceService
 from Services.RoleService import RoleService
-from Services.WebsiteService import WebsiteService
+from features.website.WebsiteService import WebsiteService
 from Services.StatisticsService import StatisticsService
 
 from Nodes.Node import Node
@@ -38,8 +38,8 @@ from Nodes.EditEventFieldNode import EditEventFieldNode
 from Nodes.AddEventCallbackNode import AddEventCallbackNode
 from Nodes.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
 from Nodes.AssignRolesCallbackNode import AssignRolesCallbackNode
-from Nodes.UpdateWebsiteNode import UpdateWebsiteNode
-from Nodes.UpdateWebsiteCallbackNode import UpdateWebsiteCallbackNode
+from features.website.UpdateWebsiteNode import UpdateWebsiteNode
+from features.website.UpdateWebsiteCallbackNode import UpdateWebsiteCallbackNode
 
 from Nodes.EditCallbackNode import EditCallbackNode
 from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode

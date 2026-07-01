@@ -13,18 +13,19 @@ As of 2026-07-01:
   `UserStateService`). **Phase 3a** collapsed the add-event wizard (step → `TempData.step`,
   10 states deleted); **Phase 3b** collapsed the update-event field states (field/type →
   `additional_info`, two edit nodes merged into `EditEventFieldNode`, 7 states → 1).
-  `UserState` is down **39 → 23**. 90 tests green (`./venv/bin/python -m pytest -q`).
+  `UserState` is down **39 → 23**. **Phase 4** (physical reslice) is in progress,
+  features-first: the **website** slice is moved into `features/website/`. 91 tests green
+  (`./venv/bin/python -m pytest -q`).
 - **One accepted exception** to "no `data_access` in `Nodes/`": the base
   `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
-  in Phase 4 when base infra moves to `platform/`.
+  in Phase 4 when base infra moves to `framework/`.
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 4** (physical reslice into `platform/ domain/ features/ data/`).
-Optional deeper state collapse (per-type `ADMIN_ADD_*` / `STATS_*` / `EDIT_*` → single
-states with the type in context) can precede it if we want to approach ~12. Then
-Phase 6 (diagram), Phase 7 (comment cleanup). Each increment: branch off `main`, pin
-the flow first where behavior is touched, one reviewable PR.
+**NEXT TASK → Phase 4 cont.** — next slice: **stats** (`StatsNode`,
+`ResetStatisticsCallbackNode`, `StatisticsService` → `features/stats/`), then roles,
+attendance, eventmgmt, onboarding/admin, then the `framework/`+`domain/`+`data/`
+rename. Then Phase 6 (diagram), Phase 7 (comment cleanup). One reviewable PR per slice.
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -56,7 +57,8 @@ The existing `Transition`/`EventTransition` state-machine core and the
 
 ```
 src/
-  platform/        # the framework — feature-agnostic
+  framework/       # the framework — feature-agnostic (named `framework` not `platform`
+                   # to avoid shadowing Python's stdlib `platform` module under pythonpath=src)
     NodeHandler.py
     Nodes/Node.py, CallbackNode.py
     Transitions/*
@@ -288,7 +290,7 @@ through a feature service.
     `data_access`. They live in the shared base class every node extends, so
     routing them through a feature service would inject that service into ~25
     node constructions and invert the layering (base infra depending on a
-    feature slice). Revisit in Phase 4 when base infra moves to `platform/`.
+    feature slice). Revisit in Phase 4 when base infra moves to `framework/`.
     This is the one accepted exception to the "no `data_access` in Nodes/" exit
     criterion.
 - **2b-iv — right-size the pass-through services (done, branch
@@ -357,14 +359,34 @@ Exit criteria per increment: `do_checks` green, suite green.
 
 ## Phase 4 — Physically reslice into features
 
-Mostly mechanical once 1–3 are done.
+Mostly mechanical, but too large for one 60-file diff — done **features-first, one
+slice per PR**. Each feature's nodes + service move into `features/<name>/`; only
+that feature's imports + `NodeHandler`'s imports of them change. Base classes
+(`Node`/`CallbackNode`), `TelegramService`, entities and `Data/` stay put during the
+feature moves, then a final pair of PRs renames the leftovers into
+`framework/ domain/ data/`. Tests + `do_checks` green after each slice.
 
-15. Create `platform/ domain/ features/ data/`. Move files. Fix imports.
-16. Each feature folder owns its `Node`, `CallbackNode`, and feature service.
-17. Update `main.py` composition root and any import paths
-    (`.github/workflows/deploy.yml`, `runtime.txt` unaffected; check the
-    `src`-relative imports still resolve).
+Slice order (smallest first, as a mechanics canary):
+15. **website (done, branch `phase-4a-website-slice`).** Moved `UpdateWebsiteNode`,
+    `UpdateWebsiteCallbackNode`, `WebsiteService` → `features/website/`; rewired the 3
+    importers (`NodeHandler`, `main.py`, `conftest`). 91 green. Validated the move +
+    import-rewrite + test loop.
+16. stats → roles → attendance → eventmgmt (biggest) → onboarding/admin hub. One PR each.
+17. Rename the leftovers: `Nodes/Node.py`+`CallbackNode.py`+`NodeHandler`+`Transitions`+
+    `TelegramService`+`NodeUtils`+`CommandDescriptions` → `framework/`; `databaseEntities`
+    + `domain` → `domain/`; `Data/` → `data/`. Update `main.py` composition root.
+    (`.github/workflows/deploy.yml`, `runtime.txt` unaffected; `pythonpath=src` so all
+    imports are `src`-relative.)
 18. Update `README.md` + the excalidraw `ArchitectureOverview` to the new layout.
+
+Naming note: the framework layer is `framework/`, **not** `platform/` — a top-level
+`platform` package would shadow Python's stdlib `platform` (imported by telegram/
+apscheduler) under `pythonpath=src`.
+
+Known compromises (not blockers): `CallbackUtils` builds Telegram markup so it isn't
+pure-domain (stays in `Utils`); entities keep `to_dict/from_dict` Firestore coupling
+but are still the domain models; `AdminNode`/`DefaultNode` are cross-feature hubs
+(handled in the onboarding/admin slice).
 
 Exit criteria: capability change touches one folder; suite green; bot boots.
 
@@ -380,7 +402,7 @@ It should capture:
 - **Request path:** Update → NodeHandler routing (text node vs callback node) →
   slice service → domain → data → Firestore, and the response back out.
 - **Slices** (`eventmgmt`, `attendance`, `stats`, `roles`, `website`) and the
-  shared `platform` / `domain` / `data` layers.
+  shared `framework` / `domain` / `data` layers.
 - **The collapsed state machine** (post-Phase-3 ~12 states), superseding the old
   `StateMachine.excalidraw` / `NodesInheritance.excalidraw`.
 - **Background jobs:** the APScheduler reminders/summaries off SchedulingService.
