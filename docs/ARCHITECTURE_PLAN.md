@@ -7,8 +7,10 @@ Secrets confirmed dummy/safe — no secret remediation in this plan.
 
 As of 2026-06-30 (`main` @ PR #12 merged):
 
-- **Phases 0, 1, 2a, 2b-i…2b-iii-e: DONE.** Every *feature* node is
-  `data_access`-free; all data access goes node → service → `DataAccess`. 65 tests green
+- **Phases 0, 1, 2a, 2b-i…2b-iv: DONE.** Every *feature* node is
+  `data_access`-free; all data access goes node → service → `DataAccess`. The
+  pass-through services are right-sized: `StatisticsService` + `UserStateService`
+  kept, `AdminService` inlined into `UserStateService` and deleted. 65 tests green
   (`./venv/bin/python -m pytest -q`).
 - **One accepted exception** to "no `data_access` in `Nodes/`": the base
   `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
@@ -16,10 +18,9 @@ As of 2026-06-30 (`main` @ PR #12 merged):
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 2b-iv** (right-size the pass-through services). Then Phase 3
-(collapse the 31→~12 `UserState` explosion), Phase 4 (physical reslice), Phase 6
-(diagram), Phase 7 (comment cleanup). Each increment: branch off `main`, pin the
-flow first where behavior is touched, one reviewable PR.
+**NEXT TASK → Phase 3** (collapse the 31→~12 `UserState` explosion). Then Phase 4
+(physical reslice), Phase 6 (diagram), Phase 7 (comment cleanup). Each increment:
+branch off `main`, pin the flow first where behavior is touched, one reviewable PR.
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -286,16 +287,22 @@ through a feature service.
     feature slice). Revisit in Phase 4 when base infra moves to `platform/`.
     This is the one accepted exception to the "no `data_access` in Nodes/" exit
     criterion.
-- **2b-iv — right-size the pass-through services (TODO — next task).**
-  Re-evaluate the thin delegators: either give them real responsibility or inline them.
-  - `StatisticsService` — **no longer a stub** after 2b-iii-d (now owns the stats
-    read/reset surface); likely already right-sized. Confirm, don't churn.
-  - `UserStateService` — small (`get_user_state`, `update_user_state`,
-    `register_user`); judge whether it earns its keep or folds into callers.
-  - `AdminService` — inspect; it predates this sweep. Check current
-    responsibility and callers before deciding inline vs keep.
-  Approach: read each + its call sites first, propose keep/inline per service,
-  then act. Don't add ceremony; don't remove a seam that has real callers.
+- **2b-iv — right-size the pass-through services (done, branch
+  `phase-2b-iv-right-size-services`).** Read each delegator + its call sites, then
+  decided keep/inline per service:
+  - `StatisticsService` — **kept.** Real surface (5 methods) with 4 distinct
+    callers incl. `SchedulingService`; already right-sized after 2b-iii-d.
+  - `UserStateService` — **kept.** The central user-state seam, injected into every
+    node via the base `Node`; `update_user_state` folds the mutate-then-persist
+    invariant. Inlining would revert the whole sweep — it earns its keep.
+  - `AdminService` — **inlined + deleted.** Misnamed (held one user-lifecycle
+    mutation, not "admin"), single method, single caller, and stored-but-unused in
+    `NodeHandler` (dead). Its `set_user_inactive` (`get_user_state` + `add_role` +
+    `update`) is the same shape `UserStateService` already owns, so it moved there;
+    `TelegramService` now depends on `UserStateService`. Dropped the dead
+    `admin_service` ctor param from `NodeHandler`; rewired `main.py` /
+    `NodeHandler` / the test fixture. Pure consolidation, no behavior change.
+    65 green.
 
 ---
 
