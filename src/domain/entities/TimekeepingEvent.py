@@ -1,4 +1,3 @@
-import datetime
 import pandas as pd
 
 from domain.entities.DatabaseEntity import DatabaseEntity
