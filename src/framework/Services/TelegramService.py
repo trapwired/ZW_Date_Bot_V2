@@ -341,7 +341,7 @@ class TelegramService(object):
 
     async def _delete_message(self, message_id: int, chat_id: int):
         try:
-            await self.bot.deleteMessage(message_id=message_id, chat_id=chat_id)
+            await self.bot.delete_message(message_id=message_id, chat_id=chat_id)
         except BadRequest as e:
             # Bots can't delete messages older than 48h; this cleanup is best-effort.
             logging.debug(f"Could not delete message {message_id} in chat {chat_id}: {e}")

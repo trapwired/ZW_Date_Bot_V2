@@ -101,7 +101,7 @@ class FirebaseRepository(object):
         res = query_ref.get()
         if len(res) == 1:
             return UsersToState.from_dict(res[0].id, res[0].to_dict())
-        raise ObjectNotFoundException(collection, res[0].id)
+        raise ObjectNotFoundException(collection, user_id)
 
     def get_game(self, doc_id: str) -> Game | None:
         res = self.get_document(doc_id, Table.GAMES_TABLE)
@@ -289,7 +289,7 @@ class FirebaseRepository(object):
             updated_user_to_state = user_to_state.add_document_id(res[0].id)
             self.update_user_state(updated_user_to_state)
         else:
-            return ObjectNotFoundException(collection, user_to_state.user_id)
+            raise ObjectNotFoundException(collection, user_to_state.user_id)
 
     def update_user_via_telegram_id(self, user: TelegramUser):
         user_id = self.get_user(user.telegramId).doc_id
@@ -355,6 +355,8 @@ class FirebaseRepository(object):
                 return self.tables.get(Table.TRAINING_ATTENDANCE_TABLE)
             case Event.TIMEKEEPING:
                 return self.tables.get(Table.TIMEKEEPING_ATTENDANCE_TABLE)
+            case _:
+                raise ValueError(f'Unhandled event type: {event_type}')
 
     def get_event_table(self, event_type: Event):
         match event_type:
@@ -364,6 +366,8 @@ class FirebaseRepository(object):
                 return self.tables.get(Table.TRAININGS_TABLE)
             case Event.TIMEKEEPING:
                 return self.tables.get(Table.TIMEKEEPING_TABLE)
+            case _:
+                raise ValueError(f'Unhandled event type: {event_type}')
 
     def reset_all_player_event_attendance(self, doc_id: str, table: Table):
         collection_reference = self.db.collection(self.tables.get(table))
