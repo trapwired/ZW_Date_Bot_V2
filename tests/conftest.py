@@ -49,7 +49,7 @@ def services(data_access, bot, api_config):
     from Services.TelegramService import TelegramService
     from features.attendance.IcsService import IcsService
     from Services.TriggerService import TriggerService
-    from Services.EventService import EventService
+    from features.eventmgmt.EventService import EventService
     from features.attendance.AttendanceService import AttendanceService
     from features.roles.RoleService import RoleService
     from features.website.WebsiteService import WebsiteService

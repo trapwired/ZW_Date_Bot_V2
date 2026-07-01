@@ -15,7 +15,7 @@ from Services.UserStateService import UserStateService
 from Services.SchedulingService import SchedulingService
 from Services.TriggerService import TriggerService
 from features.stats.StatisticsService import StatisticsService
-from Services.EventService import EventService
+from features.eventmgmt.EventService import EventService
 from features.attendance.AttendanceService import AttendanceService
 from features.roles.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
