@@ -17,7 +17,7 @@
     that layer becomes the single translation seam (keys -> localized text)
   - decide the string catalog format + fallback language; MessageType is the
     natural key set
-- [] redesign the menu / submenu experience for accessibility
+- [ ] redesign the menu / submenu experience for accessibility
   - the reply-keyboard layout is built in TelegramService (fixed per-screen
     layouts) + the state -> commands rendering; rework as part of Phase 4 once
     nodes live in feature slices
