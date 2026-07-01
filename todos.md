@@ -10,7 +10,7 @@
   - shape as its own vertical slice: prefer an admin `/announce` command over a
     hardcoded deploy-time changelog script
   - do after the Phase 3/4 refactor, not folded into it
-- [] per-user language switch (i18n)
+- [ ] per-user language switch (i18n)
   - a `language` field on the user (UsersToState/TelegramUser); resolve once per
     update like the tenant context, don't thread it through every call
   - the message/label strings live in Format / PrintUtils / CommandDescriptions —
