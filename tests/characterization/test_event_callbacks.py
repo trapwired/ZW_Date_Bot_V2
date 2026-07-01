@@ -9,9 +9,9 @@ from Enums.Role import Role
 from Enums.UserState import UserState
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
-from databaseEntities.Game import Game
-from databaseEntities.Training import Training
-from databaseEntities.TempData import TempData
+from domain.entities.Game import Game
+from domain.entities.Training import Training
+from domain.entities.TempData import TempData
 from Utils import CallbackUtils
 from Utils.CustomExceptions import ObjectNotFoundException, NoTempDataFoundException
 from domain.EventDateTimeParser import parse

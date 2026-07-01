@@ -3,7 +3,7 @@ import logging
 from telegram import Update
 from telegram.error import TelegramError
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.Role import Role
 from Enums.RoleSet import RoleSet

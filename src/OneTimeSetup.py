@@ -1,12 +1,12 @@
 from datetime import datetime
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
-from databaseEntities.Training import Training
-from databaseEntities.TelegramUser import TelegramUser
-from databaseEntities.Game import Game
-from databaseEntities.Attendance import Attendance
-from databaseEntities.TimekeepingEvent import TimekeepingEvent
+from domain.entities.Training import Training
+from domain.entities.TelegramUser import TelegramUser
+from domain.entities.Game import Game
+from domain.entities.Attendance import Attendance
+from domain.entities.TimekeepingEvent import TimekeepingEvent
 
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event

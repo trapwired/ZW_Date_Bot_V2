@@ -13,9 +13,9 @@ a value that would later blow up when shown.
 """
 from urllib.parse import urlparse
 
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.UsersToState import UsersToState
 
 
 class WebsiteService:

@@ -5,7 +5,7 @@ from framework.Nodes.Node import Node
 from Enums.UserState import UserState
 from Enums.MessageType import MessageType
 
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.UsersToState import UsersToState
 
 from Utils import CallbackUtils
 

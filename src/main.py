@@ -7,7 +7,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes
 from Utils.ApiConfig import ApiConfig
 
 from framework.NodeHandler import NodeHandler
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from features.attendance.IcsService import IcsService
 from framework.Services.TelegramService import TelegramService

@@ -3,13 +3,13 @@
 Owns the role data orchestration AdminNode and AssignRolesCallbackNode used to do
 inline against DataAccess. Presentation (markup, display names) stays in the nodes.
 """
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.Role import Role, ASSIGNABLE_ROLES
 from Enums.UserState import UserState
 
-from databaseEntities.TelegramUser import TelegramUser
-from databaseEntities.UsersToState import UsersToState
+from domain.entities.TelegramUser import TelegramUser
+from domain.entities.UsersToState import UsersToState
 
 
 class RoleService:

@@ -1,9 +1,9 @@
 from Enums.CallbackOption import CallbackOption
 from Enums.Event import Event
 
-from databaseEntities.Game import Game
-from databaseEntities.TimekeepingEvent import TimekeepingEvent
-from databaseEntities.Training import Training
+from domain.entities.Game import Game
+from domain.entities.TimekeepingEvent import TimekeepingEvent
+from domain.entities.Training import Training
 
 from Utils import PrintUtils
 

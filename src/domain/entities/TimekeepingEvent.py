@@ -1,7 +1,7 @@
 import datetime
 import pandas as pd
 
-from databaseEntities.DatabaseEntity import DatabaseEntity
+from domain.entities.DatabaseEntity import DatabaseEntity
 
 from Utils import DateTimeUtils
 

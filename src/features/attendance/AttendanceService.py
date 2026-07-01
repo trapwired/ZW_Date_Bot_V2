@@ -3,11 +3,11 @@
 Owns the data orchestration for a player changing their attendance on an event,
 so EditCallbackNode stays thin and Telegram-facing.
 """
-from Data.DataAccess import DataAccess
+from data.DataAccess import DataAccess
 
 from Enums.Event import Event
 
-from databaseEntities.Attendance import Attendance
+from domain.entities.Attendance import Attendance
 
 
 class AttendanceService:

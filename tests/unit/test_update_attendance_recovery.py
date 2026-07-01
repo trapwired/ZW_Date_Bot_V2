@@ -7,7 +7,7 @@ bubble up and drop the vote.
 """
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
-from databaseEntities.Attendance import Attendance
+from domain.entities.Attendance import Attendance
 from Utils.CustomExceptions import ObjectNotFoundException
 
 
