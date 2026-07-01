@@ -52,7 +52,7 @@ def services(data_access, bot, api_config):
     from Services.EventService import EventService
     from Services.AttendanceService import AttendanceService
     from Services.RoleService import RoleService
-    from Services.WebsiteService import WebsiteService
+    from features.website.WebsiteService import WebsiteService
     from Services.StatisticsService import StatisticsService
 
     user_state_service = UserStateService(data_access)
