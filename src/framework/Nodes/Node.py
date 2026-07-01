@@ -57,7 +57,7 @@ class Node(ABC):
                                                           update.effective_chat.id),
                 message_type=MessageType.ERROR,
                 message_extra_text=str(e))
-            await self.telegram_service.send_maintainer_message('Error caught in Node.handle()', update, e)
+            await self.telegram_service.report_exception('Exception in Node.handle', e, update)
 
     ###############
     # TRANSITIONS #

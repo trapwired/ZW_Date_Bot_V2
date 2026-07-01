@@ -147,9 +147,9 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             if "Message is not modified" in str(e):
                 logging.debug(f"Ignoring 'Message is not modified' error: {e}")
                 return
-            await self.telegram_service.send_maintainer_message('Exception caught in NodeHandler.handle()', update, e)
+            await self.telegram_service.report_exception('Exception in NodeHandler.handle_message', e, update)
         except Exception as e:
-            await self.telegram_service.send_maintainer_message('Exception caught in NodeHandler.handle()', update, e)
+            await self.telegram_service.report_exception('Exception in NodeHandler.handle_message', e, update)
 
     def get_user_state_and_node(self, update):
         telegram_id = update.effective_chat.id

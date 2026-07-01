@@ -61,9 +61,8 @@ class SchedulingService:
 
             await self.telegram_service.send_group_message(message)
         except Exception as e:
-            await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService.send_same_day_game_reminder()',
-                e)
+            await self.telegram_service.report_exception(
+                'Exception caught in SchedulingService.send_same_day_game_reminder()', e)
 
     async def send_previous_day_training_reminder(self, context: ContextTypes.DEFAULT_TYPE):
         # find training that takes place tomorrow
@@ -84,9 +83,8 @@ class SchedulingService:
                 await self.telegram_service.send_group_message(message)
 
         except Exception as e:
-            await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService.send_previous_day_training_reminder()',
-                e)
+            await self.telegram_service.report_exception(
+                'Exception caught in SchedulingService.send_previous_day_training_reminder()', e)
 
     async def send_individual_game_reminders(self, context: ContextTypes.DEFAULT_TYPE):
         await self._send_individual_event_reminders(Event.GAME)
@@ -139,9 +137,8 @@ class SchedulingService:
                 message = f'Sent out a total of {message_sent_count} timekeeping reminders to {len(unsure_player_to_event)} Player(s)'
                 await self.telegram_service.send_maintainer_message(message)
         except Exception as e:
-            await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService.send_individual_tke_reminders()',
-                e)
+            await self.telegram_service.report_exception(
+                'Exception caught in SchedulingService.send_individual_tke_reminders()', e)
 
     async def _send_individual_event_reminders(self, event_type: Event):
         try:
@@ -176,9 +173,8 @@ class SchedulingService:
                 await self.telegram_service.send_maintainer_message(message)
 
         except Exception as e:
-            await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService._send_individual_event_reminders()',
-                e)
+            await self.telegram_service.report_exception(
+                'Exception caught in SchedulingService._send_individual_event_reminders()', e)
 
     async def send_event_enroll_reminder(self, player, event_list, event_type: Event) -> int:
         messages_sent_count = 0
@@ -226,9 +222,8 @@ class SchedulingService:
                 await self.telegram_service.send_info_message_to_trainers(message, event_type)
 
         except Exception as e:
-            await self.telegram_service.send_maintainer_message(
-                'Exception caught in SchedulingService.send_event_summary()',
-                e)
+            await self.telegram_service.report_exception(
+                'Exception caught in SchedulingService.send_event_summary()', e)
 
     def get_ordered_events(self, event_type: Event):
         match event_type:
