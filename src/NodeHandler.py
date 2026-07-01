@@ -25,12 +25,12 @@ from features.website.WebsiteService import WebsiteService
 from features.stats.StatisticsService import StatisticsService
 
 from Nodes.Node import Node
-from Nodes.DefaultNode import DefaultNode
-from Nodes.InitNode import InitNode
-from Nodes.RejectedNode import RejectedNode
+from features.menu.DefaultNode import DefaultNode
+from features.onboarding.InitNode import InitNode
+from features.onboarding.RejectedNode import RejectedNode
 from features.stats.StatsNode import StatsNode
 from features.attendance.EditNode import EditNode
-from Nodes.AdminNode import AdminNode
+from features.menu.AdminNode import AdminNode
 from features.eventmgmt.AdminAddNode import AdminAddNode
 from features.eventmgmt.AddEventFieldsNode import AddEventFieldsNode
 from features.eventmgmt.UpdateNode import UpdateNode
