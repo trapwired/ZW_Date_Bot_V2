@@ -14,7 +14,7 @@ from Data.DataAccess import DataAccess
 
 from Services.TelegramService import TelegramService
 from Services.TriggerService import TriggerService
-from Services.IcsService import IcsService
+from features.attendance.IcsService import IcsService
 
 from Triggers.TriggerPayload import TriggerPayload
 

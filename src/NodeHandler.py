@@ -14,12 +14,12 @@ from Enums.Table import Table
 from Enums.Event import Event
 from Enums.MessageType import MessageType
 
-from Services.IcsService import IcsService
+from features.attendance.IcsService import IcsService
 from Services.UserStateService import UserStateService
 from Services.TelegramService import TelegramService
 from Services.TriggerService import TriggerService
 from Services.EventService import EventService
-from Services.AttendanceService import AttendanceService
+from features.attendance.AttendanceService import AttendanceService
 from features.roles.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
 from features.stats.StatisticsService import StatisticsService
@@ -29,7 +29,7 @@ from Nodes.DefaultNode import DefaultNode
 from Nodes.InitNode import InitNode
 from Nodes.RejectedNode import RejectedNode
 from features.stats.StatsNode import StatsNode
-from Nodes.EditNode import EditNode
+from features.attendance.EditNode import EditNode
 from Nodes.AdminNode import AdminNode
 from Nodes.AdminAddNode import AdminAddNode
 from Nodes.AddEventFieldsNode import AddEventFieldsNode
@@ -41,7 +41,7 @@ from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
 from features.website.UpdateWebsiteNode import UpdateWebsiteNode
 from features.website.UpdateWebsiteCallbackNode import UpdateWebsiteCallbackNode
 
-from Nodes.EditCallbackNode import EditCallbackNode
+from features.attendance.EditCallbackNode import EditCallbackNode
 from Nodes.UpdateEventCallbackNode import UpdateEventCallbackNode
 
 from Data.DataAccess import DataAccess
