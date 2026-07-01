@@ -86,3 +86,23 @@ async def test_opponent_edit_on_non_game_is_rejected(node_handler, data_access):
         await callback_node.handle(update)
 
     assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_UPDATE  # no transition to the edit state
+
+
+async def test_add_restart_callback_discards_draft_and_restarts(node_handler, data_access, bot):
+    # Regression: clicking RESTART on the add-event inline keyboard used to crash
+    # (send_message_with_normal_keyboard returned None -> delete_previous_message), which
+    # left the user in the wizard state with the draft already discarded, so every later
+    # message hit NoTempDataFoundException. RESTART must discard the old draft and start a
+    # fresh one without error.
+    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_ADD_TRAINING)
+    old_draft = data_access.add(TempData(uts.user_id, Event.TRAINING, chat_id=ADMIN_ID, query_id=10))
+
+    await drive_callback(node_handler, ADMIN_ID,
+                         _cb(UserState.ADMIN_ADD_TRAINING, Event.TRAINING, CallbackOption.RESTART, old_draft.doc_id))
+
+    # A fresh draft exists (get_temp_data must not raise) and we are back at the wizard start.
+    new_draft = data_access.get_temp_data(uts.user_id)
+    assert new_draft.event_type == Event.TRAINING
+    assert new_draft.step == CallbackOption.DATETIME
+    assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_ADD_TRAINING
+    assert_no_error_reported(bot)
