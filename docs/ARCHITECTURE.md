@@ -91,9 +91,8 @@ summaries. It reads events via `data` and sends via `TelegramService`.
   the one place a node still touches data. It must become tenant-aware; cleanest to
   resolve alongside the tenancy work (ADR 0001).
 - **Trigger system** (`TriggerService.initialize_triggers`) is wired but underused —
-  revisit when a second trigger is needed.
-- **Unplaced shared code:** `Triggers/` (trigger domain objects) and root
-  `OneTimeSetup.py` (a manual seeding script) don't yet have a settled home.
+  revisit when a second trigger is needed. `Triggers/` and root `OneTimeSetup.py` also
+  don't yet have a settled home.
 
-Longer-term product ideas (multi-team, admin broadcast, per-user language, menu
-redesign, `/help` completeness) are tracked in [`todos.md`](../todos.md).
+Candidate next work — features and technical follow-ups, each with an entry point and
+rough effort — is tracked in [`todos.md`](../todos.md).
