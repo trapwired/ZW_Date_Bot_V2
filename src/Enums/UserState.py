@@ -25,15 +25,7 @@ class UserState(IntEnum):
     ADMIN_ADD_TRAINING = 57
     ADMIN_ADD_TIMEKEEPING = 58
 
-    ADMIN_UPDATE_GAME_LOCATION = 100
-    ADMIN_UPDATE_GAME_OPPONENT = 101
-    ADMIN_UPDATE_GAME_TIMESTAMP = 102
-
-    ADMIN_UPDATE_TRAINING_LOCATION = 110
-    ADMIN_UPDATE_TRAINING_TIMESTAMP = 112
-
-    ADMIN_UPDATE_TIMEKEEPING_LOCATION = 120
-    ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP = 122
+    ADMIN_UPDATE_EVENT_FIELD = 140
 
     ADMIN_STATISTICS = 130
     ADMIN_UPDATE_WEBSITE = 131
@@ -42,15 +34,16 @@ class UserState(IntEnum):
 
     @classmethod
     def _missing_(cls, value):
-        # Phase 3a collapsed the per-field add-event states into the per-type parent and
-        # moved the step into TempData.step. Coerce any persisted pre-3a value so a user
-        # who was mid-wizard at deploy time reads back as the parent state instead of
-        # crashing on UserState(int(state)). Returning None keeps genuinely unknown values
-        # a ValueError.
-        return _LEGACY_ADD_STATES.get(value)
+        # Phase 3a/3b collapsed the per-field add- and update-event states into a parent /
+        # a single edit state, moving the field into context (TempData.step /
+        # additional_info). Coerce any persisted pre-collapse value so a user who was
+        # mid-wizard at deploy time reads back as a valid state instead of crashing on
+        # UserState(int(state)). Returning None keeps genuinely unknown values a ValueError.
+        return _LEGACY_STATES.get(value)
 
 
-_LEGACY_ADD_STATES = {
+_LEGACY_STATES = {
+    # Phase 3a — add-event wizard field states -> per-type parent
     103: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_TIMESTAMP
     104: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_LOCATION
     105: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_OPPONENT
@@ -61,4 +54,13 @@ _LEGACY_ADD_STATES = {
     123: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_ADD_TIMEKEEPING_LOCATION
     124: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_ADD_TIMEKEEPING_TIMESTAMP
     125: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_FINISH_ADD_TIMEKEEPING
+    # Phase 3b — update-event field states -> the update menu (their old additional_info
+    # is the pre-3b format, so the edit can't resume; drop them back to re-navigate).
+    100: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_GAME_LOCATION
+    101: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_GAME_OPPONENT
+    102: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_GAME_TIMESTAMP
+    110: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_TRAINING_LOCATION
+    112: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_TRAINING_TIMESTAMP
+    120: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_TIMEKEEPING_LOCATION
+    122: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP
 }

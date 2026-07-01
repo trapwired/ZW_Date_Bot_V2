@@ -1,14 +1,16 @@
 """Characterization: the "event moved by >2h invalidates all attendance" policy.
 
-Pins the domain rule currently buried in EditEventTimestampNode (the
-`abs(old - new) > 2h` check) BEFORE Phase 2 extracts it into the domain layer.
-The flow is text-driven (handle_help -> handle_event_timestamp), so the user is
-seeded directly into the timestamp-edit state with the inline-message context
-stashed in additional_info, exactly as the callback step would leave it.
+Pins the domain rule (AttendanceResetPolicy: the `abs(old - new) > 2h` check) applied
+by EditEventFieldNode when an event's timestamp is edited.
+The flow is text-driven (handle_help -> handle_event_field), so the user is seeded
+directly into the single field-edit state (ADMIN_UPDATE_EVENT_FIELD) with the
+inline-message context, event type, and DATETIME field stashed in additional_info,
+exactly as the callback step would leave it.
 """
 from Enums.Role import Role
 from Enums.UserState import UserState
 from Enums.Event import Event
+from Enums.CallbackOption import CallbackOption
 from Enums.AttendanceState import AttendanceState
 from databaseEntities.Game import Game
 from databaseEntities.Attendance import Attendance
@@ -23,8 +25,9 @@ ORIGINAL = "24.12.2030 18:30"
 def _seed_game_with_yes_attendance(data_access):
     game = data_access.add(Game(parse(ORIGINAL).value, "home arena", "rivals fc"))
     uts = seed_user(
-        data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_GAME_TIMESTAMP,
-        additional_info=CallbackUtils.build_additional_information(1, ADMIN_ID, game.doc_id))
+        data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_EVENT_FIELD,
+        additional_info=CallbackUtils.build_additional_information(1, ADMIN_ID, game.doc_id, Event.GAME,
+                                                                   CallbackOption.DATETIME))
     data_access.update_attendance(Attendance(uts.user_id, game.doc_id, AttendanceState.YES), Event.GAME)
     return game
 

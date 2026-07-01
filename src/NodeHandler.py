@@ -13,7 +13,6 @@ from Enums.RoleSet import RoleSet
 from Enums.Table import Table
 from Enums.Event import Event
 from Enums.MessageType import MessageType
-from Enums.CallbackOption import CallbackOption
 
 from Services.IcsService import IcsService
 from Services.UserStateService import UserStateService
@@ -35,8 +34,7 @@ from Nodes.AdminNode import AdminNode
 from Nodes.AdminAddNode import AdminAddNode
 from Nodes.AddEventFieldsNode import AddEventFieldsNode
 from Nodes.UpdateNode import UpdateNode
-from Nodes.EditEventTimestampNode import EditEventTimestampNode
-from Nodes.EditEventLocationOrOpponentNode import EditEventLocationOrOpponentNode
+from Nodes.EditEventFieldNode import EditEventFieldNode
 from Nodes.AddEventCallbackNode import AddEventCallbackNode
 from Nodes.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
 from Nodes.AssignRolesCallbackNode import AssignRolesCallbackNode
@@ -348,33 +346,9 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.add_event_transitions_to_node(Event.TIMEKEEPING, update_timekeepings_node,
                                            update_timekeepings_node.handle_event_id)
 
-        admin_update_game_timestamp_node = EditEventTimestampNode(
-            UserState.ADMIN_UPDATE_GAME_TIMESTAMP, telegram_service, user_state_service, data_access, Event.GAME, self,
+        edit_event_field_node = EditEventFieldNode(
+            UserState.ADMIN_UPDATE_EVENT_FIELD, telegram_service, user_state_service, data_access, self,
             self.event_service)
-
-        admin_update_training_timestamp_node = EditEventTimestampNode(
-            UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP, telegram_service, user_state_service, data_access,
-            Event.TRAINING, self, self.event_service)
-
-        admin_update_timekeeping_timestamp_node = EditEventTimestampNode(
-            UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP, telegram_service, user_state_service, data_access,
-            Event.TIMEKEEPING, self, self.event_service)
-
-        admin_update_game_opponent_node = EditEventLocationOrOpponentNode(
-            UserState.ADMIN_UPDATE_GAME_OPPONENT, telegram_service, user_state_service, data_access, Event.GAME,
-            CallbackOption.OPPONENT, self, self.event_service)
-
-        admin_update_game_location_node = EditEventLocationOrOpponentNode(
-            UserState.ADMIN_UPDATE_GAME_LOCATION, telegram_service, user_state_service, data_access, Event.GAME,
-            CallbackOption.LOCATION, self, self.event_service)
-
-        admin_update_training_location_node = EditEventLocationOrOpponentNode(
-            UserState.ADMIN_UPDATE_TRAINING_LOCATION, telegram_service, user_state_service, data_access, Event.TRAINING,
-            CallbackOption.LOCATION, self, self.event_service)
-
-        admin_update_timekeeping_location_node = EditEventLocationOrOpponentNode(
-            UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION, telegram_service, user_state_service, data_access,
-            Event.TIMEKEEPING, CallbackOption.LOCATION, self, self.event_service)
 
         all_nodes_dict = {
             UserState.INIT: init_node,
@@ -396,13 +370,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_UPDATE_GAME: update_games_node,
             UserState.ADMIN_UPDATE_TRAINING: update_trainings_node,
             UserState.ADMIN_UPDATE_TIMEKEEPING: update_timekeepings_node,
-            UserState.ADMIN_UPDATE_GAME_OPPONENT: admin_update_game_opponent_node,
-            UserState.ADMIN_UPDATE_GAME_LOCATION: admin_update_game_location_node,
-            UserState.ADMIN_UPDATE_GAME_TIMESTAMP: admin_update_game_timestamp_node,
-            UserState.ADMIN_UPDATE_TRAINING_LOCATION: admin_update_training_location_node,
-            UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP: admin_update_training_timestamp_node,
-            UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION: admin_update_timekeeping_location_node,
-            UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP: admin_update_timekeeping_timestamp_node,
+            UserState.ADMIN_UPDATE_EVENT_FIELD: edit_event_field_node,
             UserState.ADMIN_ADD_GAME: admin_add_game_node,
             UserState.ADMIN_ADD_TRAINING: admin_add_training_node,
             UserState.ADMIN_ADD_TIMEKEEPING: admin_add_timekeeping_node

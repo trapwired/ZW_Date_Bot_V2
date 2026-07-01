@@ -33,8 +33,10 @@ def test_event_callback_rejects_malformed():
 
 
 def test_additional_information_roundtrip_and_format():
-    assert CallbackUtils.build_additional_information(5, 10, "d1") == "5#10#d1"
-    assert CallbackUtils.try_parse_additional_information("5#10#d1") == (5, 10, "d1")
+    built = CallbackUtils.build_additional_information(5, 10, "d1", Event.GAME, CallbackOption.LOCATION)
+    assert built == "5#10#d1#0#20"
+    assert CallbackUtils.try_parse_additional_information(built) == (5, 10, "d1", Event.GAME, CallbackOption.LOCATION)
+    assert CallbackUtils.try_parse_additional_information("5#10#d1") is None  # pre-3b 3-field format
     assert CallbackUtils.try_parse_additional_information("bad") is None
 
 

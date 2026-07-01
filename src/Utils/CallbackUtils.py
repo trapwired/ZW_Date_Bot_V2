@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 from Enums.UserState import UserState
 from Enums.Event import Event
 from Enums.CallbackOption import CallbackOption
@@ -103,20 +105,29 @@ def try_parse_callback_message(message: str) -> tuple[UserState, Event, Callback
     return user_state, event, callback_option, doc_id
 
 
-def build_additional_information(message_id: int, chat_id: int, event_document_id: str) -> str:
-    return str(message_id) + DELIMITER + str(chat_id) + DELIMITER + event_document_id
+class EventFieldEdit(NamedTuple):
+    """The context for a single-field event edit, stashed in UsersToState.additional_info
+    while the admin types the new value (the inline message to update, plus which event
+    and field are being edited)."""
+    message_id: int
+    chat_id: int
+    doc_id: str
+    event_type: Event
+    field: CallbackOption
 
 
-def try_parse_additional_information(message: str) -> tuple[int, int, str] | None:
+def build_additional_information(message_id: int, chat_id: int, event_document_id: str, event_type: Event,
+                                 field: CallbackOption) -> str:
+    return DELIMITER.join([str(message_id), str(chat_id), event_document_id, str(int(event_type)), str(int(field))])
+
+
+def try_parse_additional_information(message: str) -> EventFieldEdit | None:
     split = message.split(DELIMITER)
-    if len(split) != 3:
+    if len(split) != 5:
         return None
 
     try:
-        message_id = int(split[0])
-        chat_id = int(split[1])
-        doc_id = split[2]
-    except KeyError:
+        return EventFieldEdit(int(split[0]), int(split[1]), split[2], Event(int(split[3])),
+                              CallbackOption(int(split[4])))
+    except ValueError:
         return None
-
-    return message_id, chat_id, doc_id

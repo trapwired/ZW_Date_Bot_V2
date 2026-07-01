@@ -20,31 +20,6 @@ from Services.UserStateService import UserStateService
 from Utils import UpdateEventUtils
 
 
-def get_new_user_state(callback_option: CallbackOption, event_type: Event):
-    match event_type:
-        case Event.GAME:
-            match callback_option:
-                case CallbackOption.OPPONENT:
-                    return UserState.ADMIN_UPDATE_GAME_OPPONENT
-                case CallbackOption.LOCATION:
-                    return UserState.ADMIN_UPDATE_GAME_LOCATION
-                case CallbackOption.DATETIME:
-                    return UserState.ADMIN_UPDATE_GAME_TIMESTAMP
-        case Event.TRAINING:
-            match callback_option:
-                case CallbackOption.LOCATION:
-                    return UserState.ADMIN_UPDATE_TRAINING_LOCATION
-                case CallbackOption.DATETIME:
-                    return UserState.ADMIN_UPDATE_TRAINING_TIMESTAMP
-        case Event.TIMEKEEPING:
-            match callback_option:
-                case CallbackOption.LOCATION:
-                    return UserState.ADMIN_UPDATE_TIMEKEEPING_LOCATION
-                case CallbackOption.DATETIME:
-                    return UserState.ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP
-    raise Exception(f'No userState found for: {callback_option} and {event_type}')
-
-
 class UpdateEventCallbackNode(CallbackNode):
     required_roles = RoleSet.ADMINS
 
@@ -117,6 +92,11 @@ class UpdateEventCallbackNode(CallbackNode):
                 return
 
         if callback_option in [CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT]:
+            if callback_option == CallbackOption.OPPONENT and event_type is not Event.GAME:
+                # Only games have an opponent. The UI never offers this button for other
+                # types, so an OPPONENT edit on a training/timekeeping is a forged or stale
+                # callback - fail loudly (maintainer alert) instead of writing a phantom field.
+                raise ValueError(f'{event_type} has no opponent field to edit')
             updated_event_summary = UpdateEventUtils.mark_updating_in_event_string(event_type, event_summary,
                                                                                    callback_option)
             callback_message = 'Updating ' + event_label + ': ' + updated_event_summary
@@ -128,10 +108,10 @@ class UpdateEventCallbackNode(CallbackNode):
             await self.send_normal_message_keyboard(update, normal_message)
 
             user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
-            user_to_state.additional_info = CallbackUtils.build_additional_information(query.message.id,
-                                                                                       query.message.chat_id, doc_id)
+            user_to_state.additional_info = CallbackUtils.build_additional_information(
+                query.message.id, query.message.chat_id, doc_id, event_type, callback_option)
 
-            self.user_state_service.update_user_state(user_to_state, get_new_user_state(callback_option, event_type))
+            self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_EVENT_FIELD)
 
             return
 
