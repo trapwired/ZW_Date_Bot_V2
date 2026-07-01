@@ -56,7 +56,12 @@ class FirebaseRepository(object):
         self.tables = tables
         api_config_path = PathUtils.get_secrets_file_path(api_config.get_key('Firebase', 'credentialsFileName'))
         cred_object = firebase_admin.credentials.Certificate(api_config_path)
-        default_app = firebase_admin.initialize_app(cred_object)
+        try:
+            # initialize_app throws if the default app already exists; reuse it so a second
+            # repository instance doesn't crash the process.
+            default_app = firebase_admin.get_app()
+        except ValueError:
+            default_app = firebase_admin.initialize_app(cred_object)
         self.db = firestore.client(default_app)
 
     def raise_exception_if_document_not_exists(self, collection: str, document_ref: str):
@@ -293,8 +298,8 @@ class FirebaseRepository(object):
 
     def update_user_via_telegram_id(self, user: TelegramUser):
         user_id = self.get_user(user.telegramId).doc_id
-        user.doc_id = user_id
-        self.update(user, self.tables.get(Table.USERS_TABLE))
+        user_with_id = user.add_document_id(user_id)
+        return self.update(user_with_id, self.tables.get(Table.USERS_TABLE))
 
     ##########
     # DELETE #

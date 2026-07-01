@@ -20,8 +20,6 @@ from features.attendance.AttendanceService import AttendanceService
 from features.roles.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
 
-from OneTimeSetup import OneTimeSetup
-
 
 def initialize_logging():
     logging.basicConfig(
@@ -48,11 +46,6 @@ def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
 
 async def send_hi(context: ContextTypes.DEFAULT_TYPE):
     await telegram_service.send_maintainer_hi('Bot was restarted')
-
-
-def use_one_time_setup(data_access: DataAccess):
-    one_time_setup = OneTimeSetup(data_access)
-    # one_time_setup.add_timekeepings()
 
 
 def run_job_queue():
@@ -107,8 +100,6 @@ if __name__ == "__main__":
     telegram_service, user_state_service, ics_service, data_access, scheduling_service, trigger_service, \
         event_service, attendance_service, role_service, website_service, statistics_service = \
         initialize_services(application.bot, api_config)
-
-    # use_one_time_setup(data_access)
 
     node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service,
                                ics_service, data_access, trigger_service, event_service, attendance_service,
