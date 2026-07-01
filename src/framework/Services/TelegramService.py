@@ -311,7 +311,7 @@ class TelegramService(object):
         await query.edit_message_text(text=message, reply_markup=reply_markup,
                                       parse_mode=telegram.constants.ParseMode.HTML)
 
-    async def delete_previous_message(self, message: Message):
+    async def delete_previous_message(self, message: Message | None):
         if message is None:
             return
         await self._delete_message(message.message_id - 1, message.chat_id)
