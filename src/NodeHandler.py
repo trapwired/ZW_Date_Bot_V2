@@ -22,13 +22,13 @@ from Services.EventService import EventService
 from Services.AttendanceService import AttendanceService
 from Services.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
-from Services.StatisticsService import StatisticsService
+from features.stats.StatisticsService import StatisticsService
 
 from Nodes.Node import Node
 from Nodes.DefaultNode import DefaultNode
 from Nodes.InitNode import InitNode
 from Nodes.RejectedNode import RejectedNode
-from Nodes.StatsNode import StatsNode
+from features.stats.StatsNode import StatsNode
 from Nodes.EditNode import EditNode
 from Nodes.AdminNode import AdminNode
 from Nodes.AdminAddNode import AdminAddNode
@@ -36,7 +36,7 @@ from Nodes.AddEventFieldsNode import AddEventFieldsNode
 from Nodes.UpdateNode import UpdateNode
 from Nodes.EditEventFieldNode import EditEventFieldNode
 from Nodes.AddEventCallbackNode import AddEventCallbackNode
-from Nodes.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
+from features.stats.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
 from Nodes.AssignRolesCallbackNode import AssignRolesCallbackNode
 from features.website.UpdateWebsiteNode import UpdateWebsiteNode
 from features.website.UpdateWebsiteCallbackNode import UpdateWebsiteCallbackNode

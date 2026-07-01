@@ -4,7 +4,7 @@ import random
 from Data.DataAccess import DataAccess
 
 from Services.TelegramService import TelegramService
-from Services.StatisticsService import StatisticsService
+from features.stats.StatisticsService import StatisticsService
 
 from telegram.ext import ContextTypes
 
