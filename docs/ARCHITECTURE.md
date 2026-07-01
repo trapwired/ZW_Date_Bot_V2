@@ -80,9 +80,12 @@ summaries. It reads events via `data` and sends via `TelegramService`.
 
 ## Known-open items
 
-- **Observability.** The catch-all `except Exception` in `NodeHandler` only DMs the
-  maintainer — no metric or alert on failures. Worth adding structured logging + an
-  alert, and distinguishing expected dead-letters from unexpected crashes.
+- **Observability.** Unhandled exceptions in the interactive path (`NodeHandler`,
+  `Node`) and the background jobs (`SchedulingService`) all route through
+  `TelegramService.report_exception`, which logs at ERROR with a traceback *first*
+  (a greppable, alertable signal that survives even when the maintainer DM fails) and
+  then best-effort alerts the maintainer. A dedicated metrics system or error-tracking
+  integration (e.g. Sentry) is a possible next step but not currently wired.
 - **Base-node data read.** `framework/Nodes/Node.get_commands_for_buttons` reads
   `data_access` directly (`get_user`, `get_all_event_attendances`) to render buttons —
   the one place a node still touches data. It must become tenant-aware; cleanest to

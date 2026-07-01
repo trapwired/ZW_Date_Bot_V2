@@ -262,6 +262,20 @@ class TelegramService(object):
             await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
                                         parse_mode=telegram.constants.ParseMode.HTML)
 
+    async def report_exception(self, description: str, error: Exception, update: Update | None = None):
+        """Report an unhandled exception: log it with a traceback, then best-effort alert the
+        maintainer. The log happens first and unconditionally, so a failure stays visible in
+        the logs (greppable, alertable) even when the alert send itself fails or the maintainer
+        is not watching the chat."""
+        logging.error(description, exc_info=error)
+        try:
+            if update is None:
+                await self.send_maintainer_message(description, error)
+            else:
+                await self.send_maintainer_message(description, update, error)
+        except Exception:
+            logging.exception('Failed to send maintainer alert for: %s', description)
+
     async def send_maintainer_hi(self, hi: str):
         messages_to_send = PrintUtils.split_message(Format.escape(hi))
         for message_to_send in messages_to_send:
