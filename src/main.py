@@ -14,7 +14,7 @@ from Services.TelegramService import TelegramService
 from Services.UserStateService import UserStateService
 from Services.SchedulingService import SchedulingService
 from Services.TriggerService import TriggerService
-from Services.StatisticsService import StatisticsService
+from features.stats.StatisticsService import StatisticsService
 from Services.EventService import EventService
 from Services.AttendanceService import AttendanceService
 from Services.RoleService import RoleService

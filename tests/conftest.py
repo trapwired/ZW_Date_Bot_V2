@@ -53,7 +53,7 @@ def services(data_access, bot, api_config):
     from Services.AttendanceService import AttendanceService
     from Services.RoleService import RoleService
     from features.website.WebsiteService import WebsiteService
-    from Services.StatisticsService import StatisticsService
+    from features.stats.StatisticsService import StatisticsService
 
     user_state_service = UserStateService(data_access)
     telegram_service = TelegramService(bot, api_config, user_state_service)

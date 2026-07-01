@@ -14,18 +14,18 @@ As of 2026-07-01:
   10 states deleted); **Phase 3b** collapsed the update-event field states (field/type →
   `additional_info`, two edit nodes merged into `EditEventFieldNode`, 7 states → 1).
   `UserState` is down **39 → 23**. **Phase 4** (physical reslice) is in progress,
-  features-first: the **website** slice is moved into `features/website/`. 91 tests green
-  (`./venv/bin/python -m pytest -q`).
+  features-first: **website** and **stats** slices are moved into `features/`. 91 tests
+  green (`./venv/bin/python -m pytest -q`).
 - **One accepted exception** to "no `data_access` in `Nodes/`": the base
   `Node.get_commands_for_buttons` button-render reads (`Node.py:159-160`) — resolved
   in Phase 4 when base infra moves to `framework/`.
 - **Tenancy decision recorded:** `docs/adr/0001-multi-team-tenancy.md` (one Telegram
   user ↔ one team; scope at the data boundary). Implementation is post-reslice.
 
-**NEXT TASK → Phase 4 cont.** — next slice: **stats** (`StatsNode`,
-`ResetStatisticsCallbackNode`, `StatisticsService` → `features/stats/`), then roles,
-attendance, eventmgmt, onboarding/admin, then the `framework/`+`domain/`+`data/`
-rename. Then Phase 6 (diagram), Phase 7 (comment cleanup). One reviewable PR per slice.
+**NEXT TASK → Phase 4 cont.** — next slice: **roles** (`AssignRolesCallbackNode`,
+`RoleService`, `Utils/RoleAssignment` → `features/roles/`), then attendance,
+eventmgmt, onboarding/admin, then the `framework/`+`domain/`+`data/` rename. Then
+Phase 6 (diagram), Phase 7 (comment cleanup). One reviewable PR per slice.
 
 Convention this far: one vertical/concern per PR; `do_checks` runs at
 `NodeHandler` construction so wiring errors fail the whole suite; commit trailer
@@ -371,7 +371,10 @@ Slice order (smallest first, as a mechanics canary):
     `UpdateWebsiteCallbackNode`, `WebsiteService` → `features/website/`; rewired the 3
     importers (`NodeHandler`, `main.py`, `conftest`). 91 green. Validated the move +
     import-rewrite + test loop.
-16. stats → roles → attendance → eventmgmt (biggest) → onboarding/admin hub. One PR each.
+16. **stats (done, branch `phase-4b-stats-slice`).** `StatsNode`,
+    `ResetStatisticsCallbackNode`, `StatisticsService` → `features/stats/`; rewired
+    `NodeHandler`, `main.py`, `SchedulingService`, `conftest`. 91 green.
+    Then: roles → attendance → eventmgmt (biggest) → onboarding/admin hub. One PR each.
 17. Rename the leftovers: `Nodes/Node.py`+`CallbackNode.py`+`NodeHandler`+`Transitions`+
     `TelegramService`+`NodeUtils`+`CommandDescriptions` → `framework/`; `databaseEntities`
     + `domain` → `domain/`; `Data/` → `data/`. Update `main.py` composition root.
