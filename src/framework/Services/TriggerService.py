@@ -24,8 +24,9 @@ class TriggerService:
     def initialize_triggers(self, data_access: DataAccess):
         triggers = []
 
-        # Trigger: warn trainers once cancellations leave at most MAX_PLAYERS_PER_GAME
-        # players available (yes or unsure) for a game
+        # Trigger: warn trainers when cancellations leave at most MAX_PLAYERS_PER_GAME
+        # players available (yes or unsure) for a game; deliberately fires again on
+        # every further no while availability stays at or below the limit
         pre_condition = lambda tp: tp.attendance_is(AttendanceState.NO) and tp.event_is(Event.GAME)
         condition = lambda tp: (data_access.get_num_of_available_players(tp.doc_id, tp.event_type)
                                 <= MAX_PLAYERS_PER_GAME)

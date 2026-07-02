@@ -1,8 +1,8 @@
 """The low-availability game trigger.
 
 Counts availability over all active players: yes + unsure (active players
-without an answer default to unsure). Once cancellations leave at most
-MAX_PLAYERS_PER_GAME available, a NO update notifies the game trainers.
+without an answer default to unsure). While cancellations leave at most
+MAX_PLAYERS_PER_GAME available, every NO update notifies the game trainers.
 """
 import pytest
 
@@ -44,7 +44,8 @@ def _trainer_texts(bot, api_config):
     return bot.texts_to(trainer_chat_id)
 
 
-async def test_fires_once_only_max_players_stay_available(services, data_access, api_config, bot, game, player_ids):
+async def test_fires_when_at_most_max_players_stay_available(services, data_access, api_config, bot, game,
+                                                              player_ids):
     last_no = _say_no(data_access, player_ids, game, count=3)   # 12 active - 3 no = 9 available
 
     payload = TriggerPayload(new_attendance=last_no, doc_id=game.doc_id, event_type=Event.GAME)
@@ -53,6 +54,15 @@ async def test_fires_once_only_max_players_stay_available(services, data_access,
     texts = _trainer_texts(bot, api_config)
     assert any(f'at most {MAX_PLAYERS_PER_GAME} players' in text and '24.12.2030 18:30' in text
                for text in texts)
+
+
+async def test_fires_again_on_every_further_no(services, data_access, api_config, bot, game, player_ids):
+    for count in [3, 4]:                                        # 9 available, then 8
+        last_no = _say_no(data_access, player_ids, game, count=count)
+        payload = TriggerPayload(new_attendance=last_no, doc_id=game.doc_id, event_type=Event.GAME)
+        await services["trigger_service"].check_triggers(payload)
+
+    assert len(_trainer_texts(bot, api_config)) == 2
 
 
 async def test_silent_while_more_than_max_players_available(services, data_access, api_config, bot, game, player_ids):
