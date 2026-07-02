@@ -1,6 +1,6 @@
-from Triggers.Trigger import Trigger
+from framework.Triggers.Trigger import Trigger
 
-from Triggers.TriggerPayload import TriggerPayload
+from framework.Triggers.TriggerPayload import TriggerPayload
 
 
 class AttendanceUpdateTrigger(Trigger):

@@ -2,13 +2,15 @@ import logging
 
 from data.DataAccess import DataAccess
 
-from Triggers.TriggerPayload import TriggerPayload
-from Triggers.AttendanceUpdateTrigger import AttendanceUpdateTrigger
+from framework.Triggers.TriggerPayload import TriggerPayload
+from framework.Triggers.AttendanceUpdateTrigger import AttendanceUpdateTrigger
 
 from framework.Services.TelegramService import TelegramService
 
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
+
+from domain.GameRules import has_too_few_available_players
 
 from Utils import PrintUtils
 
@@ -22,12 +24,13 @@ class TriggerService:
     def initialize_triggers(self, data_access: DataAccess):
         triggers = []
 
-        # Trigger: notify if more than 8 ppl said no on event
+        # Trigger: warn trainers when cancellations leave too few players available
+        # (yes or unsure) for a game; deliberately fires again on every further no
+        # while availability stays low
         pre_condition = lambda tp: tp.attendance_is(AttendanceState.NO) and tp.event_is(Event.GAME)
-        condition = lambda tp: data_access.get_num_of_no_of_event(tp.doc_id, tp.event_type) > 7
-        message = 'More than 7 players indicated no - so we can only be a maximum of 9 players'
-        notify_action = lambda tp: self.send_event_message(tp, message)
-        new_trigger = AttendanceUpdateTrigger(pre_condition, condition, notify_action, message)
+        condition = lambda tp: has_too_few_available_players(
+            data_access.get_num_of_available_players(tp.doc_id, tp.event_type))
+        new_trigger = AttendanceUpdateTrigger(pre_condition, condition, self.send_low_availability_warning)
         triggers.append(new_trigger)
 
         # Trigger: notify if both keepers said no on event
@@ -40,6 +43,12 @@ class TriggerService:
                 logging.info('Trigger fired: %s for event %s',
                              type(trigger).__name__, trigger_payload.doc_id)
                 await trigger.notify_action(trigger_payload)
+
+    async def send_low_availability_warning(self, trigger_payload: TriggerPayload):
+        available = self.data_access.get_num_of_available_players(trigger_payload.doc_id,
+                                                                  trigger_payload.event_type)
+        message = f'So many players said no that only {available} players are still available (yes or unsure)'
+        await self.send_event_message(trigger_payload, message)
 
     async def send_event_message(self, trigger_payload: TriggerPayload, msg: str):
         game = self.data_access.get_game(trigger_payload.doc_id)

@@ -16,7 +16,7 @@ from framework.Services.TelegramService import TelegramService
 from framework.Services.TriggerService import TriggerService
 from features.attendance.IcsService import IcsService
 
-from Triggers.TriggerPayload import TriggerPayload
+from framework.Triggers.TriggerPayload import TriggerPayload
 
 
 class EditCallbackNode(CallbackNode):
