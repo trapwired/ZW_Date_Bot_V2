@@ -4,7 +4,6 @@ from framework.Nodes.Node import Node
 
 from Enums.UserState import UserState
 from Enums.EventField import EventField
-from Enums.AttendanceState import AttendanceState
 from Enums.MessageType import MessageType
 
 from domain.entities.UsersToState import UsersToState
@@ -20,7 +19,7 @@ from Utils import PrintUtils
 from Utils.CustomExceptions import NoTempDataFoundException
 
 from features.adminpanel import AdminMenu
-from features.events import EventsMenu
+from features.eventmgmt import PlayerNotifications
 
 from domain import EventDateTimeParser
 
@@ -37,7 +36,7 @@ class AddEventFieldsNode(Node):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.event_service = event_service
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.DEFAULT)
-        self.add_main_menu_escapes(self._discard_draft)
+        self.enable_main_menu_escapes(self._discard_draft)
         self.fallback_action = self.handle_user_input
 
     def _discard_draft(self, user_to_state: UsersToState) -> None:
@@ -98,7 +97,9 @@ class AddEventFieldsNode(Node):
     async def handle_save(self, update: Update, user_to_state: UsersToState, temp_data: TempData):
         new_event = self.event_service.finalize_draft(temp_data)
         await self.update_inline_message(temp_data, 'Saved', can_save=None)
-        await self.notify_all_players(new_event, temp_data.event_type)
+        await PlayerNotifications.push_event_to_players(
+            self.telegram_service, self.event_service.get_all_players(), new_event, temp_data.event_type,
+            intro_message_type=MessageType.EVENT_ADDED)
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
         await self.telegram_service.send_message(update=update, all_buttons=None, message='Saved 👍')
 
@@ -109,21 +110,3 @@ class AddEventFieldsNode(Node):
         reply_markup = None if can_save is None else AdminMenu.build_wizard_markup(can_save)
         await self.telegram_service.edit_inline_message_text(pretty_print, temp_data.query_id, temp_data.chat_id,
                                                              reply_markup)
-
-    async def notify_all_players(self, new_event, event_type):
-        all_players = self.event_service.get_all_players()
-
-        for player in all_players:
-            await self.telegram_service.send_message(
-                update=player,
-                all_buttons=None,
-                message_type=MessageType.EVENT_ADDED)
-
-            pretty_print_event = PrintUtils.pretty_print(new_event, AttendanceState.UNSURE)
-            reply_markup = EventsMenu.build_attendance_markup(event_type, new_event.doc_id)
-            message_text = PrintUtils.event_label(event_type) + ' | ' + pretty_print_event
-            await self.telegram_service.send_message(
-                update=player,
-                all_buttons=None,
-                message=message_text,
-                reply_markup=reply_markup)

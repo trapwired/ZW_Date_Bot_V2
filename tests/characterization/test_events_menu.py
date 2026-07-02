@@ -119,6 +119,35 @@ async def test_full_timekeeping_card_locks_out_non_yes_players(node_handler, dat
     assert_no_error_reported(bot)
 
 
+async def test_spectator_cannot_open_a_timekeeping_card_via_forwarded_button(node_handler, data_access, bot):
+    tke = data_access.add(TimekeepingEvent(parse(FUTURE).value, "eventhalle"))
+    seed_user(data_access, SPECTATOR_ID, Role.SPECTATOR, UserState.DEFAULT)
+
+    update = await drive_callback(node_handler, SPECTATOR_ID, EventsMenu.encode_card(Event.TIMEKEEPING, tke.doc_id))
+
+    assert update.callback_query.answered
+    assert not update.callback_query.edits          # card (incl. player names) never rendered
+    assert len(bot.documents) == 0
+    assert_no_error_reported(bot)
+
+
+async def test_full_timekeeping_rejects_a_yes_from_a_stale_button(node_handler, data_access, bot):
+    tke = data_access.add(TimekeepingEvent(parse(FUTURE).value, "eventhalle", people_required=1))
+    helper = seed_user(data_access, 2103, Role.PLAYER, UserState.DEFAULT)
+    set_attendance(data_access, helper.user_id, tke.doc_id, AttendanceState.YES, Event.TIMEKEEPING)
+    late = seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
+
+    # A reminder/card message rendered before the event filled still carries a live Yes.
+    update = await drive_callback(node_handler, PLAYER_ID,
+                                  EventsMenu.encode_attend(Event.TIMEKEEPING, tke.doc_id, AttendanceState.YES))
+
+    stored = data_access.get_attendance(PLAYER_ID, tke.doc_id, Event.TIMEKEEPING)
+    assert stored.state == AttendanceState.UNSURE   # the over-filling yes was not written
+    assert late.user_id != helper.user_id
+    assert any("enough people" in e.text for e in update.callback_query.edits)
+    assert_no_error_reported(bot)
+
+
 async def test_card_of_deleted_event_degrades_gracefully(node_handler, data_access, bot, game):
     seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
     data_access.delete_event(Event.GAME, game.doc_id)

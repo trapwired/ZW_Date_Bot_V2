@@ -3,7 +3,7 @@ import traceback
 
 import telegram
 from multipledispatch import dispatch
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InaccessibleMessage
 
 from Enums.MessageType import MessageType
 from Enums.Event import Event
@@ -13,7 +13,7 @@ from Utils import Format
 from Utils.ApiConfig import ApiConfig
 
 from domain.entities.TelegramUser import TelegramUser
-from telegram.error import BadRequest, Forbidden
+from telegram.error import Forbidden
 
 from Utils.CustomExceptions import ExpectedException
 
@@ -223,12 +223,15 @@ class TelegramService(object):
                                          parse_mode=telegram.constants.ParseMode.HTML)
 
     async def edit_callback_message(self, query, message: str, reply_markup: InlineKeyboardMarkup = None):
+        # Buttons keep working forever, but for messages older than 48h Telegram sends
+        # only an InaccessibleMessage in the callback - query.edit_message_text would
+        # raise TypeError. The message can still be edited directly via its ids.
+        if isinstance(query.message, InaccessibleMessage):
+            await self.edit_inline_message_text(message, query.message.message_id, query.message.chat.id,
+                                                reply_markup)
+            return
+        if query.message is None:
+            await self._send_message(chat_id=query.from_user.id, message=message, reply_markup=reply_markup)
+            return
         await query.edit_message_text(text=message, reply_markup=reply_markup,
                                       parse_mode=telegram.constants.ParseMode.HTML)
-
-    async def _delete_message(self, message_id: int, chat_id: int):
-        try:
-            await self.bot.delete_message(message_id=message_id, chat_id=chat_id)
-        except BadRequest as e:
-            # Bots can't delete messages older than 48h; this cleanup is best-effort.
-            logging.debug(f"Could not delete message {message_id} in chat {chat_id}: {e}")

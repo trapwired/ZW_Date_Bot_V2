@@ -22,6 +22,10 @@ class EventService:
     # --- event drafts (the add-event wizard scratch state) ---
 
     def create_draft(self, user_id: str, event_type: Event) -> TempData:
+        # Invariant: at most one draft per user (get_draft looks drafts up by user and
+        # fails on more). Enforced here so no wizard entry point can create a second one
+        # (e.g. starting the wizard from two admin-menu messages).
+        self.discard_draft_if_any(user_id)
         return self.data_access.add(TempData(user_id, event_type))
 
     def get_draft(self, user_id: str) -> TempData:

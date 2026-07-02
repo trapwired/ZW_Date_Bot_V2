@@ -1,10 +1,11 @@
 """Application service for the attendance slice.
 
 Owns the data orchestration for a player changing their attendance on an event,
-so EditCallbackNode stays thin and Telegram-facing.
+so the events callback node stays thin and Telegram-facing.
 """
 from data.DataAccess import DataAccess
 
+from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 
 from domain.entities.Attendance import Attendance
@@ -32,3 +33,13 @@ class AttendanceService:
     def yes_count(self, doc_id: str, event_type: Event) -> int:
         yes, _, _ = self.data_access.get_stats_event(doc_id, event_type)
         return len(yes)
+
+    def timekeeping_is_locked(self, own_attendance: Attendance, event, yes_count: int | None = None) -> bool:
+        """A full timekeeping event only locks out players who are not part of the
+        yes-crowd; whoever already said yes may still change their answer. Callers
+        that already hold the yes count pass it in to save the extra query."""
+        if own_attendance.state is AttendanceState.YES:
+            return False
+        if yes_count is None:
+            yes_count = self.yes_count(event.doc_id, Event.TIMEKEEPING)
+        return yes_count >= event.people_required

@@ -19,10 +19,6 @@ from framework.CommandDescriptions import CommandDescriptions
 
 from framework.Transitions.Transition import Transition
 
-# Main-menu commands a typed-input node lets through as an escape hatch: instead of
-# being swallowed as input, they clean up the in-flight flow and navigate.
-MAIN_MENU_ESCAPE_COMMANDS = ('events', 'admin', 'website')
-
 
 class Node(ABC):
 
@@ -36,6 +32,9 @@ class Node(ABC):
         # Where free text that matches no transition lands: menu screens show help,
         # typed-input screens (wizard, field edit, URL) consume it as the expected value.
         self.fallback_action = self.handle_help
+        # Set via enable_main_menu_escapes: lets any main-menu command break out of a
+        # typed-input node instead of being swallowed as input.
+        self.main_menu_escape_cleanup = None
         self.add_transition('help', self.handle_help, allowed_roles=RoleSet.EVERYONE)
         self.add_transition('/help', self.handle_help, allowed_roles=RoleSet.EVERYONE,
                             needs_description=False, in_keyboard=False)
@@ -48,6 +47,9 @@ class Node(ABC):
         try:
             command = update.message.text.lower()
             transition = self.get_transition(command, user_to_state.role)
+            if transition is None:
+                await self.fallback_action(update, user_to_state, None)
+                return
             action = transition.action
             new_state = transition.new_state
             await action(update, user_to_state, new_state)
@@ -69,12 +71,15 @@ class Node(ABC):
     # TRANSITIONS #
     ###############
 
-    def get_transition(self, command: str, role: Role) -> Transition:
+    def get_transition(self, command: str, role: Role) -> Transition | None:
+        """The matching transition, a main-menu escape if the node allows one, or None
+        (the caller runs fallback_action)."""
         transitions = list(filter(lambda t: t.can_be_taken(command, role), self.transitions))
-        if len(transitions) == 0:
-            return Transition(command, self.fallback_action, allowed_roles=RoleSet.REALLY_EVERYONE,
-                              needs_description=False, in_keyboard=False)
-        return transitions[0]
+        if len(transitions) > 0:
+            return transitions[0]
+        if self.main_menu_escape_cleanup is not None and self._is_main_menu_command(command, role):
+            return Transition(command, self._handle_main_menu_escape, needs_description=False, in_keyboard=False)
+        return None
 
     def add_transition(self, command: str, action: Callable = None, allowed_roles: RoleSet = RoleSet.EVERYONE,
                        new_state: UserState = None, needs_description: bool = True, is_active_function: Callable = None,
@@ -88,17 +93,19 @@ class Node(ABC):
         self.transitions.append(new_transition)
         return new_transition
 
-    def add_main_menu_escapes(self, cleanup: Callable[[UsersToState], None]) -> None:
-        """Let the main-menu commands break out of this node: run the node's cleanup
+    def enable_main_menu_escapes(self, cleanup: Callable[[UsersToState], None]) -> None:
+        """Let every main-menu command break out of this node: run the node's cleanup
         (drop a draft, clear staged input), then dispatch the command as if the user
-        were already back on the main menu."""
-        for command in MAIN_MENU_ESCAPE_COMMANDS:
-            self.add_transition(command, partial(self._handle_main_menu_escape, cleanup=cleanup),
-                                needs_description=False, in_keyboard=False)
+        were already back on the main menu. Which commands escape is derived from the
+        DEFAULT node's transitions, so new main-menu entries can't go stale here."""
+        self.main_menu_escape_cleanup = cleanup
 
-    async def _handle_main_menu_escape(self, update: Update, user_to_state: UsersToState, new_state: UserState,
-                                       cleanup: Callable[[UsersToState], None]) -> None:
-        cleanup(user_to_state)
+    def _is_main_menu_command(self, command: str, role: Role) -> bool:
+        return any(t.can_be_taken(command, role) for t in self.nodes[UserState.DEFAULT].transitions)
+
+    async def _handle_main_menu_escape(self, update: Update, user_to_state: UsersToState,
+                                       new_state: UserState) -> None:
+        self.main_menu_escape_cleanup(user_to_state)
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
         await self.nodes[UserState.DEFAULT].handle(update, user_to_state)
 
@@ -107,7 +114,9 @@ class Node(ABC):
     ####################
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
-        commands_for_buttons = self.get_commands_for_buttons(user_to_state.role, new_state)
+        # Help text lists THIS screen's commands; the reply keyboard is always the
+        # static main-menu one, so asking for help mid-flow can't swap it out.
+        commands_for_buttons = self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT)
         commands_for_text = self.get_commands_for_help(user_to_state.role, new_state)
         message = CommandDescriptions.get_descriptions(commands_for_text)
         await self.telegram_service.send_message(

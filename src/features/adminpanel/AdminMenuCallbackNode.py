@@ -16,7 +16,6 @@ from framework.Services.UserStateService import UserStateService
 from features.adminpanel import AdminMenu
 
 from Utils import PrintUtils
-from Utils import UpdateEventUtils
 from Utils.CustomExceptions import NoTempDataFoundException
 
 RESET_CONFIRM_TEXT = ('Are you sure you want to end the current season?\n\n'
@@ -155,7 +154,10 @@ class AdminMenuCallbackNode(CallbackNode):
         self.event_service.save_draft(temp_data)
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_ADD_EVENT)
 
-        await self._edit(query, self._draft_text(temp_data), AdminMenu.build_wizard_markup(can_save=False))
+        # Rendered by the wizard node so the first draft display and every re-render
+        # after a typed step come from the same code path.
+        await query.answer()
+        await self.add_event_node.update_inline_message(temp_data, 'Adding new', can_save=False)
         prompt = PrintUtils.get_update_attribute_message(EventField.DATETIME)
         await self.telegram_service.send_message(update=update, all_buttons=None, message=prompt)
 
@@ -181,10 +183,6 @@ class AdminMenuCallbackNode(CallbackNode):
             case AdminMenu.WIZARD_SAVE:
                 await query.answer()
                 await self.add_event_node.handle_save(update, user_to_state, temp_data)
-
-    def _draft_text(self, temp_data) -> str:
-        event_summary = PrintUtils.pretty_print(temp_data, temp_data.event_type)
-        return UpdateEventUtils.get_inline_message('Adding new', temp_data.event_type, event_summary)
 
     async def _edit(self, query, message: str, reply_markup=None):
         await query.answer()

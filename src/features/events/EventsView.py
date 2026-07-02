@@ -17,22 +17,23 @@ EVENT_TYPES_IN_ORDER = [Event.GAME, Event.TRAINING, Event.TIMEKEEPING]
 
 
 class EventsView:
+    PAGE_SIZE = 8
+
     def __init__(self, event_service, attendance_service, statistics_service):
         self.event_service = event_service
         self.attendance_service = attendance_service
         self.statistics_service = statistics_service
 
-    PAGE_SIZE = 8
-
     def build_list(self, role: Role, telegram_id: int, selected_type: Event | None,
                    page: int = 0) -> tuple[str, InlineKeyboardMarkup | None]:
-        available_types = self._available_types(role)
-        if len(available_types) == 0:
+        events_by_type = self._upcoming_by_type(role)
+        if len(events_by_type) == 0:
             return 'There are no upcoming events at the moment.', None
-        if selected_type not in available_types:
+        available_types = list(events_by_type.keys())
+        if selected_type not in events_by_type:
             selected_type = available_types[0]
 
-        events = self.event_service.get_upcoming(selected_type)
+        events = events_by_type[selected_type]
         last_page = max(0, (len(events) - 1) // self.PAGE_SIZE)
         page = min(max(page, 0), last_page)
         page_of_events = events[page * self.PAGE_SIZE:(page + 1) * self.PAGE_SIZE]
@@ -66,7 +67,8 @@ class EventsView:
         can_attend = role in RoleSet.PLAYERS
         if can_attend:
             own = self.attendance_service.get_attendance(telegram_id, doc_id, event_type)
-            if self._timekeeping_is_full_for(event, event_type, own):
+            if event_type is Event.TIMEKEEPING and \
+                    self.attendance_service.timekeeping_is_locked(own, event, yes_count=len(stats_with_names[0])):
                 can_attend = False
                 text += '\n' + Format.italic('Already enough people registered for this event.')
             else:
@@ -75,12 +77,12 @@ class EventsView:
         markup = EventsMenu.build_card_markup(event_type, doc_id, can_attend, is_admin=(role is Role.ADMIN))
         return text, markup
 
-    def _available_types(self, role: Role) -> list[Event]:
+    def _upcoming_by_type(self, role: Role) -> dict[Event, list]:
         # Timekeeping events are deliberately hidden from spectators.
-        types = [t for t in EVENT_TYPES_IN_ORDER if self.event_service.any_upcoming(t)]
-        if role is Role.SPECTATOR:
-            types = [t for t in types if t is not Event.TIMEKEEPING]
-        return types
+        types = [t for t in EVENT_TYPES_IN_ORDER
+                 if not (role is Role.SPECTATOR and t is Event.TIMEKEEPING)]
+        by_type = {t: self.event_service.get_upcoming(t) for t in types}
+        return {t: events for t, events in by_type.items() if len(events) > 0}
 
     def _list_button_label(self, event, own_attendances: dict, role: Role) -> str:
         label = PrintUtils.pretty_print_event_command(event)
@@ -90,10 +92,3 @@ class EventsView:
         attendance = own_attendances.get(event.doc_id)
         state = attendance.state if attendance else AttendanceState.UNSURE
         return f'{PrintUtils.ATTENDANCE_EMOJI[state]} {label}'
-
-    def _timekeeping_is_full_for(self, event, event_type: Event, own_attendance) -> bool:
-        # A full timekeeping event only locks out players who are not part of the
-        # yes-crowd; whoever already said yes may still change their answer.
-        if event_type is not Event.TIMEKEEPING or own_attendance.state is AttendanceState.YES:
-            return False
-        return self.attendance_service.yes_count(event.doc_id, event_type) >= event.people_required

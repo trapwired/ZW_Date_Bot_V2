@@ -92,6 +92,23 @@ async def test_edit_shows_field_chooser_per_event_type(node_handler, data_access
     assert_no_error_reported(bot)
 
 
+async def test_forged_opponent_edit_on_a_training_fails_loudly(node_handler, data_access, bot):
+    # OPPONENT is only a game field; the chooser never offers it for a training, so this
+    # can only be a forged/stale callback. Driven at the node so the assertion isn't the
+    # harness's maintainer path.
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    training = data_access.add(Training(parse(FUTURE).value, "sporthalle"))
+
+    from tests.helpers import make_callback_update
+    update = make_callback_update(
+        ADMIN_ID, EventsMenu.encode_edit_field(Event.TRAINING, training.doc_id, EventField.OPPONENT))
+    callback_node = node_handler.get_callback_node(update.callback_query.data)
+    with pytest.raises(ValueError):
+        await callback_node.handle(update)
+
+    assert current_state(data_access, ADMIN_ID) == UserState.DEFAULT  # no transition to the edit state
+
+
 async def test_picking_a_field_hands_over_to_typed_input(node_handler, data_access, bot, game):
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
 

@@ -47,6 +47,35 @@ async def test_admin_escapes_the_field_edit_and_clears_context(node_handler, dat
     assert_no_error_reported(bot)
 
 
+async def test_any_main_menu_command_escapes_including_privacy(node_handler, data_access, bot):
+    # Escapes are derived from the DEFAULT node's transitions, so even the
+    # keyboard-invisible /privacy command must break out instead of being stored
+    # as the event's field value.
+    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)))
+
+    await drive(node_handler, ADMIN_ID, "/privacy")
+
+    assert current_state(data_access, ADMIN_ID) == UserState.DEFAULT
+    with pytest.raises(NoTempDataFoundException):
+        data_access.get_temp_data(uts.user_id)
+    assert any("Privacy Policy" in m.text for m in bot.sent)
+    assert_no_error_reported(bot)
+
+
+async def test_help_during_wizard_keeps_the_static_keyboard(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)))
+
+    await drive(node_handler, ADMIN_ID, "help")
+
+    keyboard = [m for m in bot.sent if m.chat_id == ADMIN_ID][-1].reply_markup.keyboard
+    flattened = [str(getattr(b, 'text', b)).lower() for row in keyboard for b in row]
+    assert flattened == ['events', 'admin', 'website', 'help']   # main-menu keyboard, not [/cancel]
+    assert '/cancel' in bot.texts_to(ADMIN_ID)[-1]               # help text still explains this screen
+    assert_no_error_reported(bot)
+
+
 async def test_website_escapes_the_url_input(node_handler, data_access, bot):
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="staged")
 

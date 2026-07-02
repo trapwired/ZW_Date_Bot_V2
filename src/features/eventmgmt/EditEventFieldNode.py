@@ -9,7 +9,6 @@ from Enums.UserState import UserState
 from Enums.MessageType import MessageType
 from Enums.Event import Event
 from Enums.EventField import EventField
-from Enums.AttendanceState import AttendanceState
 
 from domain.entities.UsersToState import UsersToState
 
@@ -20,7 +19,7 @@ from data.DataAccess import DataAccess
 from framework.Services.TelegramService import TelegramService
 from framework.Services.UserStateService import UserStateService
 
-from features.events import EventsMenu
+from features.eventmgmt import PlayerNotifications
 from features.events.EventsView import EventsView
 
 
@@ -36,7 +35,7 @@ class EditEventFieldNode(Node):
         self.event_service = event_service
         self.events_view = events_view
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.DEFAULT)
-        self.add_main_menu_escapes(self._clear_edit_context)
+        self.enable_main_menu_escapes(self._clear_edit_context)
         self.fallback_action = self.handle_event_field
 
     def _clear_edit_context(self, user_to_state: UsersToState) -> None:
@@ -88,24 +87,10 @@ class EditEventFieldNode(Node):
 
     async def notify_all_players(self, event_type: Event, doc_id: str, updated_event, old_event):
         self.event_service.reset_attendance(event_type, doc_id)
-        all_players = self.event_service.get_all_players()
-        pretty_print_old_event = PrintUtils.pretty_print_event_datetime(old_event)
-
-        for player in all_players:
-            await self.telegram_service.send_message(
-                update=player,
-                all_buttons=None,
-                message_type=MessageType.EVENT_TIMESTAMP_CHANGED,
-                message_extra_text=pretty_print_old_event)
-
-            pretty_print_event = PrintUtils.pretty_print(updated_event, AttendanceState.UNSURE)
-            reply_markup = EventsMenu.build_attendance_markup(event_type, doc_id)
-            message_text = PrintUtils.event_label(event_type) + ' | ' + pretty_print_event
-            await self.telegram_service.send_message(
-                update=player,
-                all_buttons=None,
-                message=message_text,
-                reply_markup=reply_markup)
+        await PlayerNotifications.push_event_to_players(
+            self.telegram_service, self.event_service.get_all_players(), updated_event, event_type,
+            intro_message_type=MessageType.EVENT_TIMESTAMP_CHANGED,
+            intro_extra_text=PrintUtils.pretty_print_event_datetime(old_event))
 
     async def handle_parse_additional_info_failed(self, user_to_state: UsersToState, update: Update):
         text = 'Error getting information from the database, please restart updating the event via the events menu :)'

@@ -16,7 +16,7 @@ class UpdateWebsiteNode(Node):
     def __init__(self, state, telegram_service, user_state_service, data_access):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.DEFAULT)
-        self.add_main_menu_escapes(self._clear_pending_url)
+        self.enable_main_menu_escapes(self._clear_pending_url)
         self.fallback_action = self.handle_url_input
 
     def _clear_pending_url(self, user_to_state: UsersToState) -> None:

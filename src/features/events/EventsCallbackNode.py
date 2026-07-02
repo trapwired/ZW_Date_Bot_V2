@@ -60,6 +60,12 @@ class EventsCallbackNode(CallbackNode):
         role = self.user_state_service.get_user_state(update.effective_chat.id).role
         telegram_id = update.effective_chat.id
 
+        if event_type is Event.TIMEKEEPING and role not in RoleSet.PLAYERS:
+            # Timekeeping events are hidden from spectators; a forwarded button must
+            # not leak the card, attendance names or the calendar file either.
+            await query.answer()
+            return
+
         match action:
             case EventsMenu.LIST:
                 page = int(args[0]) if args else 0
@@ -96,6 +102,15 @@ class EventsCallbackNode(CallbackNode):
     async def _set_attendance(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str,
                               state: AttendanceState):
         try:
+            if event_type is Event.TIMEKEEPING and state is AttendanceState.YES:
+                # The card hides the buttons once the event is full, but stale cards and
+                # pushed reminder messages keep live YES buttons - re-check on write.
+                event = self.event_service.get_event(event_type, doc_id)
+                own = self.attendance_service.get_attendance(telegram_id, doc_id, event_type)
+                if self.attendance_service.timekeeping_is_locked(own, event):
+                    await query.answer()
+                    await self._render_card(query, role, telegram_id, event_type, doc_id)
+                    return
             attendance, _ = self.attendance_service.set_attendance(telegram_id, event_type, doc_id, state)
         except ObjectNotFoundException:
             await self._show_event_gone(query, event_type)
@@ -134,6 +149,12 @@ class EventsCallbackNode(CallbackNode):
 
     async def _prompt_field_value(self, update: Update, query, event_type: Event, doc_id: str,
                                   field: EventField):
+        if field not in FIELD_ORDER[event_type]:
+            # The chooser never offers this combination (e.g. OPPONENT on a training), so
+            # it is a forged or stale callback - fail loudly (maintainer alert) instead of
+            # prompting for a value that would be written into a phantom field.
+            raise ValueError(f'{event_type} has no {field.name} field to edit')
+
         # The admin types the new value next; remember which event/field/card message the
         # answer belongs to, and route their next text through the field-edit node.
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)

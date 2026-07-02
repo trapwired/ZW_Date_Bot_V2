@@ -151,6 +151,24 @@ async def test_cancel_button_discards_draft(node_handler, data_access, bot):
     assert_no_error_reported(bot)
 
 
+async def test_second_wizard_start_replaces_the_first_draft(node_handler, data_access, bot):
+    # Starting the wizard from two admin-menu messages must not leave two drafts behind
+    # (a second TempData row would make every get_draft lookup fail from then on).
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    await drive_callback(node_handler, ADMIN_ID, _start(Event.GAME))
+    await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))
+
+    # The wizard continues on the fresh (training) draft; typed input still works.
+    assert current_step(data_access, ADMIN_ID) == EventField.DATETIME
+    await drive(node_handler, ADMIN_ID, FUTURE_TIMESTAMP)
+    await drive(node_handler, ADMIN_ID, "Sporthalle")
+    await drive(node_handler, ADMIN_ID, "save")
+
+    assert len(data_access.get_ordered_trainings()) == 1
+    assert data_access.get_ordered_games() == []
+    assert_no_error_reported(bot)
+
+
 async def test_stale_wizard_button_after_cancel_degrades_gracefully(node_handler, data_access, bot):
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.GAME))
