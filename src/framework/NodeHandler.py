@@ -120,7 +120,12 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
-            logging.info(update)
+            if update.effective_chat is None:
+                # Chat-less updates (e.g. poll answers) have no state to route; ignore them.
+                return
+            # Log a compact, non-PII summary rather than the full Update (which carries names).
+            logging.info('Update: chat_type=%s, callback=%s',
+                         update.effective_chat.type, update.callback_query is not None)
             chat_type = update.effective_chat.type
 
             if chat_type in self.GROUP_TYPES:

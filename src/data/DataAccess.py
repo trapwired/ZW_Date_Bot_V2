@@ -311,7 +311,7 @@ class DataAccess(object):
             result.append(user)
         return result
 
-    def any_events_in_future(self, event_table: Table, x=42):
+    def any_events_in_future(self, event_table: Table):
         events = self.firebase_repository.get_future_events(event_table)
         return len(events) > 0
 

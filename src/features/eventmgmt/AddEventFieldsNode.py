@@ -23,18 +23,13 @@ from Utils import CallbackUtils
 
 from domain import EventDateTimeParser
 
+from features.eventmgmt.EventStateMapping import add_event_user_state
+
 
 # The wizard walks TempData.FIELD_ORDER (games additionally collect an opponent), so a
 # single flow handles all three event types instead of three copy-pasted handlers. The
 # current step lives in temp_data.step, not in UserState, so the whole wizard runs on a
 # single per-type state (ADMIN_ADD_GAME etc.); SAVE marks the finish step.
-
-# The UserState encoded into the inline-keyboard callback channel for the add flow.
-_ADD_USER_STATE = {
-    Event.GAME: UserState.ADMIN_ADD_GAME,
-    Event.TRAINING: UserState.ADMIN_ADD_TRAINING,
-    Event.TIMEKEEPING: UserState.ADMIN_ADD_TIMEKEEPING,
-}
 
 
 class AddEventFieldsNode(Node):
@@ -65,7 +60,7 @@ class AddEventFieldsNode(Node):
         # On the finish step, 'save' commits; anything else just re-prompts to save.
         if temp_data.step == CallbackOption.SAVE:
             if message == 'save':
-                await self.handle_save(new_state, temp_data, update, user_to_state)
+                await self.handle_save(update, user_to_state, new_state, temp_data)
                 return
             await self._prompt_next(update, CallbackOption.SAVE)
             return
@@ -102,11 +97,11 @@ class AddEventFieldsNode(Node):
         message = PrintUtils.get_update_attribute_message(attribute)
         await self.telegram_service.send_message_with_normal_keyboard(update=update, message=message)
 
-    async def handle_save(self, new_state, temp_data, update, user_to_state):
-        new_game = self.event_service.finalize_draft(temp_data)
+    async def handle_save(self, update, user_to_state, new_state, temp_data):
+        new_event = self.event_service.finalize_draft(temp_data)
         await self.update_inline_message(temp_data, 'Saved', AddEventMarkup.NONE)
         self.node_handler.recalculate_node_transitions()
-        await self.notify_all_players(new_game)
+        await self.notify_all_players(new_event)
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN)
         await self.telegram_service.send_message(
             update=update,
@@ -119,7 +114,7 @@ class AddEventFieldsNode(Node):
         event_summary = PrintUtils.pretty_print(temp_data, self.event_type)
         pretty_print = UpdateEventUtils.get_inline_message(prefix, self.event_type, event_summary)
 
-        user_state = _ADD_USER_STATE[self.event_type]
+        user_state = add_event_user_state(self.event_type)
         match markup_type:
             case AddEventMarkup.DEFAULT:
                 reply_markup = CallbackUtils.get_add_event_reply_markup(user_state, self.event_type, temp_data.doc_id)

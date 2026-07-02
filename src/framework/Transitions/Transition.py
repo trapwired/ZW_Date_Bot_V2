@@ -15,7 +15,7 @@ def initialize_is_active_function(function):
     if function is not None:
         return function
     else:
-        return lambda x: True
+        return lambda: True
 
 
 class Transition(ABC):
@@ -41,4 +41,4 @@ class Transition(ABC):
         return role in self.allowed_roles
 
     def is_active(self):
-        return self.is_active_function(x=5)
+        return self.is_active_function()

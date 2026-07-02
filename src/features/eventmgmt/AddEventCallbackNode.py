@@ -14,17 +14,9 @@ from framework.Services.UserStateService import UserStateService
 
 from Utils import CallbackUtils
 
+from features.eventmgmt.EventStateMapping import add_event_user_state
+
 from telegram import Update
-
-
-def get_user_state_from_event_type(event_type: Event):
-    match event_type:
-        case Event.GAME:
-            return UserState.ADMIN_ADD_GAME
-        case Event.TRAINING:
-            return UserState.ADMIN_ADD_TRAINING
-        case Event.TIMEKEEPING:
-            return UserState.ADMIN_ADD_TIMEKEEPING
 
 
 class AddEventCallbackNode(CallbackNode):
@@ -87,6 +79,6 @@ class AddEventCallbackNode(CallbackNode):
                 return
 
             case CallbackOption.SAVE:
-                user_state = get_user_state_from_event_type(temp_data.event_type)
+                user_state = add_event_user_state(temp_data.event_type)
                 add_event_fields_node = self.node_handler.get_node(user_state)
-                await add_event_fields_node.handle_save(UserState.ADMIN, temp_data, update, user_to_state)
+                await add_event_fields_node.handle_save(update, user_to_state, UserState.ADMIN, temp_data)
