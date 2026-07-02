@@ -27,12 +27,16 @@ async def test_admin_menu_offers_the_roles_entry(node_handler, data_access, bot)
     assert_no_error_reported(bot)
 
 
-async def test_roles_entry_shows_overview(node_handler, data_access, bot):
+async def test_roles_entry_shows_overview_with_back_to_admin_menu(node_handler, data_access, bot):
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
 
     update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_home())
 
-    assert any("Select a role to manage" in e.text for e in update.callback_query.edits)
+    edit = update.callback_query.edits[-1]
+    assert "Select a role to manage" in edit.text
+    data = [b.callback_data for row in edit.reply_markup.inline_keyboard for b in row]
+    from features.adminpanel import AdminMenu
+    assert AdminMenu.encode(AdminMenu.PANEL) in data    # « Back into the admin menu
     assert_no_error_reported(bot)
 
 

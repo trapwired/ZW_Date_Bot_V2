@@ -13,7 +13,7 @@ from Utils import Format
 from Utils.ApiConfig import ApiConfig
 
 from domain.entities.TelegramUser import TelegramUser
-from telegram.error import Forbidden
+from telegram.error import BadRequest, Forbidden
 
 from Utils.CustomExceptions import ExpectedException
 
@@ -75,7 +75,7 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
     layout = [
         ['events'],
         ['admin'],
-        ['website', 'help'],
+        ['website'],
     ]
     placed = {command for row in layout for command in row}
 
@@ -215,6 +215,16 @@ class TelegramService(object):
             case Event.TIMEKEEPING:
                 return self.trainers_games
         return []
+
+    async def delete_message(self, message_id: int | None, chat_id: int):
+        """Best-effort chat cleanup (e.g. consumed wizard prompts); deleting can fail
+        for messages older than 48h and must never fail the flow."""
+        if message_id is None:
+            return
+        try:
+            await self.bot.delete_message(message_id=message_id, chat_id=chat_id)
+        except BadRequest as e:
+            logging.debug(f'Could not delete message {message_id} in chat {chat_id}: {e}')
 
     async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int,
                                        reply_markup: InlineKeyboardMarkup = None):

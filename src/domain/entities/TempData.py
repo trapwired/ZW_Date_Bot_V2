@@ -26,7 +26,8 @@ class TempData(DatabaseEntity):
 
     def __init__(self, user_doc_id: str, event_type: Event, timestamp: pd.Timestamp | str = None, location: str = None,
                  opponent: str = None, chat_id: int = None, query_id: int = None,
-                 step: EventField | str | int = EventField.DATETIME, doc_id: str = None):
+                 step: EventField | str | int = EventField.DATETIME, doc_id: str = None,
+                 prompt_message_id: int = None):
         super().__init__(doc_id)
         self.user_doc_id = user_doc_id
         self.timestamp = DateTimeUtils.utc_to_zurich_timestamp(timestamp) if timestamp is not None else None
@@ -34,6 +35,9 @@ class TempData(DatabaseEntity):
         self.opponent = opponent
         self.chat_id = int(chat_id) if chat_id else None
         self.query_id = int(query_id) if query_id else None
+        # The wizard's latest 'Send me the ...' prompt; deleted once its input arrived
+        # so the chat doesn't fill up with consumed prompts.
+        self.prompt_message_id = int(prompt_message_id) if prompt_message_id else None
         if type(event_type) is str or type(event_type) is int:
             event_type = Event(int(event_type))
         self.event_type = event_type
@@ -46,7 +50,8 @@ class TempData(DatabaseEntity):
     @staticmethod
     def from_dict(doc_id: str, source: dict):
         temp_data = TempData(source['userDocId'], source['eventType'], source['timestamp'], source['location'],
-                             source['opponent'], source['chatId'], source['queryId'], doc_id=doc_id)
+                             source['opponent'], source['chatId'], source['queryId'], doc_id=doc_id,
+                             prompt_message_id=source.get('promptMessageId'))
         stored_step = source.get('step')
         # Legacy drafts (created before TempData.step existed) have no persisted step;
         # infer it from which fields are already filled so an in-flight wizard resumes
@@ -73,7 +78,8 @@ class TempData(DatabaseEntity):
                 'chatId': self.chat_id,
                 'queryId': self.query_id,
                 'step': self.step,
-                'eventType': self.event_type}
+                'eventType': self.event_type,
+                'promptMessageId': self.prompt_message_id}
 
     def __repr__(self):
         return (f"TempData(userDocId={self.user_doc_id}, timestamp={self.timestamp}, location={self.location}, "

@@ -36,14 +36,21 @@ class AddEventFieldsNode(Node):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.event_service = event_service
         self.add_transition('/cancel', self.handle_cancel, new_state=UserState.DEFAULT)
-        self.enable_main_menu_escapes(self._discard_draft)
+        self.enable_main_menu_escapes(self.abort_draft)
         self.fallback_action = self.handle_user_input
 
-    def _discard_draft(self, user_to_state: UsersToState) -> None:
-        self.event_service.discard_draft_if_any(user_to_state.user_id)
+    async def abort_draft(self, user_to_state: UsersToState) -> None:
+        """Every way out of the wizard runs this: delete the open prompt and discard
+        the draft, if one exists."""
+        try:
+            temp_data = self.event_service.get_draft(user_to_state.user_id)
+        except NoTempDataFoundException:
+            return
+        await self.telegram_service.delete_message(temp_data.prompt_message_id, temp_data.chat_id)
+        self.event_service.discard_draft(temp_data)
 
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        self._discard_draft(user_to_state)
+        await self.abort_draft(user_to_state)
         await self.telegram_service.send_message(
             update=update, all_buttons=None, message='Cancelled - the event was not saved.')
 
@@ -64,7 +71,8 @@ class AddEventFieldsNode(Node):
             if message == 'save':
                 await self.handle_save(update, user_to_state, temp_data)
                 return
-            await self._prompt_next(update, EventField.SAVE)
+            await self.replace_prompt(update, temp_data, EventField.SAVE)
+            self.event_service.save_draft(temp_data)
             return
 
         steps = FIELD_ORDER[temp_data.event_type]
@@ -85,16 +93,21 @@ class AddEventFieldsNode(Node):
         index = steps.index(field)
         next_step = steps[index + 1] if index + 1 < len(steps) else EventField.SAVE
         temp_data.step = next_step
-        self.event_service.save_draft(temp_data)
 
         await self.update_inline_message(temp_data, 'Adding new', can_save=(next_step == EventField.SAVE))
-        await self._prompt_next(update, next_step)
+        await self.replace_prompt(update, temp_data, next_step)
+        self.event_service.save_draft(temp_data)
 
-    async def _prompt_next(self, update: Update, attribute: EventField) -> None:
-        message = PrintUtils.get_update_attribute_message(attribute)
-        await self.telegram_service.send_message(update=update, all_buttons=None, message=message)
+    async def replace_prompt(self, update, temp_data: TempData, attribute: EventField) -> None:
+        """Swap the consumed 'Send me the ...' prompt for the next one, so the chat
+        holds at most one open prompt. The caller persists the draft."""
+        await self.telegram_service.delete_message(temp_data.prompt_message_id, temp_data.chat_id)
+        sent = await self.telegram_service.send_message(
+            update=update, all_buttons=None, message=PrintUtils.get_update_attribute_message(attribute))
+        temp_data.prompt_message_id = sent.message_id if sent else None
 
     async def handle_save(self, update: Update, user_to_state: UsersToState, temp_data: TempData):
+        await self.telegram_service.delete_message(temp_data.prompt_message_id, temp_data.chat_id)
         new_event = self.event_service.finalize_draft(temp_data)
         await self.update_inline_message(temp_data, 'Saved', can_save=None)
         await PlayerNotifications.push_event_to_players(

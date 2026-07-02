@@ -74,10 +74,15 @@ def test_admin_menu_detection_and_parse():
 # --- field-edit context (CallbackUtils.additional_info) ------------------------
 
 def test_additional_information_roundtrip_and_format():
-    built = CallbackUtils.build_additional_information(5, 10, "d1", Event.GAME, EventField.LOCATION)
-    assert built == "5#10#d1#0#20"
-    assert CallbackUtils.try_parse_additional_information(built) == (5, 10, "d1", Event.GAME, EventField.LOCATION)
-    assert CallbackUtils.try_parse_additional_information("5#10#d1") is None  # legacy 3-field format
+    built = CallbackUtils.build_additional_information(5, 10, "d1", Event.GAME, EventField.LOCATION,
+                                                       prompt_message_id=77)
+    assert built == "5#10#d1#0#20#77"
+    assert CallbackUtils.try_parse_additional_information(built) == \
+        (5, 10, "d1", Event.GAME, EventField.LOCATION, 77)
+    # Contexts stashed before the prompt id existed have 5 fields and must keep parsing.
+    assert CallbackUtils.try_parse_additional_information("5#10#d1#0#20") == \
+        (5, 10, "d1", Event.GAME, EventField.LOCATION, None)
+    assert CallbackUtils.try_parse_additional_information("5#10#d1") is None  # ancient 3-field format
     assert CallbackUtils.try_parse_additional_information("bad") is None
 
 

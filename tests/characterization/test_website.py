@@ -33,12 +33,34 @@ async def test_typed_url_is_staged_and_confirmation_asked(node_handler, data_acc
 
     await drive(node_handler, ADMIN_ID, NEW_URL)
 
+    from features.website.WebsiteService import WebsiteService
     assert data_access.get_website() is None                       # nothing committed yet
-    assert data_access.get_user_state(ADMIN_ID).additional_info == NEW_URL
+    _, _, staged_url = WebsiteService.parse_pending(data_access.get_user_state(ADMIN_ID).additional_info)
+    assert staged_url == NEW_URL
     confirm = [m for m in bot.sent if m.chat_id == ADMIN_ID][-1]
     data = [b.callback_data for row in confirm.reply_markup.inline_keyboard for b in row]
     assert AdminMenu.encode(AdminMenu.WEBSITE_YES) in data
     assert AdminMenu.encode(AdminMenu.WEBSITE_NO) in data
+    assert_no_error_reported(bot)
+
+
+async def test_typed_url_updates_the_menu_message_in_place(node_handler, data_access, bot):
+    # Entering via the admin menu tracks that message: every typed URL re-renders it
+    # with Save/Cancel and the loose typed message is removed from the chat.
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WEBSITE_PROMPT), message_id=33)
+
+    await drive(node_handler, ADMIN_ID, NEW_URL)
+    await drive(node_handler, ADMIN_ID, OLD_URL)     # retyping replaces the staged value
+
+    from features.website.WebsiteService import WebsiteService
+    menu_edits = [e for e in bot.edits if e.message_id == 33]
+    assert any(NEW_URL in e.text for e in menu_edits)
+    assert any(OLD_URL in e.text for e in menu_edits)          # second URL re-rendered in place
+    _, _, staged_url = WebsiteService.parse_pending(data_access.get_user_state(ADMIN_ID).additional_info)
+    assert staged_url == OLD_URL
+    assert data_access.get_website() is None                   # still nothing committed
+    assert len(bot.deleted) == 2                               # both typed URL messages cleaned up
     assert_no_error_reported(bot)
 
 
@@ -65,7 +87,7 @@ async def test_confirm_no_keeps_existing_url(node_handler, data_access, bot):
     staged = data_access.get_user_state(ADMIN_ID)
     assert staged.additional_info == ''                 # staging field still cleared
     assert staged.state == UserState.DEFAULT
-    assert any("Cancelled" in e.text for e in update.callback_query.edits)
+    assert any("Admin menu" in e.text for e in update.callback_query.edits)  # back on the panel
     assert_no_error_reported(bot)
 
 

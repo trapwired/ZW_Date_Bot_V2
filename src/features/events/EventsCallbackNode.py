@@ -155,16 +155,18 @@ class EventsCallbackNode(CallbackNode):
             # prompting for a value that would be written into a phantom field.
             raise ValueError(f'{event_type} has no {field.name} field to edit')
 
-        # The admin types the new value next; remember which event/field/card message the
-        # answer belongs to, and route their next text through the field-edit node.
-        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
-        user_to_state.additional_info = CallbackUtils.build_additional_information(
-            query.message.id, query.message.chat_id, doc_id, event_type, field)
-        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_EVENT_FIELD)
-
         await query.answer()
         prompt = PrintUtils.get_update_attribute_message(field)
-        await self.telegram_service.send_message(update=update, all_buttons=None, message=prompt)
+        sent = await self.telegram_service.send_message(update=update, all_buttons=None, message=prompt)
+
+        # The admin types the new value next; remember which event/field/card message the
+        # answer belongs to (plus the prompt, to clean it up afterwards), and route their
+        # next text through the field-edit node.
+        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        user_to_state.additional_info = CallbackUtils.build_additional_information(
+            query.message.message_id, query.message.chat_id, doc_id, event_type, field,
+            prompt_message_id=sent.message_id if sent else None)
+        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_EVENT_FIELD)
 
     async def _confirm_delete(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str):
         try:

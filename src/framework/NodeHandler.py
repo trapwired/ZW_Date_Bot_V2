@@ -195,7 +195,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                                    self.events_view)
 
         update_website_node = UpdateWebsiteNode(UserState.ADMIN_UPDATE_WEBSITE, telegram_service, user_state_service,
-                                                data_access)
+                                                data_access, self.website_service)
 
         return {
             UserState.INIT: init_node,

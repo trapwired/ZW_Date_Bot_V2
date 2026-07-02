@@ -103,6 +103,14 @@ def build_wizard_markup(can_save: bool) -> InlineKeyboardMarkup:
 
 def build_website_confirm_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton('YES', callback_data=encode(WEBSITE_YES)),
-         InlineKeyboardButton('NO', callback_data=encode(WEBSITE_NO))],
+        [InlineKeyboardButton('💾 Save', callback_data=encode(WEBSITE_YES)),
+         InlineKeyboardButton('Cancel', callback_data=encode(WEBSITE_NO))],
     ])
+
+
+def build_website_prompt_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data=encode(PANEL))]])
+
+
+def build_back_to_panel_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton('« Back', callback_data=encode(PANEL))]])

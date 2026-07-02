@@ -1,3 +1,4 @@
+import inspect
 from functools import partial
 from abc import ABC
 from telegram import Update
@@ -35,8 +36,10 @@ class Node(ABC):
         # Set via enable_main_menu_escapes: lets any main-menu command break out of a
         # typed-input node instead of being swallowed as input.
         self.main_menu_escape_cleanup = None
-        self.add_transition('help', self.handle_help, allowed_roles=RoleSet.EVERYONE)
-        self.add_transition('/help', self.handle_help, allowed_roles=RoleSet.EVERYONE,
+        # /help lives in Telegram's command menu (set_my_commands), not on the reply
+        # keyboard; the bare word stays typeable as a hidden alias.
+        self.add_transition('/help', self.handle_help, allowed_roles=RoleSet.EVERYONE, in_keyboard=False)
+        self.add_transition('help', self.handle_help, allowed_roles=RoleSet.EVERYONE,
                             needs_description=False, in_keyboard=False)
         self.nodes = dict()
 
@@ -105,7 +108,9 @@ class Node(ABC):
 
     async def _handle_main_menu_escape(self, update: Update, user_to_state: UsersToState,
                                        new_state: UserState) -> None:
-        self.main_menu_escape_cleanup(user_to_state)
+        cleanup_result = self.main_menu_escape_cleanup(user_to_state)
+        if inspect.isawaitable(cleanup_result):
+            await cleanup_result
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
         await self.nodes[UserState.DEFAULT].handle(update, user_to_state)
 

@@ -82,7 +82,7 @@ class AdminMenuCallbackNode(CallbackNode):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         if user_to_state.state is not UserState.DEFAULT:
             if user_to_state.state is UserState.ADMIN_ADD_EVENT:
-                self.event_service.discard_draft_if_any(user_to_state.user_id)
+                await self.add_event_node.abort_draft(user_to_state)
             user_to_state.additional_info = ''
             self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
         await self._edit(query, AdminMenu.PANEL_TEXT, AdminMenu.build_panel_markup())
@@ -120,27 +120,32 @@ class AdminMenuCallbackNode(CallbackNode):
         current = self.website_service.get_url()
         current_text = current if current else 'not set'
         message = (f'The website link shown to players is currently:\n{current_text}\n\n'
-                   'Send me the new URL, or /cancel to abort.')
+                   'Send me the new URL.')
 
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        # Remember which menu message to keep re-rendering while the admin types URLs;
+        # nothing hits Firestore until they press Save.
+        user_to_state.additional_info = self.website_service.build_pending(
+            query.message.message_id, query.message.chat_id, '')
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_WEBSITE)
-        await self._edit(query, message)
+        await self._edit(query, message, AdminMenu.build_website_prompt_markup())
 
     async def _finish_website(self, update: Update, query, action: str):
         telegram_id = update.effective_chat.id
-        if action == AdminMenu.WEBSITE_YES:
-            new_url, user_to_state = self.website_service.commit_pending_url(telegram_id)
-            if new_url is None:
-                message = ('⚠️ That doesn\'t look like a valid URL - it must start with http:// or https://.\n'
-                           'The website link was not changed.')
-            else:
-                message = f'✅ The website link was updated to:\n{new_url}'
-        else:
+        if action == AdminMenu.WEBSITE_NO:
             user_to_state = self.website_service.discard_pending_url(telegram_id)
-            message = 'Cancelled - the website link was not changed.'
+            self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+            await self._show_panel(update, query)
+            return
 
+        new_url, user_to_state = self.website_service.commit_pending_url(telegram_id)
+        if new_url is None:
+            message = ('⚠️ That doesn\'t look like a valid URL - it must start with http:// or https://.\n'
+                       'The website link was not changed.')
+        else:
+            message = f'✅ The website link was updated to:\n{new_url}'
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-        await self._edit(query, message)
+        await self._edit(query, message, AdminMenu.build_back_to_panel_markup())
 
     ####################
     # ADD-EVENT WIZARD #
@@ -150,16 +155,15 @@ class AdminMenuCallbackNode(CallbackNode):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         temp_data = self.event_service.create_draft(user_to_state.user_id, event_type)
         # The menu message becomes the draft display the wizard keeps updating.
-        temp_data.add_inline_information(query.message.chat_id, query.message.id)
-        self.event_service.save_draft(temp_data)
+        temp_data.add_inline_information(query.message.chat_id, query.message.message_id)
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_ADD_EVENT)
 
-        # Rendered by the wizard node so the first draft display and every re-render
-        # after a typed step come from the same code path.
+        # Rendered by the wizard node so the first draft display, the first prompt and
+        # every re-render after a typed step come from the same code path.
         await query.answer()
         await self.add_event_node.update_inline_message(temp_data, 'Adding new', can_save=False)
-        prompt = PrintUtils.get_update_attribute_message(EventField.DATETIME)
-        await self.telegram_service.send_message(update=update, all_buttons=None, message=prompt)
+        await self.add_event_node.replace_prompt(update, temp_data, EventField.DATETIME)
+        self.event_service.save_draft(temp_data)
 
     async def _handle_wizard_action(self, update: Update, query, action: str):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
@@ -172,13 +176,13 @@ class AdminMenuCallbackNode(CallbackNode):
 
         match action:
             case AdminMenu.WIZARD_CANCEL:
-                self.event_service.discard_draft(temp_data)
+                await self.add_event_node.abort_draft(user_to_state)
                 self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
                 await self._edit(query, 'Cancelled - the event was not saved.')
             case AdminMenu.WIZARD_RESTART:
-                # Discard first: the wizard looks drafts up by user, so the old one must
+                # Abort first: the wizard looks drafts up by user, so the old one must
                 # be gone before the fresh one exists.
-                self.event_service.discard_draft(temp_data)
+                await self.add_event_node.abort_draft(user_to_state)
                 await self._start_add_wizard(update, query, temp_data.event_type)
             case AdminMenu.WIZARD_SAVE:
                 await query.answer()

@@ -119,6 +119,7 @@ async def test_picking_a_field_hands_over_to_typed_input(node_handler, data_acce
     assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_UPDATE_EVENT_FIELD
     edit_context = CallbackUtils.try_parse_additional_information(
         data_access.get_user_state(ADMIN_ID).additional_info)
-    assert edit_context == (77, ADMIN_ID, game.doc_id, Event.GAME, EventField.LOCATION)
+    assert edit_context[:5] == (77, ADMIN_ID, game.doc_id, Event.GAME, EventField.LOCATION)
+    assert edit_context.prompt_message_id is not None    # remembered for cleanup
     assert any("Location" in m.text for m in bot.sent)   # typed-input prompt went out
     assert_no_error_reported(bot)

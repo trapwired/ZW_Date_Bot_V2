@@ -44,9 +44,13 @@ def parse(data: str) -> tuple[str, list[str]] | None:
     return parts[1], parts[2:]
 
 
-def build_overview_markup(counts: dict[Role, int]) -> InlineKeyboardMarkup:
+def build_overview_markup(counts: dict[Role, int], back_callback_data: str = None) -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(f'{role.name} ({counts[role]})', callback_data=encode_list_users(role))]
             for role in ASSIGNABLE_ROLES]
+    if back_callback_data:
+        # Caller-supplied so this slice needs no knowledge of the menu it is embedded in
+        # (the admin menu passes its own panel callback here).
+        rows.append([InlineKeyboardButton('« Back', callback_data=back_callback_data)])
     return InlineKeyboardMarkup(rows)
 
 

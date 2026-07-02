@@ -71,7 +71,7 @@ async def test_help_during_wizard_keeps_the_static_keyboard(node_handler, data_a
 
     keyboard = [m for m in bot.sent if m.chat_id == ADMIN_ID][-1].reply_markup.keyboard
     flattened = [str(getattr(b, 'text', b)).lower() for row in keyboard for b in row]
-    assert flattened == ['events', 'admin', 'website', 'help']   # main-menu keyboard, not [/cancel]
+    assert flattened == ['events', 'admin', 'website']   # main-menu keyboard, not [/cancel]
     assert '/cancel' in bot.texts_to(ADMIN_ID)[-1]               # help text still explains this screen
     assert_no_error_reported(bot)
 

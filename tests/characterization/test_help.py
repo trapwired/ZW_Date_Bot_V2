@@ -26,7 +26,7 @@ async def test_help_lists_active_commands_with_descriptions(node_handler, data_a
     await drive(node_handler, PLAYER_ID, 'help')
 
     help_text = bot.texts_to(PLAYER_ID)[-1]
-    for command in ['help', 'events', 'website', '/privacy']:
+    for command in ['/help', 'events', 'website', '/privacy']:
         assert f'{command}: {CommandDescriptions.descriptions[command]}' in help_text
     assert 'admin:' not in help_text                    # admin-only, hidden for players
     assert_no_error_reported(bot)
@@ -44,12 +44,12 @@ async def test_slash_help_alias_works_but_stays_off_the_keyboard(node_handler, d
     assert_no_error_reported(bot)
 
 
-async def test_player_keyboard_is_static_events_website_help(node_handler, data_access, bot):
+async def test_player_keyboard_is_static_events_website(node_handler, data_access, bot):
     seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
 
     await drive(node_handler, PLAYER_ID, 'help')
 
-    assert _keyboard_commands(bot, PLAYER_ID) == ['events', 'website', 'help']
+    assert _keyboard_commands(bot, PLAYER_ID) == ['events', 'website']
     assert_no_error_reported(bot)
 
 
@@ -58,7 +58,7 @@ async def test_admin_keyboard_adds_admin_row(node_handler, data_access, bot):
 
     await drive(node_handler, ADMIN_ID, 'help')
 
-    assert _keyboard_commands(bot, ADMIN_ID) == ['events', 'admin', 'website', 'help']
+    assert _keyboard_commands(bot, ADMIN_ID) == ['events', 'admin', 'website']
     assert_no_error_reported(bot)
 
 
@@ -67,7 +67,7 @@ async def test_spectator_keyboard_matches_player_layout(node_handler, data_acces
 
     await drive(node_handler, SPECTATOR_ID, 'help')
 
-    assert _keyboard_commands(bot, SPECTATOR_ID) == ['events', 'website', 'help']
+    assert _keyboard_commands(bot, SPECTATOR_ID) == ['events', 'website']
     assert_no_error_reported(bot)
 
 

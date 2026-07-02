@@ -68,6 +68,8 @@ class EditEventFieldNode(Node):
         updated_event = self.event_service.update_field(edit.event_type, edit.doc_id, new_value, edit.field)
 
         await self._refresh_event_card(user_to_state, edit)
+        # The prompt is consumed - drop it so the chat doesn't fill up.
+        await self.telegram_service.delete_message(edit.prompt_message_id, edit.chat_id)
         await self.telegram_service.send_message(update=update, all_buttons=None,
                                                  message='Updated event successfully!')
 

@@ -180,6 +180,21 @@ async def test_stale_wizard_button_after_cancel_degrades_gracefully(node_handler
     assert_no_error_reported(bot)
 
 
+async def test_consumed_prompts_are_deleted(node_handler, data_access, bot):
+    # Each accepted input deletes the previous 'Send me the ...' prompt; saving deletes
+    # the last one, so no consumed prompt is left in the chat.
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))
+    await drive(node_handler, ADMIN_ID, FUTURE_TIMESTAMP)
+    await drive(node_handler, ADMIN_ID, "Sporthalle")
+    await drive(node_handler, ADMIN_ID, "save")
+
+    prompt_ids = [m.message_id for m in bot.sent if "Send me the new" in m.text or "SAVE" in m.text]
+    assert len(prompt_ids) == 3                      # datetime, location, finish instructions
+    assert sorted(m.message_id for m in bot.deleted) == sorted(prompt_ids)
+    assert_no_error_reported(bot)
+
+
 async def test_wizard_markup_offers_save_only_on_finish_step(node_handler, data_access, bot):
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))

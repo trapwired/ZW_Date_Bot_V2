@@ -1,6 +1,6 @@
 class CommandDescriptions(object):
     descriptions = {
-        'help': 'Show all available commands and a short description',
+        '/help': 'Show all available commands and a short description',
         '/start': 'Start chatting with me :)',
         '/privacy': 'Show the privacy policy of the bot',
         'events': 'Browse upcoming games, trainings and timekeeping-events - see who is coming and set your attendance',
