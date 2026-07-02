@@ -43,6 +43,14 @@ def data_access(monkeypatch, fake_firestore, api_config):
 
 
 @pytest.fixture
+def game(data_access):
+    """A future game most attendance/trigger tests can share."""
+    from domain.entities.Game import Game
+    from domain.EventDateTimeParser import parse
+    return data_access.add(Game(parse("24.12.2030 18:30").value, "home arena", "rivals fc"))
+
+
+@pytest.fixture
 def services(data_access, bot, api_config):
     """The service stack, wired exactly like main.initialize_services but with the fake bot."""
     from framework.Services.UserStateService import UserStateService

@@ -7,7 +7,10 @@ from telegram.constants import ChatType
 
 from Enums.Role import Role
 from Enums.UserState import UserState
+from Enums.Event import Event
+from Enums.AttendanceState import AttendanceState
 from domain.entities.TelegramUser import TelegramUser
+from domain.entities.Attendance import Attendance
 
 
 # TelegramService branches on `type(update) is Update`, so tests must pass real
@@ -29,6 +32,11 @@ def seed_user(data_access, telegram_id: int, role: Role, state: UserState,
     user_to_state.additional_info = additional_info
     data_access.update(user_to_state)
     return user_to_state
+
+
+def set_attendance(data_access, user_id: str, event_doc_id: str, state: AttendanceState,
+                   event_type: Event = Event.GAME) -> Attendance:
+    return data_access.update_attendance(Attendance(user_id, event_doc_id, state), event_type)
 
 
 async def drive(node_handler, chat_id: int, text: str) -> None:

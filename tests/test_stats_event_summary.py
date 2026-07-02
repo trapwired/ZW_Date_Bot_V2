@@ -5,27 +5,11 @@
 - A retired/inactive player surfaces only by explicitly saying yes.
 - Active players with no attendance record default to UNSURE.
 """
-import pytest
-
 from Enums.Role import Role
 from Enums.UserState import UserState
 from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState
-from domain.entities.Game import Game
-from domain.entities.Attendance import Attendance
-from domain.EventDateTimeParser import parse
-from tests.helpers import seed_user
-
-FUTURE = "24.12.2030 18:30"
-
-
-@pytest.fixture
-def game(data_access):
-    return data_access.add(Game(parse(FUTURE).value, "home arena", "rivals fc"))
-
-
-def _set_attendance(data_access, user_id, event_id, state):
-    data_access.update_attendance(Attendance(user_id, event_id, state), Event.GAME)
+from tests.helpers import seed_user, set_attendance
 
 
 def test_summary_membership_rules(data_access, game):
@@ -40,14 +24,14 @@ def test_summary_membership_rules(data_access, game):
     inactive_yes = seed_user(data_access, 9, Role.INACTIVE, UserState.DEFAULT)
     inactive_unsure = seed_user(data_access, 10, Role.INACTIVE, UserState.DEFAULT)
 
-    _set_attendance(data_access, active_unsure.user_id, game.doc_id, AttendanceState.UNSURE)
-    _set_attendance(data_access, active_yes.user_id, game.doc_id, AttendanceState.YES)
-    _set_attendance(data_access, active_no.user_id, game.doc_id, AttendanceState.NO)
-    _set_attendance(data_access, retired_yes.user_id, game.doc_id, AttendanceState.YES)
-    _set_attendance(data_access, retired_unsure.user_id, game.doc_id, AttendanceState.UNSURE)
-    _set_attendance(data_access, retired_no.user_id, game.doc_id, AttendanceState.NO)
-    _set_attendance(data_access, inactive_yes.user_id, game.doc_id, AttendanceState.YES)
-    _set_attendance(data_access, inactive_unsure.user_id, game.doc_id, AttendanceState.UNSURE)
+    set_attendance(data_access, active_unsure.user_id, game.doc_id, AttendanceState.UNSURE)
+    set_attendance(data_access, active_yes.user_id, game.doc_id, AttendanceState.YES)
+    set_attendance(data_access, active_no.user_id, game.doc_id, AttendanceState.NO)
+    set_attendance(data_access, retired_yes.user_id, game.doc_id, AttendanceState.YES)
+    set_attendance(data_access, retired_unsure.user_id, game.doc_id, AttendanceState.UNSURE)
+    set_attendance(data_access, retired_no.user_id, game.doc_id, AttendanceState.NO)
+    set_attendance(data_access, inactive_yes.user_id, game.doc_id, AttendanceState.YES)
+    set_attendance(data_access, inactive_unsure.user_id, game.doc_id, AttendanceState.UNSURE)
 
     yes, no, unsure = data_access.get_stats_event(game.doc_id, Event.GAME)
     yes, no, unsure = set(yes), set(no), set(unsure)
