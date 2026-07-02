@@ -101,6 +101,10 @@ class FirebaseRepository(object):
         res = query_ref.get()
         if len(res) == 1:
             return UsersToState.from_dict(res[0].id, res[0].to_dict())
+        if len(res) > 1:
+            # Duplicate state docs for one user are data corruption, not a not-found; fail
+            # loudly so it isn't silently masked as a missing user.
+            raise MoreThanOneObjectFoundException()
         raise ObjectNotFoundException(collection, user_id)
 
     def get_game(self, doc_id: str) -> Game | None:
@@ -288,6 +292,9 @@ class FirebaseRepository(object):
         if len(res) == 1:
             updated_user_to_state = user_to_state.add_document_id(res[0].id)
             self.update_user_state(updated_user_to_state)
+        elif len(res) > 1:
+            # Duplicate state docs are data corruption, not a not-found; fail loudly.
+            raise MoreThanOneObjectFoundException()
         else:
             raise ObjectNotFoundException(collection, user_to_state.user_id)
 
