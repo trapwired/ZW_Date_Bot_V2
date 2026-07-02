@@ -6,12 +6,6 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Quick wins (S)
 
-- [ ] **`/help` lists AND explains every available option.**
-  - `do_checks.check_all_commands_have_description` already fails the suite if a
-    *described* command lacks a description; extend the guarantee so `/help` renders
-    every active transition for the user's state + role, each with its explanation.
-  - Single source of truth: `CommandDescriptions`; help should derive from the same
-    transitions the keyboard does (`get_commands_for_help`) so they can't drift.
 - [ ] **Give `Triggers/` a settled home.**
   - `Triggers/` (trigger domain objects) → likely `framework/` or `domain/`;
   - Pure move, same mechanics as the reslice (git mv + rewire importers).

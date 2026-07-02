@@ -130,28 +130,19 @@ class Node(ABC):
     # UTILITIES #
     #############
 
-    def get_commands_for_help(self, role: Role, new_state: UserState) -> [str]:
+    def get_active_transitions(self, role: Role, new_state: UserState) -> [Transition]:
         if new_state is None:
             new_node = self
         else:
             new_node = self.nodes[new_state]
 
-        all_commands = list(
-            filter(lambda t:
-                   t.is_for_role(role) and t.needs_description,
-                   new_node.transitions))
-        return [x.command for x in all_commands]
+        return [t for t in new_node.transitions if t.is_for_role(role) and t.is_active()]
+
+    def get_commands_for_help(self, role: Role, new_state: UserState) -> [str]:
+        return [t.command for t in self.get_active_transitions(role, new_state) if t.needs_description]
 
     def get_commands_for_buttons(self, role: Role, new_state: UserState, telegram_id: int) -> [str]:
-        if new_state is None:
-            new_node = self
-        else:
-            new_node = self.nodes[new_state]
-
-        all_commands = list(
-            filter(lambda t:
-                   t.is_for_role(role) and t.is_active(),
-                   new_node.transitions))
+        all_commands = self.get_active_transitions(role, new_state)
 
         event_transitions = [x for x in all_commands if isinstance(x, EventTransition)]
         if len(event_transitions) > 0:
