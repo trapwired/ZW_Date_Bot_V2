@@ -80,6 +80,8 @@ class DataAccess(object):
                 event = self.firebase_repository.get_training(event_id)
             case Event.TIMEKEEPING:
                 event = self.firebase_repository.get_timekeeping(event_id)
+            case _:
+                raise ValueError(f'Unhandled event type: {event_type}')
 
         match field_type:
             case CallbackOption.LOCATION:
@@ -165,6 +167,8 @@ class DataAccess(object):
                 return self.get_training(doc_id)
             case Event.TIMEKEEPING:
                 return self.get_timekeeping(doc_id)
+            case _:
+                raise ValueError(f'Unhandled event type: {event_type}')
 
     def get_game(self, doc_id: str):
         return self.firebase_repository.get_game(doc_id)
@@ -367,6 +371,8 @@ class DataAccess(object):
                 self.firebase_repository.delete_training(doc_id)
             case Event.TIMEKEEPING:
                 self.firebase_repository.delete_timekeeping(doc_id)
+            case _:
+                raise ValueError(f'Unhandled event type: {event_type}')
         self.firebase_repository.delete_event_attendances(event_type, doc_id)
 
     @dispatch(TempData)

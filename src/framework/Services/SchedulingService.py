@@ -54,12 +54,9 @@ class SchedulingService:
             all_future_events = self.get_ordered_events(Event.GAME)
             events_to_remind = get_events_in_x_days(all_future_events, [0])
 
-            if len(events_to_remind) == 0:
-                return
-
-            message = PrintUtils.create_game_summary(events_to_remind[0])
-
-            await self.telegram_service.send_group_message(message)
+            for event in events_to_remind:
+                message = PrintUtils.create_game_summary(event)
+                await self.telegram_service.send_group_message(message)
         except Exception as e:
             await self.telegram_service.report_exception(
                 'Exception caught in SchedulingService.send_same_day_game_reminder()', e)
@@ -79,7 +76,7 @@ class SchedulingService:
                 stats_with_names = self.data_access.get_names(stats)
                 player_overview = PrintUtils.pretty_print_event_summary(stats_with_names, None, event_type)
 
-                message = PrintUtils.create_training_summary(events_to_remind[0], player_overview)
+                message = PrintUtils.create_training_summary(event, player_overview)
                 await self.telegram_service.send_group_message(message)
 
         except Exception as e:
