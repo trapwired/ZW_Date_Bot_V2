@@ -51,12 +51,13 @@ class Node(ABC):
             self.user_state_service.update_user_state(user_to_state, new_state)
 
         except Exception as e:
+            # The user always gets the generic ERROR text; report_exception decides whether the
+            # maintainer is alerted (unexpected) or the miss is only logged (expected).
             await self.telegram_service.send_message(
                 update=update,
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT,
                                                           update.effective_chat.id),
-                message_type=MessageType.ERROR,
-                message_extra_text=str(e))
+                message_type=MessageType.ERROR)
             await self.telegram_service.report_exception('Exception in Node.handle', e, update)
 
     ###############

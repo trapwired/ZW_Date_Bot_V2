@@ -16,6 +16,8 @@ from Utils.ApiConfig import ApiConfig
 from domain.entities.TelegramUser import TelegramUser
 from telegram.error import BadRequest, Forbidden
 
+from Utils.CustomExceptions import ExpectedException
+
 from framework.Services.UserStateService import UserStateService
 
 
@@ -263,13 +265,22 @@ class TelegramService(object):
                                         parse_mode=telegram.constants.ParseMode.HTML)
 
     async def report_exception(self, description: str, error: Exception, update: Update | None = None):
-        """Report an unhandled exception: log it with a traceback, then best-effort alert the
-        maintainer. The log happens first and unconditionally, so a failure stays visible in
-        the logs (greppable, alertable) even when the alert send itself fails or the maintainer
-        is not watching the chat."""
-        logging.error(description, exc_info=error)
+        """Report an unhandled exception: log it, then best-effort notify the maintainer. The log
+        happens first and unconditionally, so a failure stays visible in the logs (greppable,
+        alertable) even when the notification send itself fails.
+
+        The maintainer is notified for every exception. Expected (control-flow) exceptions are
+        logged at info and sent as a short notice without a stacktrace; genuinely unexpected
+        ones are logged at error and sent with the full stacktrace (and Update, if present)."""
+        expected = isinstance(error, ExpectedException)
+        if expected:
+            logging.info('%s (expected): %r', description, error)
+        else:
+            logging.error(description, exc_info=error)
         try:
-            if update is None:
+            if expected:
+                await self.send_maintainer_message(f'{description}: {error!r}')
+            elif update is None:
                 await self.send_maintainer_message(description, error)
             else:
                 await self.send_maintainer_message(description, update, error)
