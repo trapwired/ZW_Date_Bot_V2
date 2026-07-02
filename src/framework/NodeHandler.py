@@ -1,6 +1,4 @@
 import logging
-from functools import partial
-from typing import Callable
 
 import telegram
 from telegram import Update
@@ -10,9 +8,6 @@ from telegram.ext import ContextTypes, BaseHandler, CallbackContext
 
 from Enums.UserState import UserState
 from Enums.RoleSet import RoleSet
-from Enums.Table import Table
-from Enums.Event import Event
-from Enums.MessageType import MessageType
 
 from features.attendance.IcsService import IcsService
 from framework.Services.UserStateService import UserStateService
@@ -24,34 +19,29 @@ from features.roles.RoleService import RoleService
 from features.website.WebsiteService import WebsiteService
 from features.stats.StatisticsService import StatisticsService
 
-from framework.Nodes.Node import Node
 from features.menu.DefaultNode import DefaultNode
 from features.onboarding.InitNode import InitNode
 from features.onboarding.RejectedNode import RejectedNode
-from features.stats.StatsNode import StatsNode
-from features.attendance.EditNode import EditNode
-from features.menu.AdminNode import AdminNode
-from features.eventmgmt.AdminAddNode import AdminAddNode
 from features.eventmgmt.AddEventFieldsNode import AddEventFieldsNode
-from features.eventmgmt.UpdateNode import UpdateNode
 from features.eventmgmt.EditEventFieldNode import EditEventFieldNode
-from features.eventmgmt.AddEventCallbackNode import AddEventCallbackNode
-from features.stats.ResetStatisticsCallbackNode import ResetStatisticsCallbackNode
-from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
 from features.website.UpdateWebsiteNode import UpdateWebsiteNode
-from features.website.UpdateWebsiteCallbackNode import UpdateWebsiteCallbackNode
 
-from features.attendance.EditCallbackNode import EditCallbackNode
-from features.eventmgmt.UpdateEventCallbackNode import UpdateEventCallbackNode
+from features.events import EventsMenu
+from features.events.EventsView import EventsView
+from features.events.EventsCallbackNode import EventsCallbackNode
+from features.adminpanel import AdminMenu
+from features.adminpanel.AdminMenuCallbackNode import AdminMenuCallbackNode
+from features.roles import RoleAssignment
+from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
 
 from data.DataAccess import DataAccess
 
 from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundException, MissingCommandDescriptionException
 from framework.CommandDescriptions import CommandDescriptions
-from framework import NodeUtils
-from Utils import CallbackUtils
-from features.roles import RoleAssignment
 from Utils.ApiConfig import ApiConfig
+
+EXPIRED_MENU_TEXT = ('This menu is from an older version of the bot and no longer works - '
+                     'use the keyboard below (Events / Admin) instead.')
 
 
 def add_nodes_reference_to_all_nodes(nodes: dict):
@@ -104,11 +94,11 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.website_service = website_service
         self.statistics_service = statistics_service
 
-        self.node_transition_arguments = {}
+        self.events_view = EventsView(event_service, attendance_service, statistics_service)
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
-        self.callback_nodes = self.initialize_callback_nodes(telegram_service, data_access, trigger_service,
-                                                             ics_service, user_state_service)
+        self.initialize_callback_nodes(telegram_service, data_access, trigger_service, ics_service,
+                                       user_state_service)
         add_nodes_reference_to_all_nodes(self.nodes)
 
         self.do_checks(api_config)
@@ -133,7 +123,13 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                 return
 
             if update.callback_query:
-                callback_node = self.get_callback_node(update)
+                callback_node = self.get_callback_node(update.callback_query.data)
+                if callback_node is None:
+                    # A button from a retired menu (pre-redesign message): degrade
+                    # gracefully instead of alerting the maintainer.
+                    await update.callback_query.answer()
+                    await self.telegram_service.edit_callback_message(update.callback_query, EXPIRED_MENU_TEXT)
+                    return
                 if not self.is_caller_allowed(update, callback_node):
                     # Forwarded inline buttons keep working callback_data; gate admin actions
                     # by the pressing user's role, mirroring Transition.allowed_roles for text.
@@ -180,247 +176,47 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             rejected_node.handle_correct_password,
             new_state=UserState.DEFAULT,
             allowed_roles=RoleSet.REJECTED,
-            needs_description=False)
+            needs_description=False,
+            in_keyboard=False)
 
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access,
-                                   self.website_service)
-        default_node.add_transition('/website', default_node.handle_website)
-        default_node.add_transition('/privacy', default_node.handle_privacy, allowed_roles=RoleSet.REALLY_EVERYONE)
-        default_node.add_transition('/stats', new_state=UserState.STATS, message_type=MessageType.STATS_OVERVIEW)
-        default_node.add_transition('/edit', new_state=UserState.EDIT, allowed_roles=RoleSet.PLAYERS,
-                                    message_type=MessageType.EDIT_OVERVIEW)
-        default_node.add_transition('/admin', new_state=UserState.ADMIN, allowed_roles=RoleSet.ADMINS,
-                                    message_type=MessageType.ADMIN)
+                                   self.website_service, self.events_view)
+        default_node.add_transition('events', default_node.handle_events)
+        default_node.add_transition('admin', default_node.handle_admin, allowed_roles=RoleSet.ADMINS)
+        default_node.add_transition('website', default_node.handle_website)
+        default_node.add_transition('/privacy', default_node.handle_privacy, allowed_roles=RoleSet.REALLY_EVERYONE,
+                                    in_keyboard=False)
 
-        stats_node = StatsNode(UserState.STATS, telegram_service, user_state_service, data_access,
-                               self.statistics_service, self.event_service)
-        stats_node.add_continue_later()
-        stats_node.add_transition(
-            '/games', message_type=MessageType.STATS_TO_GAMES,
-            new_state=UserState.STATS_GAMES,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
-        stats_node.add_transition(
-            '/trainings', message_type=MessageType.STATS_TO_TRAININGS,
-            new_state=UserState.STATS_TRAININGS,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
-        stats_node.add_transition(
-            '/timekeepings', message_type=MessageType.STATS_TO_TIMEKEEPINGS,
-            new_state=UserState.STATS_TIMEKEEPINGS, allowed_roles=RoleSet.PLAYERS,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
+        add_event_node = AddEventFieldsNode(UserState.ADMIN_ADD_EVENT, telegram_service, user_state_service,
+                                            data_access, self.event_service)
 
-        stats_games_node = StatsNode(UserState.STATS_GAMES, telegram_service, user_state_service, data_access,
-                                     self.statistics_service, self.event_service)
-        stats_games_node.add_continue_later()
-        stats_games_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW, new_state=UserState.STATS)
-        self.add_event_transitions_to_node(Event.GAME, stats_games_node, stats_games_node.handle_event_id)
-
-        stats_trainings_node = StatsNode(UserState.STATS_TRAININGS, telegram_service, user_state_service, data_access,
-                                         self.statistics_service, self.event_service)
-        stats_trainings_node.add_continue_later()
-        stats_trainings_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW,
-                                            new_state=UserState.STATS)
-        self.add_event_transitions_to_node(Event.TRAINING, stats_trainings_node,
-                                           stats_trainings_node.handle_event_id)
-
-        stats_timekeepings_node = StatsNode(UserState.STATS_TIMEKEEPINGS, telegram_service, user_state_service,
-                                            data_access, self.statistics_service, self.event_service)
-        stats_timekeepings_node.add_continue_later()
-        stats_timekeepings_node.add_transition('Overview', message_type=MessageType.STATS_OVERVIEW,
-                                               new_state=UserState.STATS)
-        self.add_event_transitions_to_node(Event.TIMEKEEPING, stats_timekeepings_node,
-                                           stats_timekeepings_node.handle_event_id)
-
-        edit_node = EditNode(UserState.EDIT, telegram_service, user_state_service, data_access,
-                             self.event_service, self.attendance_service)
-        edit_node.add_continue_later()
-        edit_node.add_transition(
-            '/games', message_type=MessageType.EDIT_TO_GAMES,
-            new_state=UserState.EDIT_GAMES,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
-        edit_node.add_transition(
-            '/trainings', message_type=MessageType.EDIT_TO_TRAININGS,
-            new_state=UserState.EDIT_TRAININGS,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
-        edit_node.add_transition(
-            '/timekeepings', message_type=MessageType.EDIT_TO_TIMEKEEPINGS,
-            new_state=UserState.EDIT_TIMEKEEPINGS, allowed_roles=RoleSet.PLAYERS,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
-
-        edit_games_node = EditNode(UserState.EDIT_GAMES, telegram_service, user_state_service, data_access,
-                                   self.event_service, self.attendance_service)
-        edit_games_node.add_continue_later()
-        edit_games_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
-        self.add_event_transitions_to_node(Event.GAME, edit_games_node, edit_games_node.handle_event_id)
-
-        edit_trainings_node = EditNode(UserState.EDIT_TRAININGS, telegram_service, user_state_service, data_access,
-                                       self.event_service, self.attendance_service)
-        edit_trainings_node.add_continue_later()
-        edit_trainings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW, new_state=UserState.EDIT)
-        self.add_event_transitions_to_node(Event.TRAINING, edit_trainings_node,
-                                           edit_trainings_node.handle_event_id)
-
-        edit_timekeepings_node = EditNode(UserState.EDIT_TIMEKEEPINGS, telegram_service, user_state_service,
-                                          data_access, self.event_service, self.attendance_service)
-        edit_timekeepings_node.add_continue_later()
-        edit_timekeepings_node.add_transition('Overview', message_type=MessageType.EDIT_OVERVIEW,
-                                              new_state=UserState.EDIT)
-        self.add_event_transitions_to_node(Event.TIMEKEEPING, edit_timekeepings_node,
-                                           edit_timekeepings_node.handle_event_id)
-
-        admin_node = AdminNode(UserState.ADMIN, telegram_service, user_state_service, data_access, self.role_service,
-                               self.website_service, self.statistics_service)
-        admin_node.add_continue_later()
-        admin_node.add_transition('/add', message_type=MessageType.ADMIN_ADD, new_state=UserState.ADMIN_ADD)
-        admin_node.add_transition('/update', message_type=MessageType.ADMIN_UPDATE, new_state=UserState.ADMIN_UPDATE)
-        admin_node.add_transition('/statistics', message_type=MessageType.ADMIN_STATISTICS, new_state=UserState.ADMIN_STATISTICS)
-        admin_node.add_transition('/assign_roles', admin_node.handle_assign_roles, allowed_roles=RoleSet.ADMINS)
-        admin_node.add_transition('/update_website', admin_node.handle_update_website,
-                                  new_state=UserState.ADMIN_UPDATE_WEBSITE, allowed_roles=RoleSet.ADMINS)
+        edit_event_field_node = EditEventFieldNode(UserState.ADMIN_UPDATE_EVENT_FIELD, telegram_service,
+                                                   user_state_service, data_access, self.event_service,
+                                                   self.events_view)
 
         update_website_node = UpdateWebsiteNode(UserState.ADMIN_UPDATE_WEBSITE, telegram_service, user_state_service,
                                                 data_access)
 
-        admin_statistics_node = AdminNode(UserState.ADMIN_STATISTICS, telegram_service, user_state_service, data_access,
-                                          self.role_service, self.website_service, self.statistics_service)
-        admin_statistics_node.add_continue_later()
-
-        admin_statistics_node.add_transition('/reminder_statistics', admin_statistics_node.handle_statistics)
-        admin_statistics_node.add_transition('/game_statistics', admin_statistics_node.handle_game_statistics)
-        admin_statistics_node.add_transition('/training_statistics', admin_statistics_node.handle_training_statistics)
-        admin_statistics_node.add_transition('/timekeeping_statistics', admin_statistics_node.handle_timekeeping_statistics)
-        admin_statistics_node.add_transition('/reset_statistics', admin_statistics_node.handle_reset_statistics,
-                                             allowed_roles=RoleSet.ADMINS)
-
-        admin_add_node = AdminAddNode(UserState.ADMIN_ADD, telegram_service, user_state_service, data_access,
-                                      self.event_service)
-        admin_add_node.add_continue_later()
-        admin_add_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
-        admin_add_node.add_transition('/game', admin_add_node.handle_add_game,
-                                      new_state=UserState.ADMIN_ADD_GAME)
-        admin_add_node.add_transition('/training', admin_add_node.handle_add_training,
-                                      new_state=UserState.ADMIN_ADD_TRAINING)
-        admin_add_node.add_transition('/timekeeping', admin_add_node.handle_add_timekeeping,
-                                      new_state=UserState.ADMIN_ADD_TIMEKEEPING,
-                                      allowed_roles=RoleSet.PLAYERS)
-
-        admin_add_game_node = AddEventFieldsNode(UserState.ADMIN_ADD_GAME, telegram_service, user_state_service,
-                                                 data_access, Event.GAME, self, self.event_service)
-        admin_add_training_node = AddEventFieldsNode(UserState.ADMIN_ADD_TRAINING, telegram_service, user_state_service,
-                                                     data_access, Event.TRAINING, self, self.event_service)
-        admin_add_timekeeping_node = AddEventFieldsNode(UserState.ADMIN_ADD_TIMEKEEPING, telegram_service,
-                                                        user_state_service, data_access, Event.TIMEKEEPING, self,
-                                                        self.event_service)
-
-        admin_update_node = AdminNode(UserState.ADMIN_UPDATE, telegram_service, user_state_service, data_access,
-                                      self.role_service, self.website_service, self.statistics_service)
-        admin_update_node.add_continue_later()
-        admin_update_node.add_transition('Overview', message_type=MessageType.ADMIN, new_state=UserState.ADMIN)
-        admin_update_node.add_transition(
-            '/games', message_type=MessageType.ADMIN_UPDATE_TO_GAME,
-            new_state=UserState.ADMIN_UPDATE_GAME,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.GAMES_TABLE))
-        admin_update_node.add_transition(
-            '/trainings', message_type=MessageType.ADMIN_UPDATE_TO_TRAINING,
-            new_state=UserState.ADMIN_UPDATE_TRAINING,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TRAININGS_TABLE))
-        admin_update_node.add_transition(
-            '/timekeepings', message_type=MessageType.ADMIN_UPDATE_TO_TIMEKEEPING,
-            new_state=UserState.ADMIN_UPDATE_TIMEKEEPING, allowed_roles=RoleSet.PLAYERS,
-            is_active_function=partial(self.data_access.any_events_in_future, event_table=Table.TIMEKEEPING_TABLE))
-
-        update_games_node = UpdateNode(UserState.ADMIN_UPDATE_GAME, telegram_service, user_state_service, data_access,
-                                       self.event_service)
-        update_games_node.add_continue_later()
-        update_games_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
-                                         new_state=UserState.ADMIN_UPDATE)
-        self.add_event_transitions_to_node(Event.GAME, update_games_node, update_games_node.handle_event_id)
-
-        update_trainings_node = UpdateNode(UserState.ADMIN_UPDATE_TRAINING, telegram_service, user_state_service,
-                                           data_access, self.event_service)
-        update_trainings_node.add_continue_later()
-        update_trainings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
-                                             new_state=UserState.ADMIN_UPDATE)
-        self.add_event_transitions_to_node(Event.TRAINING, update_trainings_node,
-                                           update_trainings_node.handle_event_id)
-
-        update_timekeepings_node = UpdateNode(UserState.ADMIN_UPDATE_TIMEKEEPING, telegram_service, user_state_service,
-                                              data_access, self.event_service)
-        update_timekeepings_node.add_continue_later()
-        update_timekeepings_node.add_transition('Overview', message_type=MessageType.ADMIN_UPDATE,
-                                                new_state=UserState.ADMIN_UPDATE)
-        self.add_event_transitions_to_node(Event.TIMEKEEPING, update_timekeepings_node,
-                                           update_timekeepings_node.handle_event_id)
-
-        edit_event_field_node = EditEventFieldNode(
-            UserState.ADMIN_UPDATE_EVENT_FIELD, telegram_service, user_state_service, data_access, self,
-            self.event_service)
-
-        all_nodes_dict = {
+        return {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
             UserState.DEFAULT: default_node,
-            UserState.STATS: stats_node,
-            UserState.STATS_GAMES: stats_games_node,
-            UserState.STATS_TRAININGS: stats_trainings_node,
-            UserState.STATS_TIMEKEEPINGS: stats_timekeepings_node,
-            UserState.EDIT: edit_node,
-            UserState.EDIT_GAMES: edit_games_node,
-            UserState.EDIT_TRAININGS: edit_trainings_node,
-            UserState.EDIT_TIMEKEEPINGS: edit_timekeepings_node,
-            UserState.ADMIN: admin_node,
-            UserState.ADMIN_UPDATE_WEBSITE: update_website_node,
-            UserState.ADMIN_STATISTICS: admin_statistics_node,
-            UserState.ADMIN_ADD: admin_add_node,
-            UserState.ADMIN_UPDATE: admin_update_node,
-            UserState.ADMIN_UPDATE_GAME: update_games_node,
-            UserState.ADMIN_UPDATE_TRAINING: update_trainings_node,
-            UserState.ADMIN_UPDATE_TIMEKEEPING: update_timekeepings_node,
+            UserState.ADMIN_ADD_EVENT: add_event_node,
             UserState.ADMIN_UPDATE_EVENT_FIELD: edit_event_field_node,
-            UserState.ADMIN_ADD_GAME: admin_add_game_node,
-            UserState.ADMIN_ADD_TRAINING: admin_add_training_node,
-            UserState.ADMIN_ADD_TIMEKEEPING: admin_add_timekeeping_node
+            UserState.ADMIN_UPDATE_WEBSITE: update_website_node,
         }
-
-        return all_nodes_dict
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
-                                  trigger_service: TriggerService, ics_service: IcsService, user_state_service: UserStateService):
-        edit_callback_node = EditCallbackNode(telegram_service, data_access, trigger_service, ics_service,
-                                              self.attendance_service)
-        update_callback_node = UpdateEventCallbackNode(telegram_service, data_access, trigger_service, self,
-                                                       user_state_service, self.event_service)
-        add_callback_node = AddEventCallbackNode(telegram_service, data_access, trigger_service, self,
-                                                 user_state_service, self.event_service)
-        reset_statistics_callback_node = ResetStatisticsCallbackNode(telegram_service, data_access, trigger_service,
-                                                                     self.statistics_service)
-        self.assign_roles_callback_node = AssignRolesCallbackNode(telegram_service, data_access, trigger_service,
-                                                                  user_state_service, self, self.role_service)
-        update_website_callback_node = UpdateWebsiteCallbackNode(telegram_service, data_access, trigger_service,
-                                                                 user_state_service, self, self.website_service)
-
-        callback_nodes_dict = {
-            UserState.EDIT: edit_callback_node,
-            UserState.ADMIN_UPDATE: update_callback_node,
-            UserState.ADMIN_ADD_GAME: add_callback_node,
-            UserState.ADMIN_ADD_TRAINING: add_callback_node,
-            UserState.ADMIN_ADD_TIMEKEEPING: add_callback_node,
-            UserState.ADMIN_STATISTICS: reset_statistics_callback_node,
-            UserState.ADMIN_UPDATE_WEBSITE: update_website_callback_node
-        }
-        return callback_nodes_dict
-
-    def add_event_transitions_to_node(self, event_type: Event, node: Node, event_function: Callable):
-        if node not in self.node_transition_arguments.keys():
-            self.node_transition_arguments[node] = []
-        self.node_transition_arguments[node].append((event_type, event_function))
-
-        NodeUtils.add_event_transitions_to_node(event_type, node, event_function)
-
-    def recalculate_node_transitions(self):
-        for node, argument_list in self.node_transition_arguments.items():
-            node.clear_event_transitions()
-            for event_type, event_function in argument_list:
-                NodeUtils.add_event_transitions_to_node(event_type, node, event_function)
+                                  trigger_service: TriggerService, ics_service: IcsService,
+                                  user_state_service: UserStateService):
+        self.events_callback_node = EventsCallbackNode(
+            telegram_service, data_access, trigger_service, user_state_service, ics_service,
+            self.attendance_service, self.event_service, self.events_view)
+        self.admin_menu_callback_node = AdminMenuCallbackNode(
+            telegram_service, data_access, trigger_service, user_state_service, self.statistics_service,
+            self.website_service, self.event_service, self.nodes[UserState.ADMIN_ADD_EVENT])
+        self.assign_roles_callback_node = AssignRolesCallbackNode(
+            telegram_service, data_access, trigger_service, user_state_service, self, self.role_service)
 
     def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)
@@ -433,20 +229,16 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             return False
         return role in callback_node.required_roles
 
-    def get_callback_node(self, update):
-        query = update.callback_query
-        if RoleAssignment.is_role_callback(query.data):
+    def get_callback_node(self, callback_data: str):
+        """Route a callback press to its slice's node by data prefix; None means the
+        button belongs to no current menu (a pre-redesign message)."""
+        if RoleAssignment.is_role_callback(callback_data):
             return self.assign_roles_callback_node
+        if EventsMenu.is_events_callback(callback_data) or EventsMenu.is_legacy_attendance_callback(callback_data):
+            return self.events_callback_node
+        if AdminMenu.is_admin_menu_callback(callback_data):
+            return self.admin_menu_callback_node
+        return None
 
-        callback_message = CallbackUtils.try_parse_callback_message(query.data)
-        if callback_message is None:
-            raise Exception('Parsing of Callback message failed: ', query.data)
-
-        user_state, _, _, _ = callback_message
-
-        if not self.callback_nodes[user_state]:
-            raise Exception('No callback-node found for user_state: ', user_state)
-        return self.callback_nodes[user_state]
-
-    def get_node(self, user_state: UserState) -> Node:
+    def get_node(self, user_state: UserState):
         return self.nodes[user_state]

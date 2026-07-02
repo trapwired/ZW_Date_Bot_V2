@@ -7,7 +7,7 @@ nodes.
 """
 from data.DataAccess import DataAccess
 
-from Enums.CallbackOption import CallbackOption
+from Enums.EventField import EventField
 from Enums.Event import Event
 
 from domain.entities.TempData import TempData
@@ -43,7 +43,21 @@ class EventService:
     def get_event(self, event_type: Event, doc_id: str):
         return self.data_access.get_event(event_type, doc_id)
 
-    def update_field(self, event_type: Event, doc_id: str, new_value, field_type: CallbackOption):
+    def get_upcoming(self, event_type: Event) -> list:
+        match event_type:
+            case Event.GAME:
+                return self.data_access.get_ordered_games()
+            case Event.TRAINING:
+                return self.data_access.get_ordered_trainings()
+            case Event.TIMEKEEPING:
+                return self.data_access.get_ordered_timekeepings()
+            case _:
+                raise ValueError(f'Unhandled event type: {event_type}')
+
+    def any_upcoming(self, event_type: Event) -> bool:
+        return len(self.get_upcoming(event_type)) > 0
+
+    def update_field(self, event_type: Event, doc_id: str, new_value, field_type: EventField):
         return self.data_access.update_event_field(event_type, doc_id, new_value, field_type)
 
     def delete_event(self, event_type: Event, doc_id: str) -> None:

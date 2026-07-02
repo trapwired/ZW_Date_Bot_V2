@@ -5,7 +5,7 @@ from domain.entities.DatabaseEntity import DatabaseEntity
 from Utils import DateTimeUtils
 
 from Enums.Event import Event
-from Enums.CallbackOption import CallbackOption
+from Enums.EventField import EventField
 
 from domain.entities.Game import Game
 from domain.entities.TimekeepingEvent import TimekeepingEvent
@@ -16,9 +16,9 @@ from domain.entities.Training import Training
 # opponent). Single source of truth for both the wizard's step traversal
 # (AddEventFieldsNode) and TempData.infer_step, so the two can't drift.
 FIELD_ORDER = {
-    Event.GAME: (CallbackOption.DATETIME, CallbackOption.LOCATION, CallbackOption.OPPONENT),
-    Event.TRAINING: (CallbackOption.DATETIME, CallbackOption.LOCATION),
-    Event.TIMEKEEPING: (CallbackOption.DATETIME, CallbackOption.LOCATION),
+    Event.GAME: (EventField.DATETIME, EventField.LOCATION, EventField.OPPONENT),
+    Event.TRAINING: (EventField.DATETIME, EventField.LOCATION),
+    Event.TIMEKEEPING: (EventField.DATETIME, EventField.LOCATION),
 }
 
 
@@ -26,7 +26,7 @@ class TempData(DatabaseEntity):
 
     def __init__(self, user_doc_id: str, event_type: Event, timestamp: pd.Timestamp | str = None, location: str = None,
                  opponent: str = None, chat_id: int = None, query_id: int = None,
-                 step: CallbackOption | str | int = CallbackOption.DATETIME, doc_id: str = None):
+                 step: EventField | str | int = EventField.DATETIME, doc_id: str = None):
         super().__init__(doc_id)
         self.user_doc_id = user_doc_id
         self.timestamp = DateTimeUtils.utc_to_zurich_timestamp(timestamp) if timestamp is not None else None
@@ -40,7 +40,7 @@ class TempData(DatabaseEntity):
         # The add-event wizard step: which field this draft is currently collecting
         # (DATETIME -> LOCATION -> [OPPONENT] -> SAVE). Held here instead of in UserState.
         if type(step) is str or type(step) is int:
-            step = CallbackOption(int(step))
+            step = EventField(int(step))
         self.step = step
 
     @staticmethod
@@ -51,19 +51,19 @@ class TempData(DatabaseEntity):
         # Legacy drafts (created before TempData.step existed) have no persisted step;
         # infer it from which fields are already filled so an in-flight wizard resumes
         # where it left off instead of restarting at the timestamp prompt.
-        temp_data.step = CallbackOption(int(stored_step)) if stored_step is not None else temp_data.infer_step()
+        temp_data.step = EventField(int(stored_step)) if stored_step is not None else temp_data.infer_step()
         return temp_data
 
-    def infer_step(self) -> CallbackOption:
+    def infer_step(self) -> EventField:
         """The wizard step implied by which fields are already collected: the first
         field in the collection order that is still empty, or SAVE once all are set."""
-        collected = {CallbackOption.DATETIME: self.timestamp,
-                     CallbackOption.LOCATION: self.location,
-                     CallbackOption.OPPONENT: self.opponent}
+        collected = {EventField.DATETIME: self.timestamp,
+                     EventField.LOCATION: self.location,
+                     EventField.OPPONENT: self.opponent}
         for step in FIELD_ORDER[self.event_type]:
             if collected[step] is None:
                 return step
-        return CallbackOption.SAVE
+        return EventField.SAVE
 
     def to_dict(self):
         return {'userDocId': self.user_doc_id,

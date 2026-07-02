@@ -2,15 +2,15 @@
 
 Pins the domain rule (AttendanceResetPolicy: the `abs(old - new) > 2h` check) applied
 by EditEventFieldNode when an event's timestamp is edited.
-The flow is text-driven (handle_help -> handle_event_field), so the user is seeded
+The flow is text-driven (fallback -> handle_event_field), so the user is seeded
 directly into the single field-edit state (ADMIN_UPDATE_EVENT_FIELD) with the
-inline-message context, event type, and DATETIME field stashed in additional_info,
-exactly as the callback step would leave it.
+event-card context, event type, and DATETIME field stashed in additional_info,
+exactly as the card's field button would leave it.
 """
 from Enums.Role import Role
 from Enums.UserState import UserState
 from Enums.Event import Event
-from Enums.CallbackOption import CallbackOption
+from Enums.EventField import EventField
 from Enums.AttendanceState import AttendanceState
 from domain.entities.Game import Game
 from domain.entities.Attendance import Attendance
@@ -27,7 +27,7 @@ def _seed_game_with_yes_attendance(data_access):
     uts = seed_user(
         data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_EVENT_FIELD,
         additional_info=CallbackUtils.build_additional_information(1, ADMIN_ID, game.doc_id, Event.GAME,
-                                                                   CallbackOption.DATETIME))
+                                                                   EventField.DATETIME))
     data_access.update_attendance(Attendance(uts.user_id, game.doc_id, AttendanceState.YES), Event.GAME)
     return game
 
@@ -44,7 +44,7 @@ async def test_move_more_than_two_hours_resets_attendance_and_notifies(node_hand
 
     assert _attendance_state(data_access, game) == AttendanceState.UNSURE
     assert any("more than 2 hours" in m.text for m in bot.sent)
-    assert current_state(data_access, ADMIN_ID) == UserState.ADMIN
+    assert current_state(data_access, ADMIN_ID) == UserState.DEFAULT
     assert_no_error_reported(bot)
 
 
@@ -55,5 +55,5 @@ async def test_move_less_than_two_hours_keeps_attendance(node_handler, data_acce
 
     assert _attendance_state(data_access, game) == AttendanceState.YES
     assert not any("more than 2 hours" in m.text for m in bot.sent)
-    assert current_state(data_access, ADMIN_ID) == UserState.ADMIN
+    assert current_state(data_access, ADMIN_ID) == UserState.DEFAULT
     assert_no_error_reported(bot)

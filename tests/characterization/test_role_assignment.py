@@ -1,9 +1,10 @@
-"""Characterization: the /assign_roles flow (overview entry + list + assign) and its
+"""Characterization: the role-assignment flow (overview entry + list + assign) and its
 admin-only authorization.
 
 Role callbacks use the dedicated ROLES#... channel and persist through RoleService.
-NodeHandler gates callback nodes by the pressing user's role, so the caller is
-seeded as an admin for the positive cases.
+The entry point is the admin menu's Roles button (ROLES#H). NodeHandler gates callback
+nodes by the pressing user's role, so the caller is seeded as an admin for the
+positive cases.
 """
 from Enums.Role import Role
 from Enums.UserState import UserState
@@ -15,17 +16,28 @@ TARGET_ID = 1201
 NON_ADMIN_ID = 1202
 
 
-async def test_assign_roles_entry_shows_overview(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN)
+async def test_admin_menu_offers_the_roles_entry(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
 
-    await drive(node_handler, ADMIN_ID, "/assign_roles")
+    await drive(node_handler, ADMIN_ID, "admin")
 
-    assert any("Select a role to manage" in m.text for m in bot.sent)
+    panel = [m for m in bot.sent if m.chat_id == ADMIN_ID][-1]
+    data = [b.callback_data for row in panel.reply_markup.inline_keyboard for b in row]
+    assert RoleAssignment.encode_home() in data
+    assert_no_error_reported(bot)
+
+
+async def test_roles_entry_shows_overview(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_home())
+
+    assert any("Select a role to manage" in e.text for e in update.callback_query.edits)
     assert_no_error_reported(bot)
 
 
 async def test_list_users_by_role_edits_message(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN)
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
     seed_user(data_access, TARGET_ID, Role.ADMIN, UserState.DEFAULT)
 
     update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_list_users(Role.ADMIN))
@@ -35,8 +47,8 @@ async def test_list_users_by_role_edits_message(node_handler, data_access, bot):
 
 
 async def test_assign_role_persists_new_role_and_resets_state(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN)
-    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.STATS)
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE)
 
     await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_assign(target.user_id, Role.ADMIN))
 

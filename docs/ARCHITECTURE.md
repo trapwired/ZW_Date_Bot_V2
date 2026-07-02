@@ -12,9 +12,10 @@ The code is organized as **vertical slices** on a shared spine:
 src/
   framework/   feature-agnostic runtime: NodeHandler, Node/CallbackNode, Transitions,
                TelegramService, UserStateService, TriggerService, SchedulingService,
-               NodeUtils, CommandDescriptions
+               CommandDescriptions
   features/    one folder per capability, each owning its Node(s) + Service:
-               eventmgmt · attendance · stats · roles · website · onboarding · menu
+               events · adminpanel · eventmgmt · attendance · stats · roles · website
+               · onboarding · menu
   domain/      entities + business rules (policies, parsing) — no Telegram, no Firestore
   data/        DataAccess + FirebaseRepository (the Firestore boundary)
   Enums/  Utils/   shared cross-cutting code
@@ -25,9 +26,12 @@ across horizontal layers.
 
 ## How a request flows
 
-1. A Telegram update reaches **`NodeHandler`**, which looks up the user's `UserState`
-   and routes: plain text → a feature **Node**, an inline-button tap → a **CallbackNode**.
-   Callback nodes are additionally role-gated (`CallbackNode.required_roles`).
+1. A Telegram update reaches **`NodeHandler`**, which routes: plain text → the
+   feature **Node** for the user's `UserState`, an inline-button tap → the
+   **CallbackNode** owning the callback-data prefix (`EV#` events, `AP#` admin menu,
+   `ROLES#` role assignment; old-format attendance buttons are adapted, any other
+   pre-redesign button gets an "expired menu" notice). Callback nodes are additionally
+   role-gated (`CallbackNode.required_roles`).
 2. The node parses the input and calls its slice **Service** for orchestration.
 3. The service works through **`domain`** models and rules, and reads/writes via the
    **`data`** layer to **Firestore**.
@@ -41,18 +45,27 @@ the services, not the view nodes.
 - **Thin nodes, service-owned data access.** A feature node never touches `DataAccess`
   directly; it goes node → service → `DataAccess` → Firestore. This keeps the number
   of places that touch data small and auditable — the foundation the tenancy work
-  builds on (see ADR 0001). The one exception is the base `Node.get_commands_for_buttons`
-  button-render read (see Known-open items).
+  builds on (see ADR 0001).
+- **Inline-first menus, static reply keyboard.** The reply keyboard is a fixed,
+  role-filtered top-level menu (Events / Admin / Website / Help) built from the
+  DEFAULT node's transitions; everything about a *specific object* (event lists, the
+  event card, confirmations, the add-event wizard buttons) lives on inline messages
+  edited in place. One event card combines details, live counts, attendance buttons,
+  calendar export and — for admins — edit/delete, so there is no separate stats/edit
+  navigation.
 - **Domain logic in the domain layer.** Business rules (e.g. the ">2h event move
   invalidates attendance" policy, datetime parsing/validation) live in `domain/`, not
   inside view nodes.
 - **Event type is data, not code paths.** Game / Training / Timekeeping are handled by
   one polymorphic flow parameterized by `Event`, not by three copy-pasted handlers.
 - **Wizard/edit step lives in context, not the state machine.** The add-event wizard's
-  current field is held in `TempData.step`; the update-event edit carries its field and
-  event type in `UsersToState.additional_info`. `UserState` models *where the user is*,
-  not *which form field is being collected* — so it stays small (currently 23 values)
-  instead of one state per field × event type.
+  current field *and event type* are held in the draft (`TempData`); the field edit
+  carries its context in `UsersToState.additional_info`. `UserState` therefore only
+  models *which typed input is expected* — six states total (INIT, DEFAULT, the three
+  typed-input states, REJECTED); all menu navigation is inline.
+- **Typed-input states can't strand the user.** The keyboard stays visible during
+  typed input, and its main-menu commands act as escape hatches: they clean up the
+  in-flight flow (drop the draft / staged input) and navigate.
 - **Startup invariants.** `NodeHandler.do_checks` runs at construction and asserts every
   `UserState` has a node and every described command has a description, so a wiring
   mistake fails the whole test suite immediately.
@@ -86,10 +99,6 @@ summaries. It reads events via `data` and sends via `TelegramService`.
   (a greppable, alertable signal that survives even when the maintainer DM fails) and
   then best-effort alerts the maintainer. A dedicated metrics system or error-tracking
   integration (e.g. Sentry) is a possible next step but not currently wired.
-- **Base-node data read.** `framework/Nodes/Node.get_commands_for_buttons` reads
-  `data_access` directly (`get_user`, `get_all_event_attendances`) to render buttons —
-  the one place a node still touches data. It must become tenant-aware; cleanest to
-  resolve alongside the tenancy work (ADR 0001).
 - **Trigger system** (`TriggerService.initialize_triggers`, trigger mechanics in
   `framework/Triggers/`) is wired but underused — revisit when a second trigger is
   needed.

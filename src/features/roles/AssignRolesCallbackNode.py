@@ -91,7 +91,7 @@ class AssignRolesCallbackNode(CallbackNode):
         # Best-effort: the role change is already persisted, so a user we can no longer reach
         # (deleted account, blocked bot) must not fail the whole flow.
         default_node = self.node_handler.get_node(UserState.DEFAULT)
-        buttons = default_node.get_commands_for_buttons(new_role, UserState.DEFAULT, user.telegramId)
+        buttons = default_node.get_commands_for_buttons(new_role, UserState.DEFAULT)
         try:
             await self.telegram_service.send_message(
                 update=user,

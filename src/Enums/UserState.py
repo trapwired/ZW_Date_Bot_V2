@@ -2,66 +2,69 @@ from enum import IntEnum
 
 
 class UserState(IntEnum):
+    """Which node routes a user's next text message. Since the menu redesign the bot is
+    inline-first: DEFAULT is the only menu state, the remaining states exist solely to
+    capture typed input (wizard values, a field edit, a URL)."""
     INIT = -1
     DEFAULT = 0
 
-    STATS = 1
-    STATS_TIMEKEEPINGS = 2
-    STATS_TRAININGS = 3
-    STATS_GAMES = 4
+    ADMIN_ADD_EVENT = 60
 
-    EDIT = 10
-    EDIT_TIMEKEEPINGS = 11
-    EDIT_TRAININGS = 12
-    EDIT_GAMES = 13
-
-    ADMIN = 50
-    ADMIN_ADD = 51
-    ADMIN_UPDATE = 52
-    ADMIN_UPDATE_GAME = 53
-    ADMIN_UPDATE_TRAINING = 54
-    ADMIN_UPDATE_TIMEKEEPING = 55
-    ADMIN_ADD_GAME = 56
-    ADMIN_ADD_TRAINING = 57
-    ADMIN_ADD_TIMEKEEPING = 58
-
-    ADMIN_UPDATE_EVENT_FIELD = 140
-
-    ADMIN_STATISTICS = 130
     ADMIN_UPDATE_WEBSITE = 131
+    ADMIN_UPDATE_EVENT_FIELD = 140
 
     REJECTED = 999
 
     @classmethod
     def _missing_(cls, value):
-        # These enum values were removed when the add- and update-event field states were
-        # collapsed (the field now lives in TempData.step / additional_info, not the enum).
-        # Coerce a persisted legacy value to its surviving state so a user who was mid-flow
-        # at deploy time reads back as a valid state instead of crashing on
-        # UserState(int(state)). Returning None from _missing_ makes a genuinely unknown
-        # value raise ValueError, as usual.
+        # Persisted states from before the menu redesign (and the earlier wizard-state
+        # collapse) resolve to a surviving state instead of crashing on
+        # UserState(int(state)). Returning None from _missing_ makes a genuinely
+        # unknown value raise ValueError, as usual.
         return _LEGACY_STATES.get(value)
 
 
-# Legacy persisted UserState ints -> the surviving state. Removed add-event field states
-# map to their per-type parent; removed update-event field states map to the update menu
-# (their legacy additional_info can't resume the edit, so they re-navigate from there).
+# Legacy persisted UserState ints -> the surviving state.
+# - Old menu screens (stats/edit/admin navigation) all collapse into the main menu.
+# - Old per-type add-wizard states collapse into ADMIN_ADD_EVENT (the draft carries the
+#   event type, so an in-flight wizard resumes where it left off).
+# - Old update-field states can't resume their edit; they land on the main menu.
 _LEGACY_STATES = {
-    103: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_TIMESTAMP
-    104: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_LOCATION
-    105: UserState.ADMIN_ADD_GAME,        # ADMIN_ADD_GAME_OPPONENT
-    106: UserState.ADMIN_ADD_GAME,        # ADMIN_FINISH_ADD_GAME
-    113: UserState.ADMIN_ADD_TRAINING,    # ADMIN_ADD_TRAINING_LOCATION
-    114: UserState.ADMIN_ADD_TRAINING,    # ADMIN_ADD_TRAINING_TIMESTAMP
-    115: UserState.ADMIN_ADD_TRAINING,    # ADMIN_FINISH_ADD_TRAINING
-    123: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_ADD_TIMEKEEPING_LOCATION
-    124: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_ADD_TIMEKEEPING_TIMESTAMP
-    125: UserState.ADMIN_ADD_TIMEKEEPING,  # ADMIN_FINISH_ADD_TIMEKEEPING
-    100: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_GAME_LOCATION
-    101: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_GAME_OPPONENT
-    102: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_GAME_TIMESTAMP
-    110: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_TRAINING_LOCATION
-    112: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_TRAINING_TIMESTAMP
-    120: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_TIMEKEEPING_LOCATION
-    122: UserState.ADMIN_UPDATE,          # ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP
+    1: UserState.DEFAULT,    # STATS
+    2: UserState.DEFAULT,    # STATS_TIMEKEEPINGS
+    3: UserState.DEFAULT,    # STATS_TRAININGS
+    4: UserState.DEFAULT,    # STATS_GAMES
+    10: UserState.DEFAULT,   # EDIT
+    11: UserState.DEFAULT,   # EDIT_TIMEKEEPINGS
+    12: UserState.DEFAULT,   # EDIT_TRAININGS
+    13: UserState.DEFAULT,   # EDIT_GAMES
+    50: UserState.DEFAULT,   # ADMIN
+    51: UserState.DEFAULT,   # ADMIN_ADD
+    52: UserState.DEFAULT,   # ADMIN_UPDATE
+    53: UserState.DEFAULT,   # ADMIN_UPDATE_GAME
+    54: UserState.DEFAULT,   # ADMIN_UPDATE_TRAINING
+    55: UserState.DEFAULT,   # ADMIN_UPDATE_TIMEKEEPING
+    130: UserState.DEFAULT,  # ADMIN_STATISTICS
+
+    56: UserState.ADMIN_ADD_EVENT,   # ADMIN_ADD_GAME
+    57: UserState.ADMIN_ADD_EVENT,   # ADMIN_ADD_TRAINING
+    58: UserState.ADMIN_ADD_EVENT,   # ADMIN_ADD_TIMEKEEPING
+    103: UserState.ADMIN_ADD_EVENT,  # ADMIN_ADD_GAME_TIMESTAMP
+    104: UserState.ADMIN_ADD_EVENT,  # ADMIN_ADD_GAME_LOCATION
+    105: UserState.ADMIN_ADD_EVENT,  # ADMIN_ADD_GAME_OPPONENT
+    106: UserState.ADMIN_ADD_EVENT,  # ADMIN_FINISH_ADD_GAME
+    113: UserState.ADMIN_ADD_EVENT,  # ADMIN_ADD_TRAINING_LOCATION
+    114: UserState.ADMIN_ADD_EVENT,  # ADMIN_ADD_TRAINING_TIMESTAMP
+    115: UserState.ADMIN_ADD_EVENT,  # ADMIN_FINISH_ADD_TRAINING
+    123: UserState.ADMIN_ADD_EVENT,  # ADMIN_ADD_TIMEKEEPING_LOCATION
+    124: UserState.ADMIN_ADD_EVENT,  # ADMIN_ADD_TIMEKEEPING_TIMESTAMP
+    125: UserState.ADMIN_ADD_EVENT,  # ADMIN_FINISH_ADD_TIMEKEEPING
+
+    100: UserState.DEFAULT,  # ADMIN_UPDATE_GAME_LOCATION
+    101: UserState.DEFAULT,  # ADMIN_UPDATE_GAME_OPPONENT
+    102: UserState.DEFAULT,  # ADMIN_UPDATE_GAME_TIMESTAMP
+    110: UserState.DEFAULT,  # ADMIN_UPDATE_TRAINING_LOCATION
+    112: UserState.DEFAULT,  # ADMIN_UPDATE_TRAINING_TIMESTAMP
+    120: UserState.DEFAULT,  # ADMIN_UPDATE_TIMEKEEPING_LOCATION
+    122: UserState.DEFAULT,  # ADMIN_UPDATE_TIMEKEEPING_TIMESTAMP
 }

@@ -8,12 +8,11 @@ from domain import AttendanceResetPolicy
 from Enums.UserState import UserState
 from Enums.MessageType import MessageType
 from Enums.Event import Event
-from Enums.CallbackOption import CallbackOption
+from Enums.EventField import EventField
 from Enums.AttendanceState import AttendanceState
 
 from domain.entities.UsersToState import UsersToState
 
-from Utils import UpdateEventUtils
 from Utils import CallbackUtils
 from Utils import PrintUtils
 
@@ -21,27 +20,32 @@ from data.DataAccess import DataAccess
 from framework.Services.TelegramService import TelegramService
 from framework.Services.UserStateService import UserStateService
 
+from features.events import EventsMenu
+from features.events.EventsView import EventsView
+
 
 class EditEventFieldNode(Node):
     """Applies a single-field edit to an existing event. Which event, which field, and
-    which inline message to update all come from the caller's context
-    (user_to_state.additional_info, set by UpdateEventCallbackNode) rather than from the
+    which event-card message to refresh all come from the caller's context
+    (user_to_state.additional_info, set by EventsCallbackNode) rather than from the
     UserState, so one node handles every event-type/field combination."""
 
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, node_handler, event_service):
+                 data_access: DataAccess, event_service, events_view: EventsView):
         super().__init__(state, telegram_service, user_state_service, data_access)
-        self.add_transition('/cancel', self.handle_cancel, new_state=UserState.ADMIN)
-        self.node_handler = node_handler
         self.event_service = event_service
+        self.events_view = events_view
+        self.add_transition('/cancel', self.handle_cancel, new_state=UserState.DEFAULT)
+        self.add_main_menu_escapes(self._clear_edit_context)
+        self.fallback_action = self.handle_event_field
+
+    def _clear_edit_context(self, user_to_state: UsersToState) -> None:
+        user_to_state.additional_info = ''
 
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        user_to_state.additional_info = ''
-        self.user_state_service.update_user_state(user_to_state, new_state)
+        self._clear_edit_context(user_to_state)
         await self.telegram_service.send_message(
-            update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
-            message_type=MessageType.ADMIN)
+            update=update, all_buttons=None, message='Cancelled - the event was not changed.')
 
     async def handle_event_field(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         edit = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
@@ -51,11 +55,11 @@ class EditEventFieldNode(Node):
         message = update.message.text.lower()
 
         old_event = None
-        if edit.field == CallbackOption.DATETIME:
+        if edit.field == EventField.DATETIME:
             parsed = EventDateTimeParser.parse_future(message)
             if not parsed.ok:
                 # Parsing failed - report and stay on this step without changing anything.
-                await self.telegram_service.send_message_with_normal_keyboard(update=update, message=parsed.error)
+                await self.telegram_service.send_message(update=update, all_buttons=None, message=parsed.error)
                 return
             old_event = self.event_service.get_event(edit.event_type, edit.doc_id)
             new_value = parsed.value
@@ -64,20 +68,23 @@ class EditEventFieldNode(Node):
 
         updated_event = self.event_service.update_field(edit.event_type, edit.doc_id, new_value, edit.field)
 
-        new_inline_message = UpdateEventUtils.get_inline_message('Updated', edit.event_type, updated_event)
-        await self.telegram_service.edit_inline_message_text(new_inline_message, edit.message_id, edit.chat_id)
-        await self.telegram_service.send_message_with_normal_keyboard(update=update, message="Updated event successfully!")
-        self.node_handler.recalculate_node_transitions()
+        await self._refresh_event_card(user_to_state, edit)
+        await self.telegram_service.send_message(update=update, all_buttons=None,
+                                                 message='Updated event successfully!')
 
         if old_event is not None and AttendanceResetPolicy.requires_attendance_reset(old_event.timestamp,
                                                                                      updated_event.timestamp):
             await self.notify_all_players(edit.event_type, edit.doc_id, updated_event, old_event)
             text = ('Since the event was moved by more than 2 hours, I invalidated all previous answers and let all '
                     'players know...')
-            await self.telegram_service.send_message_with_normal_keyboard(update=update, message=text)
+            await self.telegram_service.send_message(update=update, all_buttons=None, message=text)
 
-        # handle_cancel does the authoritative reset: state -> ADMIN, clear additional_info, render the admin menu.
-        await self.handle_cancel(update, user_to_state, UserState.ADMIN)
+        self._clear_edit_context(user_to_state)
+        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+
+    async def _refresh_event_card(self, user_to_state: UsersToState, edit: CallbackUtils.EventFieldEdit):
+        text, markup = self.events_view.build_card(user_to_state.role, edit.chat_id, edit.event_type, edit.doc_id)
+        await self.telegram_service.edit_inline_message_text(text, edit.message_id, edit.chat_id, markup)
 
     async def notify_all_players(self, event_type: Event, doc_id: str, updated_event, old_event):
         self.event_service.reset_attendance(event_type, doc_id)
@@ -92,7 +99,7 @@ class EditEventFieldNode(Node):
                 message_extra_text=pretty_print_old_event)
 
             pretty_print_event = PrintUtils.pretty_print(updated_event, AttendanceState.UNSURE)
-            reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, doc_id)
+            reply_markup = EventsMenu.build_attendance_markup(event_type, doc_id)
             message_text = PrintUtils.event_label(event_type) + ' | ' + pretty_print_event
             await self.telegram_service.send_message(
                 update=player,
@@ -101,15 +108,6 @@ class EditEventFieldNode(Node):
                 reply_markup=reply_markup)
 
     async def handle_parse_additional_info_failed(self, user_to_state: UsersToState, update: Update):
-        text = 'Error getting information from the database, please restart updating an event via the menu :)'
-        new_state = UserState.ADMIN_UPDATE
-        self.user_state_service.update_user_state(user_to_state, new_state)
-
-        await self.telegram_service.send_message_with_normal_keyboard(update=update, message=text)
-        await self.telegram_service.send_message(
-            update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state, update.effective_chat.id),
-            message_type=MessageType.ADMIN_UPDATE)
-
-    async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
-        await self.handle_event_field(update, user_to_state, new_state)
+        text = 'Error getting information from the database, please restart updating the event via the events menu :)'
+        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+        await self.telegram_service.send_message(update=update, all_buttons=None, message=text)

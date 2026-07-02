@@ -24,6 +24,11 @@ class AttendanceService:
     def get_attendance(self, telegram_id: int, doc_id: str, event_type: Event) -> Attendance:
         return self.data_access.get_attendance(telegram_id, doc_id, event_type)
 
+    def get_own_attendances(self, telegram_id: int) -> dict:
+        """All of one player's attendances across every event type, keyed by event doc_id."""
+        user = self.data_access.get_user(telegram_id)
+        return self.data_access.get_all_event_attendances(user)
+
     def yes_count(self, doc_id: str, event_type: Event) -> int:
         yes, _, _ = self.data_access.get_stats_event(doc_id, event_type)
         return len(yes)

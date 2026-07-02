@@ -1,20 +1,17 @@
-"""Characterization: /help stays consistent with the keyboard.
+"""Characterization: help and the static per-role reply keyboard stay consistent.
 
-Help and the reply keyboard derive from the same active-transition selection
-(Node.get_active_transitions): an option hidden from the keyboard (inactive
-is_active_function, e.g. no upcoming games) must not be explained in help,
-and every described keyboard option gets its explanation.
+Both derive from the DEFAULT node's transitions: every keyboard button has a help
+entry, admin-only entries are hidden from players, and keyboard-invisible aliases
+(/help, /privacy) still work as typed commands.
 """
 from Enums.Role import Role
 from Enums.UserState import UserState
 from framework.CommandDescriptions import CommandDescriptions
-from domain.entities.Game import Game
-from domain.EventDateTimeParser import parse
 from tests.helpers import drive, seed_user, assert_no_error_reported
 
 PLAYER_ID = 1400
-
-FUTURE = "24.12.2030 18:30"
+ADMIN_ID = 1402
+SPECTATOR_ID = 1403
 
 
 def _keyboard_commands(bot, chat_id):
@@ -26,47 +23,69 @@ def _keyboard_commands(bot, chat_id):
 async def test_help_lists_active_commands_with_descriptions(node_handler, data_access, bot):
     seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
 
-    await drive(node_handler, PLAYER_ID, '/help')
+    await drive(node_handler, PLAYER_ID, 'help')
 
     help_text = bot.texts_to(PLAYER_ID)[-1]
-    for command in ['/help', '/website', '/stats', '/edit']:
+    for command in ['help', 'events', 'website', '/privacy']:
         assert f'{command}: {CommandDescriptions.descriptions[command]}' in help_text
-    assert '/admin' not in help_text                    # admin-only, hidden for players
+    assert 'admin:' not in help_text                    # admin-only, hidden for players
     assert_no_error_reported(bot)
 
 
-async def test_help_matches_keyboard(node_handler, data_access, bot):
+async def test_slash_help_alias_works_but_stays_off_the_keyboard(node_handler, data_access, bot):
     seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
 
     await drive(node_handler, PLAYER_ID, '/help')
 
-    help_text = bot.texts_to(PLAYER_ID)[-1]
-    for command in _keyboard_commands(bot, PLAYER_ID):
+    assert 'Here are my available commands' in bot.texts_to(PLAYER_ID)[-1]
+    keyboard = _keyboard_commands(bot, PLAYER_ID)
+    assert '/help' not in keyboard
+    assert '/privacy' not in keyboard
+    assert_no_error_reported(bot)
+
+
+async def test_player_keyboard_is_static_events_website_help(node_handler, data_access, bot):
+    seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive(node_handler, PLAYER_ID, 'help')
+
+    assert _keyboard_commands(bot, PLAYER_ID) == ['events', 'website', 'help']
+    assert_no_error_reported(bot)
+
+
+async def test_admin_keyboard_adds_admin_row(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+
+    await drive(node_handler, ADMIN_ID, 'help')
+
+    assert _keyboard_commands(bot, ADMIN_ID) == ['events', 'admin', 'website', 'help']
+    assert_no_error_reported(bot)
+
+
+async def test_spectator_keyboard_matches_player_layout(node_handler, data_access, bot):
+    seed_user(data_access, SPECTATOR_ID, Role.SPECTATOR, UserState.DEFAULT)
+
+    await drive(node_handler, SPECTATOR_ID, 'help')
+
+    assert _keyboard_commands(bot, SPECTATOR_ID) == ['events', 'website', 'help']
+    assert_no_error_reported(bot)
+
+
+async def test_every_keyboard_button_has_a_help_entry(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+
+    await drive(node_handler, ADMIN_ID, 'help')
+
+    help_text = bot.texts_to(ADMIN_ID)[-1]
+    for command in _keyboard_commands(bot, ADMIN_ID):
         assert f'{command}: {CommandDescriptions.descriptions[command]}' in help_text
     assert_no_error_reported(bot)
 
 
-async def test_help_hides_inactive_commands(node_handler, data_access, bot):
-    # No upcoming games/trainings/timekeepings: /games etc. are inactive, so the
-    # keyboard hides them — help must not explain them either.
-    seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.STATS)
+async def test_unknown_text_falls_back_to_help(node_handler, data_access, bot):
+    seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
 
-    await drive(node_handler, PLAYER_ID, '/help')
+    await drive(node_handler, PLAYER_ID, 'foo bar baz')
 
-    help_text = bot.texts_to(PLAYER_ID)[-1]
-    assert '/games' not in help_text
-    assert '/games' not in _keyboard_commands(bot, PLAYER_ID)
-    assert 'continue later' in help_text
-    assert_no_error_reported(bot)
-
-
-async def test_help_shows_command_once_event_exists(node_handler, data_access, bot):
-    data_access.add(Game(parse(FUTURE).value, "home arena", "rivals fc"))
-    seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.STATS)
-
-    await drive(node_handler, PLAYER_ID, '/help')
-
-    help_text = bot.texts_to(PLAYER_ID)[-1]
-    assert f'/games: {CommandDescriptions.descriptions["/games"]}' in help_text
-    assert '/games' in _keyboard_commands(bot, PLAYER_ID)
+    assert 'Here are my available commands' in bot.texts_to(PLAYER_ID)[-1]
     assert_no_error_reported(bot)
