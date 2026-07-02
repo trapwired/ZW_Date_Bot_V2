@@ -14,7 +14,7 @@ class FakeBot:
         self.sent = []          # send_message calls
         self.edits = []         # edit_message_text calls
         self.documents = []     # send_document calls
-        self.deleted = []       # deleteMessage calls
+        self.deleted = []       # delete_message calls
         self._message_id = 0
         # Default: every queried user is a group member. Tests override to exercise rejection.
         self.chat_member = ChatMemberMember(user=User(id=1, first_name="member", is_bot=False))
@@ -44,7 +44,7 @@ class FakeBot:
         self.edits.append(SimpleNamespace(
             text=text, message_id=message_id, chat_id=chat_id, reply_markup=reply_markup))
 
-    async def deleteMessage(self, message_id, chat_id):  # noqa: N802 - matches telegram.Bot
+    async def delete_message(self, message_id, chat_id):
         self.deleted.append(SimpleNamespace(message_id=message_id, chat_id=chat_id))
 
     def texts_to(self, chat_id):

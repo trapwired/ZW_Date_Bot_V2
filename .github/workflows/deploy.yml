@@ -1,4 +1,6 @@
 name: Deploy
+# Runs only after a PR is merged (push to main). Tests already ran as a required check on
+# the PR, so deployment does not re-run them.
 on:
   push:
     branches: [main]
