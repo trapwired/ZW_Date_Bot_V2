@@ -1,7 +1,8 @@
 name: CI
+# Runs on every pull request (open + each push to the PR branch). Make this a required
+# status check on main so a PR can only merge once it is green. Not run on push to main:
+# the code was already validated on the PR, so a merge only triggers Deploy.
 on:
-  push:
-    branches: [main]
   pull_request:
 jobs:
   test:

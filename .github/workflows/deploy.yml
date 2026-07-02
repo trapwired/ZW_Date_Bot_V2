@@ -1,13 +1,11 @@
 name: Deploy
+# Runs only after a PR is merged (push to main). Tests already ran as a required check on
+# the PR, so deployment does not re-run them.
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  push:
     branches: [main]
 jobs:
   deploy:
-    # Only deploy when the CI run that triggered this finished green.
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Deploy over SSH
