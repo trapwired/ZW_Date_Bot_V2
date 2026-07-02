@@ -62,7 +62,8 @@ class EventsCallbackNode(CallbackNode):
 
         match action:
             case EventsMenu.LIST:
-                await self._show_list(query, role, telegram_id, event_type)
+                page = int(args[0]) if args else 0
+                await self._show_list(query, role, telegram_id, event_type, page)
             case EventsMenu.CARD:
                 await self._show_card(query, role, telegram_id, event_type, args[0])
             case EventsMenu.ATTEND if role in RoleSet.PLAYERS:
@@ -83,8 +84,8 @@ class EventsCallbackNode(CallbackNode):
                 # pressing a forwarded attendance button) - just dismiss the spinner.
                 await query.answer()
 
-    async def _show_list(self, query, role: Role, telegram_id: int, event_type: Event):
-        text, markup = self.events_view.build_list(role, telegram_id, event_type)
+    async def _show_list(self, query, role: Role, telegram_id: int, event_type: Event, page: int = 0):
+        text, markup = self.events_view.build_list(role, telegram_id, event_type, page)
         await query.answer()
         await self.telegram_service.edit_callback_message(query, text, markup)
 

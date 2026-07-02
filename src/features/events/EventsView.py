@@ -22,7 +22,10 @@ class EventsView:
         self.attendance_service = attendance_service
         self.statistics_service = statistics_service
 
-    def build_list(self, role: Role, telegram_id: int, selected_type: Event | None) -> tuple[str, InlineKeyboardMarkup | None]:
+    PAGE_SIZE = 8
+
+    def build_list(self, role: Role, telegram_id: int, selected_type: Event | None,
+                   page: int = 0) -> tuple[str, InlineKeyboardMarkup | None]:
         available_types = self._available_types(role)
         if len(available_types) == 0:
             return 'There are no upcoming events at the moment.', None
@@ -30,6 +33,10 @@ class EventsView:
             selected_type = available_types[0]
 
         events = self.event_service.get_upcoming(selected_type)
+        last_page = max(0, (len(events) - 1) // self.PAGE_SIZE)
+        page = min(max(page, 0), last_page)
+        page_of_events = events[page * self.PAGE_SIZE:(page + 1) * self.PAGE_SIZE]
+
         own_attendances = {}
         if role is not Role.SPECTATOR:
             own_attendances = self.attendance_service.get_own_attendances(telegram_id)
@@ -37,10 +44,12 @@ class EventsView:
         rows = []
         if len(available_types) > 1:
             rows.append(EventsMenu.build_filter_row(available_types))
-        for event in events:
+        for event in page_of_events:
             rows.append([InlineKeyboardButton(
                 self._list_button_label(event, own_attendances, role),
                 callback_data=EventsMenu.encode_card(selected_type, event.doc_id))])
+        if last_page > 0:
+            rows.append(EventsMenu.build_page_row(selected_type, page, last_page))
 
         text = (f'{Format.bold(f"Upcoming {EventsMenu.FILTER_LABELS[selected_type]}")}\n'
                 'Tap an event for details' + ('' if role is Role.SPECTATOR else ' or to change your attendance') + ':')

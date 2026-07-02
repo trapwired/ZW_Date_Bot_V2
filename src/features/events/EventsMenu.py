@@ -32,8 +32,12 @@ _LEGACY_ATTENDANCE_OPTIONS = {state.name: state for state in AttendanceState}
 _LEGACY_CALENDAR_OPTION = 'CALENDAR'
 
 
-def encode_list(event_type: Event) -> str:
-    return _join(LIST, int(event_type))
+def encode_list(event_type: Event, page: int = 0) -> str:
+    if page == 0:
+        # Page 0 stays the bare form so existing buttons (cards' back-to-list,
+        # filter row) keep one canonical encoding.
+        return _join(LIST, int(event_type))
+    return _join(LIST, int(event_type), page)
 
 
 def encode_card(event_type: Event, doc_id: str) -> str:
@@ -113,6 +117,16 @@ def try_parse_legacy_attendance(data: str) -> tuple[str, Event, list[str]] | Non
 
 def build_filter_row(available_types: list[Event]) -> list[InlineKeyboardButton]:
     return [InlineKeyboardButton(FILTER_LABELS[t], callback_data=encode_list(t)) for t in available_types]
+
+
+def build_page_row(event_type: Event, page: int, last_page: int) -> list[InlineKeyboardButton]:
+    row = []
+    if page > 0:
+        row.append(InlineKeyboardButton('« previous', callback_data=encode_list(event_type, page - 1)))
+    row.append(InlineKeyboardButton(f'{page + 1}/{last_page + 1}', callback_data=encode_list(event_type, page)))
+    if page < last_page:
+        row.append(InlineKeyboardButton('more »', callback_data=encode_list(event_type, page + 1)))
+    return row
 
 
 def build_attendance_row(event_type: Event, doc_id: str) -> list[InlineKeyboardButton]:

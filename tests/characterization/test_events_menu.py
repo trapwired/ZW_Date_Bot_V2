@@ -129,6 +129,25 @@ async def test_card_of_deleted_event_degrades_gracefully(node_handler, data_acce
     assert_no_error_reported(bot)
 
 
+async def test_long_event_list_paginates(node_handler, data_access, bot):
+    from domain.entities.Game import Game
+    for day in range(1, 11):     # 10 games -> pages of 8 + 2
+        data_access.add(Game(parse(f"{day:02d}.12.2030 18:30").value, f"arena {day}", "rivals fc"))
+    seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive(node_handler, PLAYER_ID, "events")
+    first_page = _buttons(_last_markup(bot, PLAYER_ID))
+    card_buttons = [b for b in first_page if b.callback_data.startswith("EV#C")]
+    assert len(card_buttons) == 8
+    assert EventsMenu.encode_list(Event.GAME, 1) in [b.callback_data for b in first_page]  # 'more »'
+
+    update = await drive_callback(node_handler, PLAYER_ID, EventsMenu.encode_list(Event.GAME, 1))
+    second_page = _buttons(update.callback_query.edits[-1].reply_markup)
+    assert len([b for b in second_page if b.callback_data.startswith("EV#C")]) == 2
+    assert EventsMenu.encode_list(Event.GAME) in [b.callback_data for b in second_page]    # '« previous'
+    assert_no_error_reported(bot)
+
+
 async def test_list_navigation_between_types(node_handler, data_access, bot, game):
     training = data_access.add(Training(parse(FUTURE).value, "sporthalle"))
     seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)

@@ -40,6 +40,4 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Optional / nice-to-have
 
-- [ ] **Paginate the inline event list** (`features/events/EventsView.build_list`)
-  once a season's schedule makes the button column unwieldy; today all upcoming
-  events of the selected type are listed.
+*(nothing right now)*
