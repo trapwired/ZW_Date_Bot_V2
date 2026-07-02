@@ -1,12 +1,13 @@
-"""Unit: backward-compat for removed add- and update-event field states.
+"""Unit: backward-compat for removed UserStates.
 
-A user mid-wizard (or a draft in flight) at deploy time carries legacy persisted
-values. Reading them back must not crash and must not lose progress.
+A user parked on a pre-redesign menu screen (or mid-wizard) at deploy time carries a
+legacy persisted state value. Reading it back must not crash and must land them on a
+state that still exists.
 """
 import pandas as pd
 import pytest
 
-from Enums.CallbackOption import CallbackOption
+from Enums.EventField import EventField
 from Enums.Event import Event
 from Enums.UserState import UserState
 from domain.entities.TempData import TempData
@@ -15,31 +16,35 @@ from domain.entities.TempData import TempData
 TS = pd.Timestamp("2030-12-24 18:30", tz="UTC")
 
 
-# --- UserState._missing_: legacy add-field ints coerce to the parent state ---
+# --- UserState._missing_: legacy ints coerce to a surviving state ---
 
-@pytest.mark.parametrize("legacy_value, expected", [
-    (103, UserState.ADMIN_ADD_GAME),        # ADMIN_ADD_GAME_TIMESTAMP
-    (104, UserState.ADMIN_ADD_GAME),        # ADMIN_ADD_GAME_LOCATION
-    (105, UserState.ADMIN_ADD_GAME),        # ADMIN_ADD_GAME_OPPONENT
-    (106, UserState.ADMIN_ADD_GAME),        # ADMIN_FINISH_ADD_GAME
-    (114, UserState.ADMIN_ADD_TRAINING),    # ADMIN_ADD_TRAINING_TIMESTAMP
-    (115, UserState.ADMIN_ADD_TRAINING),    # ADMIN_FINISH_ADD_TRAINING
-    (124, UserState.ADMIN_ADD_TIMEKEEPING),  # ADMIN_ADD_TIMEKEEPING_TIMESTAMP
-    (125, UserState.ADMIN_ADD_TIMEKEEPING),  # ADMIN_FINISH_ADD_TIMEKEEPING
+@pytest.mark.parametrize("legacy_value", [
+    1, 2, 3, 4,          # STATS menu family
+    10, 11, 12, 13,      # EDIT menu family
+    50, 51, 52,          # ADMIN / ADMIN_ADD / ADMIN_UPDATE
+    53, 54, 55,          # ADMIN_UPDATE_<type> pickers
+    130,                 # ADMIN_STATISTICS
+    100, 101, 102, 110, 112, 120, 122,  # ancient per-field update states
 ])
-def test_legacy_add_state_int_coerces_to_parent(legacy_value, expected):
-    assert UserState(legacy_value) is expected
+def test_legacy_menu_state_int_coerces_to_main_menu(legacy_value):
+    assert UserState(legacy_value) is UserState.DEFAULT
 
 
-@pytest.mark.parametrize("legacy_value", [100, 101, 102, 110, 112, 120, 122])
-def test_legacy_update_field_state_int_coerces_to_update_menu(legacy_value):
-    # Removed per-field update states map to the update menu; a user mid-edit re-navigates
-    # (their legacy additional_info cannot resume the edit).
-    assert UserState(legacy_value) is UserState.ADMIN_UPDATE
+@pytest.mark.parametrize("legacy_value", [
+    56, 57, 58,                      # ADMIN_ADD_<type> wizard states
+    103, 104, 105, 106,              # ancient add-game field states
+    113, 114, 115, 123, 124, 125,    # ancient add-training/-timekeeping field states
+])
+def test_legacy_wizard_state_int_coerces_to_single_wizard_state(legacy_value):
+    # The draft (TempData) carries the event type + step, so an in-flight wizard
+    # resumes where it left off in the collapsed state.
+    assert UserState(legacy_value) is UserState.ADMIN_ADD_EVENT
 
 
 def test_current_states_still_resolve():
-    assert UserState(56) is UserState.ADMIN_ADD_GAME
+    assert UserState(0) is UserState.DEFAULT
+    assert UserState(60) is UserState.ADMIN_ADD_EVENT
+    assert UserState(131) is UserState.ADMIN_UPDATE_WEBSITE
     assert UserState(140) is UserState.ADMIN_UPDATE_EVENT_FIELD
     assert UserState(999) is UserState.REJECTED
 
@@ -61,30 +66,30 @@ def _legacy_source(**overrides):
 
 
 def test_legacy_draft_infers_datetime_when_empty():
-    assert TempData.from_dict('d1', _legacy_source()).step == CallbackOption.DATETIME
+    assert TempData.from_dict('d1', _legacy_source()).step == EventField.DATETIME
 
 
 def test_legacy_draft_infers_location_when_timestamp_set():
     src = _legacy_source(timestamp=TS)
-    assert TempData.from_dict('d1', src).step == CallbackOption.LOCATION
+    assert TempData.from_dict('d1', src).step == EventField.LOCATION
 
 
 def test_legacy_game_draft_infers_opponent_when_timestamp_and_location_set():
     src = _legacy_source(timestamp=TS, location='home arena')
-    assert TempData.from_dict('d1', src).step == CallbackOption.OPPONENT
+    assert TempData.from_dict('d1', src).step == EventField.OPPONENT
 
 
 def test_legacy_game_draft_infers_save_when_all_fields_set():
     src = _legacy_source(timestamp=TS, location='home arena', opponent='rivals fc')
-    assert TempData.from_dict('d1', src).step == CallbackOption.SAVE
+    assert TempData.from_dict('d1', src).step == EventField.SAVE
 
 
 def test_legacy_training_draft_infers_save_without_opponent():
     src = _legacy_source(eventType=Event.TRAINING, timestamp=TS, location='sporthalle')
-    assert TempData.from_dict('d1', src).step == CallbackOption.SAVE
+    assert TempData.from_dict('d1', src).step == EventField.SAVE
 
 
 def test_stored_step_is_used_verbatim_when_present():
-    src = _legacy_source(timestamp=TS, step=CallbackOption.DATETIME)
+    src = _legacy_source(timestamp=TS, step=EventField.DATETIME)
     # Even though timestamp is set (would infer LOCATION), an explicit stored step wins.
-    assert TempData.from_dict('d1', src).step == CallbackOption.DATETIME
+    assert TempData.from_dict('d1', src).step == EventField.DATETIME

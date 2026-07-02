@@ -2,6 +2,7 @@ import datetime
 import logging
 
 import telegram
+from telegram import BotCommand
 from telegram.ext import ApplicationBuilder, ContextTypes
 
 from Utils.ApiConfig import ApiConfig
@@ -48,9 +49,20 @@ async def send_hi(context: ContextTypes.DEFAULT_TYPE):
     await telegram_service.send_maintainer_hi('Bot was restarted')
 
 
+async def register_bot_commands(context: ContextTypes.DEFAULT_TYPE):
+    # Telegram's global command menu (the '/' button). Everything else is reachable
+    # via the reply keyboard and inline menus.
+    await context.bot.set_my_commands([
+        BotCommand('start', 'Start chatting with me :)'),
+        BotCommand('help', 'Show all available commands'),
+        BotCommand('privacy', 'Show the privacy policy of the bot'),
+    ])
+
+
 def run_job_queue():
     job_queue = application.job_queue
     job_queue.run_once(send_hi, 1)
+    job_queue.run_once(register_bot_commands, 1)
 
     # Individual event reminders
     job_queue.run_daily(  # Game Reminders, each day at 11:59 local time

@@ -7,10 +7,12 @@ nodes.
 """
 from data.DataAccess import DataAccess
 
-from Enums.CallbackOption import CallbackOption
+from Enums.EventField import EventField
 from Enums.Event import Event
 
 from domain.entities.TempData import TempData
+
+from Utils.CustomExceptions import NoTempDataFoundException
 
 
 class EventService:
@@ -20,6 +22,10 @@ class EventService:
     # --- event drafts (the add-event wizard scratch state) ---
 
     def create_draft(self, user_id: str, event_type: Event) -> TempData:
+        # Invariant: at most one draft per user (get_draft looks drafts up by user and
+        # fails on more). Enforced here so no wizard entry point can create a second one
+        # (e.g. starting the wizard from two admin-menu messages).
+        self.discard_draft_if_any(user_id)
         return self.data_access.add(TempData(user_id, event_type))
 
     def get_draft(self, user_id: str) -> TempData:
@@ -30,6 +36,14 @@ class EventService:
 
     def discard_draft(self, draft: TempData) -> None:
         self.data_access.delete(draft)
+
+    def discard_draft_if_any(self, user_id: str) -> None:
+        """Drop the user's in-flight draft, if one exists - the cleanup every
+        escape route out of the add-event wizard shares."""
+        try:
+            self.discard_draft(self.get_draft(user_id))
+        except NoTempDataFoundException:
+            return
 
     def finalize_draft(self, draft: TempData):
         """Persist the finished event and discard the draft in one step, so a saved
@@ -43,7 +57,21 @@ class EventService:
     def get_event(self, event_type: Event, doc_id: str):
         return self.data_access.get_event(event_type, doc_id)
 
-    def update_field(self, event_type: Event, doc_id: str, new_value, field_type: CallbackOption):
+    def get_upcoming(self, event_type: Event) -> list:
+        match event_type:
+            case Event.GAME:
+                return self.data_access.get_ordered_games()
+            case Event.TRAINING:
+                return self.data_access.get_ordered_trainings()
+            case Event.TIMEKEEPING:
+                return self.data_access.get_ordered_timekeepings()
+            case _:
+                raise ValueError(f'Unhandled event type: {event_type}')
+
+    def any_upcoming(self, event_type: Event) -> bool:
+        return len(self.get_upcoming(event_type)) > 0
+
+    def update_field(self, event_type: Event, doc_id: str, new_value, field_type: EventField):
         return self.data_access.update_event_field(event_type, doc_id, new_value, field_type)
 
     def delete_event(self, event_type: Event, doc_id: str) -> None:

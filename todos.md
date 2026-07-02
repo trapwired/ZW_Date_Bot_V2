@@ -28,10 +28,6 @@ start and a rough effort (S / M / L). Pick top-down within a group.
     (e.g. `position` field on `TelegramUser`), not a new `Role` value.
   - Admins assign it via a flow analogous to `/assign_roles` (reuse that slice's
     pattern in `features/roles/`).
-- [ ] **Redesign the menu / submenu experience for accessibility.**
-  - The reply-keyboard layout is built in `TelegramService` (fixed per-screen layouts)
-    + the state → commands rendering; rework it now that nodes live in feature slices.
-  - Goals: fewer/clearer levels, consistent back/overview, discoverable actions.
 
 ## Bigger bets (L)
 
@@ -41,13 +37,7 @@ start and a rough effort (S / M / L). Pick top-down within a group.
   - Onboarding: add admins on start, edit admins, set team name.
   - Data layer is the heavy lift (team-partitioned collections / a `teamId` filter on
     every read+write); `SchedulingService`'s global loops become per-team.
-  - **Fold in the base-node data read here:** `framework/Nodes/Node.get_commands_for_buttons`
-    still reads `data_access` directly (`get_user`, `get_all_event_attendances`) — the one
-    place a node touches data. It must become tenant-aware, so resolve it as part of this.
 
 ## Optional / nice-to-have
 
-- [ ] **Deeper `UserState` collapse (23 → ~12).** Fold the per-type
-  `ADMIN_ADD_*` / `STATS_*` / `EDIT_*` families into single states with the event type
-  in context. Diminishing returns — those already share node classes, so it mostly
-  trims the enum + wiring, not code duplication.
+*(nothing right now)*

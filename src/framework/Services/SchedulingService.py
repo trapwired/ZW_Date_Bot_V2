@@ -11,10 +11,10 @@ from telegram.ext import ContextTypes
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 from Enums.MessageType import MessageType
-from Enums.UserState import UserState
+
+from features.events import EventsMenu
 
 from Utils import PrintUtils
-from Utils import CallbackUtils
 from Utils.ApiConfig import ApiConfig
 
 from domain.entities.TelegramUser import TelegramUser
@@ -182,7 +182,7 @@ class SchedulingService:
 
         for event in event_list:
             pretty_print_event = PrintUtils.pretty_print(event, AttendanceState.UNSURE)
-            reply_markup = CallbackUtils.get_edit_event_reply_markup(UserState.EDIT, event_type, event.doc_id)
+            reply_markup = EventsMenu.build_attendance_markup(event_type, event.doc_id)
             message_text = PrintUtils.event_label(event_type) + ' | ' + pretty_print_event
             await self.telegram_service.send_message(
                 update=player,

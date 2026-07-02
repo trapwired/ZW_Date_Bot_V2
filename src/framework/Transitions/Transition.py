@@ -25,7 +25,8 @@ class Transition(ABC):
                  allowed_roles: RoleSet = RoleSet.EVERYONE,
                  new_state: UserState = None,
                  needs_description: bool = True,
-                 is_active_function: partial = None):
+                 is_active_function: partial = None,
+                 in_keyboard: bool = True):
         self.command = command.lower()
         self.action = action
         self.allowed_roles = allowed_roles
@@ -33,6 +34,9 @@ class Transition(ABC):
         self.new_state = new_state
         self.needs_description = needs_description
         self.is_active_function = initialize_is_active_function(is_active_function)
+        # Whether the command gets a button on the reply keyboard (aliases and
+        # slash-command duplicates stay typeable but invisible).
+        self.in_keyboard = in_keyboard
 
     def can_be_taken(self, command: str, role: Role) -> bool:
         return self.command == command and self.is_for_role(role) and self.is_active()

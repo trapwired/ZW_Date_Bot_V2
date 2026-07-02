@@ -3,8 +3,7 @@ import traceback
 
 import telegram
 from multipledispatch import dispatch
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, ReplyKeyboardRemove, \
-    Message
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardMarkup, InaccessibleMessage
 
 from Enums.MessageType import MessageType
 from Enums.Event import Event
@@ -25,14 +24,10 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
     match message_type:
         case MessageType.ERROR:
             return 'Something went wrong - please try again, the maintainer has been notified :)'
-        case MessageType.HELP:
-            return 'Help is on its way (' + Format.escape(extra_text) + ')'
         case MessageType.WRONG_START_COMMAND:
             return 'Please start chatting with me by sending the command /start'
         case MessageType.WELCOME:
             return 'Hi ' + Format.escape(first_name) + ', welcome to the ' + Format.bold('Züri West manager') + ' 👋'
-        case MessageType.CONTINUE_LATER:
-            return 'Cheerio ' + Format.escape(first_name) + '! 👋'
         case MessageType.WEBSITE:
             return 'Here you go :)'
         case MessageType.PRIVACY:
@@ -57,40 +52,6 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
             return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \
                    'you got the bot recommended from... :)'
 
-        case MessageType.STATS_OVERVIEW:
-            return 'Do you want to show stats for a game, training or timekeeping-event?'
-        case MessageType.STATS_TO_GAMES:
-            return 'Click on the game you want to see the stats for'
-        case MessageType.STATS_TO_TRAININGS:
-            return 'Click on the training you want to see the stats for'
-        case MessageType.STATS_TO_TIMEKEEPINGS:
-            return 'Click on the timekeeping-event you want to see the stats for'
-
-        case MessageType.EDIT_OVERVIEW:
-            return 'Do you want to edit your attendance for a game, training or timekeeping-event?'
-        case MessageType.EDIT_TO_GAMES:
-            return 'Click on the game you want to change your attendance-status'
-        case MessageType.EDIT_TO_TRAININGS:
-            return 'Click on the training you want to change your attendance-status'
-        case MessageType.EDIT_TO_TIMEKEEPINGS:
-            return 'Click on the timekeeping-event you want to change your attendance-status'
-
-        case MessageType.ADMIN:
-            return '<b>Admin center</b>\nHere you can add, update and delete upcoming events...'
-        case MessageType.ADMIN_ADD:
-            return 'What kind of event do you want to add?'
-        case MessageType.ADMIN_UPDATE:
-            return 'Which kind of event do you want to update (or delete)?'
-        case MessageType.ADMIN_UPDATE_TO_GAME:
-            return 'Click on the game you want to update or delete'
-        case MessageType.ADMIN_UPDATE_TO_TRAINING:
-            return 'Click on the training you want to update or delete'
-        case MessageType.ADMIN_UPDATE_TO_TIMEKEEPING:
-            return 'Click on the timekeeping-event you want to update or delete'
-
-        case MessageType.TKE_ALREADY_FULL:
-            return 'For the chosen timekeeping event already enough people have registered'
-
         case MessageType.ENROLLMENT_REMINDER:
             return 'Hey ' + Format.escape(first_name) + (', please quickly take your time to update your attendance '
                                                          'for the following upcoming event(s):')
@@ -101,13 +62,6 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
                                                          'for the moved event - thanks \n(Old event: ') \
                 + Format.escape(extra_text) + ')'
 
-        case MessageType.ADMIN_STATISTICS:
-            return 'Here you are - which statistics do you like to see?'
-
-        case MessageType.ADMIN_RESET_STATISTICS:
-            return ('Are you sure you want to end the current season?\n\n'
-                    'This permanently resets the reminder statistics for ALL players and cannot be undone.')
-
         case MessageType.EVENT_ADDED:
             return 'Hey ' + Format.escape(first_name) + ', a new event was added - if you fill it out now, you don\'t have to think about it in the future...'
         case _:
@@ -115,69 +69,21 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
 
 
 def generate_keyboard(all_commands: [str]) -> [[str]]:
-    first_cmds = ['overview', 'continue later']
-    firsts = []
-    events = []
-    commands = []
-    for cmd in all_commands:
-        if cmd[0].isdigit():
-            events.append(cmd)
-        elif cmd in first_cmds:
-            firsts.append(cmd)
-        elif cmd != '/help':
-            commands.append(cmd)
-
-    result = [firsts]
-    result.extend([e] for e in events)
-
-    max_line_length = 15
-    current_line_length = 0
-    current_line = []
-    for c in commands:
-        if current_line_length + len(c) < max_line_length:
-            current_line.append(c)
-            current_line_length += len(c)
-        else:
-            result.append(current_line)
-            current_line_length = len(c)
-            current_line = [c]
-    if len(current_line) > 0:
-        result.append(current_line)
-    result.append(['/help'])
-    return result
-
-
-def generate_admin_keyboard(all_commands: [str]) -> [[str]]:
-    # Fixed layout for the admin overview; only rows whose commands the user actually has are shown.
+    # The one static main-menu keyboard: a fixed layout, filtered to the commands the
+    # user's role actually has. Buttons are Title-cased for display; Telegram echoes the
+    # label back and Node.handle lowercases it, so the round-trip still matches.
     layout = [
-        ['continue later'],
-        ['/add', '/update'],
-        ['/statistics'],
-        ['/assign_roles', '/update_website'],
+        ['events'],
+        ['admin'],
+        ['website'],
     ]
-    placed = {command for row in layout for command in row} | {'/help'}
+    placed = {command for row in layout for command in row}
 
-    result = [present for row in layout if (present := [c for c in row if c in all_commands])]
-    # Keep any command not covered by the fixed layout on its own row, so nothing silently disappears.
-    result.extend([c] for c in all_commands if c not in placed)
-    result.append(['/help'])
-    return result
-
-
-def generate_statistics_keyboard(all_commands: [str]) -> [[str]]:
-    # Fixed layout for the statistics screen; only rows whose commands the user actually has are shown.
-    layout = [
-        ['continue later'],
-        ['/reminder_statistics', '/game_statistics'],
-        ['/training_statistics', '/timekeeping_statistics'],
-        ['/reset_statistics'],
-    ]
-    placed = {command for row in layout for command in row} | {'/help'}
-
-    result = [present for row in layout if (present := [c for c in row if c in all_commands])]
-    # Keep any command not covered by the fixed layout on its own row, so nothing silently disappears.
-    result.extend([c] for c in all_commands if c not in placed)
-    result.append(['/help'])
+    result = [present for row in layout if (present := [c.title() for c in row if c in all_commands])]
+    # Keep any command not covered by the fixed layout on its own row, so nothing silently
+    # disappears. Same Title-casing as the layout rows; slash commands stay verbatim
+    # (Telegram matches them literally).
+    result.extend([c if c.startswith('/') else c.title()] for c in all_commands if c not in placed)
     return result
 
 
@@ -216,16 +122,6 @@ class TelegramService(object):
     async def send_file(self, update: Update | TelegramUser, path: str):
         chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
         await self.bot.send_document(chat_id=chat_id, document=path)
-
-    async def send_message_with_normal_keyboard(self, update: Update | TelegramUser, message: str):
-        chat_id = update.effective_chat.id if type(update) is Update else update.telegramId
-        messages_to_send = PrintUtils.split_message(message)
-        if len(messages_to_send) > 1:
-            await self.send_maintainer_message('Message too long (2): \n\n' + message)
-        # Return the sent message so callers (e.g. the add-event RESTART flow) can act on it,
-        # matching send_message; without this it returned None and delete_previous_message crashed.
-        return await self._send_message(chat_id=chat_id, message=messages_to_send[0],
-                                        reply_markup=ReplyKeyboardRemove())
 
     async def send_info_message_to_trainers(self, message: str, event_type: Event):
         messages_to_send = PrintUtils.split_message(message)
@@ -308,13 +204,7 @@ class TelegramService(object):
 
         if all_commands is None or len(all_commands) == 0:
             return None
-        if message_type == MessageType.ADMIN_STATISTICS:
-            keyboard = generate_statistics_keyboard(all_commands)
-        elif message_type == MessageType.ADMIN:
-            keyboard = generate_admin_keyboard(all_commands)
-        else:
-            keyboard = generate_keyboard(all_commands)
-        return ReplyKeyboardMarkup(keyboard, one_time_keyboard=False)
+        return ReplyKeyboardMarkup(generate_keyboard(all_commands), one_time_keyboard=False)
 
     def get_chat_ids(self, event_type):
         match event_type:
@@ -326,6 +216,16 @@ class TelegramService(object):
                 return self.trainers_games
         return []
 
+    async def delete_message(self, message_id: int | None, chat_id: int):
+        """Best-effort chat cleanup (e.g. consumed wizard prompts); deleting can fail
+        for messages older than 48h and must never fail the flow."""
+        if message_id is None:
+            return
+        try:
+            await self.bot.delete_message(message_id=message_id, chat_id=chat_id)
+        except BadRequest as e:
+            logging.debug(f'Could not delete message {message_id} in chat {chat_id}: {e}')
+
     async def edit_inline_message_text(self, message: str, message_id: int, chat_id: int,
                                        reply_markup: InlineKeyboardMarkup = None):
         await self.bot.edit_message_text(text=message, message_id=message_id, chat_id=chat_id,
@@ -333,26 +233,15 @@ class TelegramService(object):
                                          parse_mode=telegram.constants.ParseMode.HTML)
 
     async def edit_callback_message(self, query, message: str, reply_markup: InlineKeyboardMarkup = None):
+        # Buttons keep working forever, but for messages older than 48h Telegram sends
+        # only an InaccessibleMessage in the callback - query.edit_message_text would
+        # raise TypeError. The message can still be edited directly via its ids.
+        if isinstance(query.message, InaccessibleMessage):
+            await self.edit_inline_message_text(message, query.message.message_id, query.message.chat.id,
+                                                reply_markup)
+            return
+        if query.message is None:
+            await self._send_message(chat_id=query.from_user.id, message=message, reply_markup=reply_markup)
+            return
         await query.edit_message_text(text=message, reply_markup=reply_markup,
                                       parse_mode=telegram.constants.ParseMode.HTML)
-
-    async def delete_previous_message(self, message: Message | None):
-        if message is None:
-            return
-        await self._delete_message(message.message_id - 1, message.chat_id)
-
-    async def delete_message(self, update: Update):
-        if update.message:
-            message = update.message
-        elif update.callback_query:
-            message = update.callback_query.message
-        else:
-            return
-        await self._delete_message(message.message_id, message.chat_id)
-
-    async def _delete_message(self, message_id: int, chat_id: int):
-        try:
-            await self.bot.delete_message(message_id=message_id, chat_id=chat_id)
-        except BadRequest as e:
-            # Bots can't delete messages older than 48h; this cleanup is best-effort.
-            logging.debug(f"Could not delete message {message_id} in chat {chat_id}: {e}")

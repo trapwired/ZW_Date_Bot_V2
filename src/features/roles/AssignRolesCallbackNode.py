@@ -16,6 +16,7 @@ from framework.Services.TriggerService import TriggerService
 from framework.Services.UserStateService import UserStateService
 
 from Utils import PrintUtils
+from features.adminpanel import AdminMenu
 from features.roles import RoleAssignment
 from Utils import Format
 
@@ -53,7 +54,8 @@ class AssignRolesCallbackNode(CallbackNode):
         counts = self.role_service.role_counts()
         await self.telegram_service.edit_callback_message(
             query, Format.bold('Select a role to manage:'),
-            reply_markup=RoleAssignment.build_overview_markup(counts))
+            reply_markup=RoleAssignment.build_overview_markup(
+                counts, back_callback_data=AdminMenu.encode(AdminMenu.PANEL)))
 
     async def _show_user_list(self, query, role: Role):
         users = self.role_service.users_with_role(role)
@@ -91,7 +93,7 @@ class AssignRolesCallbackNode(CallbackNode):
         # Best-effort: the role change is already persisted, so a user we can no longer reach
         # (deleted account, blocked bot) must not fail the whole flow.
         default_node = self.node_handler.get_node(UserState.DEFAULT)
-        buttons = default_node.get_commands_for_buttons(new_role, UserState.DEFAULT, user.telegramId)
+        buttons = default_node.get_commands_for_buttons(new_role, UserState.DEFAULT)
         try:
             await self.telegram_service.send_message(
                 update=user,

@@ -9,7 +9,7 @@ from Enums.Table import Table
 from Enums.Role import Role
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
-from Enums.CallbackOption import CallbackOption
+from Enums.EventField import EventField
 
 from domain.entities.Game import Game
 from domain.entities.TelegramUser import TelegramUser
@@ -72,7 +72,7 @@ class DataAccess(object):
     ##########
 
     def update_event_field(self, event_type: Event, event_id: str, new_value: str | pd.Timestamp,
-                           field_type: CallbackOption):
+                           field_type: EventField):
         match event_type:
             case Event.GAME:
                 event = self.firebase_repository.get_game(event_id)
@@ -84,11 +84,11 @@ class DataAccess(object):
                 raise ValueError(f'Unhandled event type: {event_type}')
 
         match field_type:
-            case CallbackOption.LOCATION:
+            case EventField.LOCATION:
                 event.location = new_value
-            case CallbackOption.DATETIME:
+            case EventField.DATETIME:
                 event.timestamp = new_value
-            case CallbackOption.OPPONENT:
+            case EventField.OPPONENT:
                 event.opponent = new_value
 
         return self.update(event)

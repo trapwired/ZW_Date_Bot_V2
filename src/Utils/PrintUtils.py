@@ -11,7 +11,7 @@ from domain.entities.TempData import TempData
 
 from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState
-from Enums.CallbackOption import CallbackOption
+from Enums.EventField import EventField
 
 from Utils import UpdateEventUtils
 from Utils import Format
@@ -34,46 +34,8 @@ def _datetime(event) -> str:
     return event.timestamp.strftime(DATETIME_FORMAT)
 
 
-# NOTE: pretty_print_game_stats / pretty_print_timekeeping_stats feed reply-keyboard BUTTON
-# labels, which Telegram renders literally (no HTML parsing) - so they stay plain text.
-
-def pretty_print_game_stats(game_stats: (list, list, list), attendance: Attendance | None):
-    yes, no, unsure = game_stats
-    yes_string = add_attendance_marks(f'{len(yes)}Y', attendance, AttendanceState.YES)
-    no_string = add_attendance_marks(f'{len(no)}N', attendance, AttendanceState.NO)
-    unsure_string = add_attendance_marks(f'{len(unsure)}U', attendance, AttendanceState.UNSURE)
-    return f'{yes_string} / {no_string} / {unsure_string}'
-
-
-def pretty_print_timekeeping_stats(tke_stats: (list, list, list), attendance: Attendance | None):
-    yes, no, unsure = tke_stats
-    result = add_attendance_marks(f'{len(yes)}Y', attendance, AttendanceState.YES)
-    if len(yes) >= 2:
-        result += ' (Enough)'
-    return result
-
-
-def add_attendance_marks(text: str, attendance: Attendance | None, attendance_state: AttendanceState):
-    at_bef, at_aft = get_attendance_symbols(attendance)
-    if not attendance:
-        if attendance_state is AttendanceState.UNSURE:
-            return at_bef + text + at_aft
-        else:
-            return text
-
-    if attendance.state == attendance_state:
-        return at_bef + text + at_aft
-    return text
-
-
-def get_attendance_symbols(attendance: Attendance | None) -> (str, str):
-    attendance_before = '👉'
-    attendance_after = '👈'
-    return attendance_before, attendance_after
-
-
-def get_update_attribute_message(attribute: CallbackOption) -> str:
-    if attribute == CallbackOption.SAVE:
+def get_update_attribute_message(attribute: EventField) -> str:
+    if attribute == EventField.SAVE:
         message = (f'Review your changes in the message above - if all data is correct, use the button {Format.bold("SAVE")}'
                    f' or type \'save\' to store the event. Use the other buttons to {Format.bold("RESTART")} or '
                    f'{Format.bold("CANCEL")}...')
@@ -84,30 +46,16 @@ def get_update_attribute_message(attribute: CallbackOption) -> str:
     return message
 
 
-def pretty_print_event_stats(event_stats: (list, list, list), event_type: Event, attendance: Attendance | None):
-    match event_type:
-        case Event.GAME:
-            return pretty_print_game_stats(event_stats, attendance)
-        case Event.TRAINING:
-            return pretty_print_game_stats(event_stats, attendance)
-        case Event.TIMEKEEPING:
-            return pretty_print_timekeeping_stats(event_stats, attendance)
-
-
 def pretty_print_event_datetime(event: Game | Training | TimekeepingEvent):
     # Plain text: the only caller passes this as message_extra_text, which get_text escapes.
     return f'{event.__class__.__name__.title()} - {_datetime(event)}'
 
 
 def pretty_print_event_command(event) -> str:
-    # PLAIN text (no tags, no escaping) for reply-keyboard event buttons: Telegram renders
-    # button labels literally AND echoes the tapped label back as a user message, so HTML
-    # markup must never appear here. This is also the command string used for matching.
+    # PLAIN text (no tags, no escaping): inline-keyboard button labels are rendered
+    # literally by Telegram, so HTML markup must never appear here.
     return f'{_datetime(event)} | {event.location.title()}'
 
-
-# The single-line event renderers keep '|' as the field separator because
-# UpdateEventUtils.mark_updating_in_event_string splits on it by index.
 
 _EVENT_TYPES = (Game, Training, TimekeepingEvent)
 
@@ -124,15 +72,15 @@ def pretty_print_long(game: Game) -> str:
 
 @dispatch(_EVENT_TYPES, Attendance)
 def pretty_print(event, attendance: Attendance) -> str:
-    return f'{pretty_print(event)} | {_attendance(attendance.state)}'
+    return f'{pretty_print(event)} | {pretty_print_attendance(attendance.state)}'
 
 
 @dispatch(_EVENT_TYPES, AttendanceState)
 def pretty_print(event, attendance: AttendanceState) -> str:
-    return f'{pretty_print(event)} | {_attendance(attendance)}'
+    return f'{pretty_print(event)} | {pretty_print_attendance(attendance)}'
 
 
-def _attendance(state: AttendanceState) -> str:
+def pretty_print_attendance(state: AttendanceState) -> str:
     return f'{ATTENDANCE_EMOJI[state]} {state.name.title()}'
 
 
