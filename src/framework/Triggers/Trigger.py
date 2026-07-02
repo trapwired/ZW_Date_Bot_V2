@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import Callable
 
-from Triggers.TriggerPayload import TriggerPayload
+from framework.Triggers.TriggerPayload import TriggerPayload
 
 
 class Trigger(ABC):

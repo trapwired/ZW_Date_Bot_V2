@@ -90,9 +90,9 @@ summaries. It reads events via `data` and sends via `TelegramService`.
   `data_access` directly (`get_user`, `get_all_event_attendances`) to render buttons —
   the one place a node still touches data. It must become tenant-aware; cleanest to
   resolve alongside the tenancy work (ADR 0001).
-- **Trigger system** (`TriggerService.initialize_triggers`) is wired but underused —
-  revisit when a second trigger is needed. `Triggers/` and root `OneTimeSetup.py` also
-  don't yet have a settled home.
+- **Trigger system** (`TriggerService.initialize_triggers`, trigger mechanics in
+  `framework/Triggers/`) is wired but underused — revisit when a second trigger is
+  needed.
 
 Candidate next work — features and technical follow-ups, each with an entry point and
 rough effort — is tracked in [`todos.md`](../todos.md).
