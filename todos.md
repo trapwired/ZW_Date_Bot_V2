@@ -12,9 +12,8 @@ start and a rough effort (S / M / L). Pick top-down within a group.
     every active transition for the user's state + role, each with its explanation.
   - Single source of truth: `CommandDescriptions`; help should derive from the same
     transitions the keyboard does (`get_commands_for_help`) so they can't drift.
-- [ ] **Give `Triggers/` and `OneTimeSetup.py` a settled home.**
+- [ ] **Give `Triggers/` a settled home.**
   - `Triggers/` (trigger domain objects) → likely `framework/` or `domain/`;
-    `OneTimeSetup.py` (manual seeding script) → a `scripts/` or `tools/` folder.
   - Pure move, same mechanics as the reslice (git mv + rewire importers).
 
 ## Features (M)
@@ -51,10 +50,6 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Optional / nice-to-have
 
-- [ ] **Error-tracking / metrics (e.g. Sentry).** Unhandled exceptions already log at
-  ERROR + best-effort DM the maintainer (`TelegramService.report_exception`). A
-  dedicated aggregation/alerting integration would add trend visibility — but also a
-  dependency + DSN config. Only if the maintainer DM + logs stop being enough.
 - [ ] **Deeper `UserState` collapse (23 → ~12).** Fold the per-type
   `ADMIN_ADD_*` / `STATS_*` / `EDIT_*` families into single states with the event type
   in context. Diminishing returns — those already share node classes, so it mostly
