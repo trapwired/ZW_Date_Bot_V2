@@ -28,6 +28,15 @@ start and a rough effort (S / M / L). Pick top-down within a group.
     — that layer becomes the single translation seam (keys → localized text).
   - Decide the string-catalog format + fallback language; `MessageType` is the
     natural key set.
+- [ ] **Trigger: warn trainers when both keepers said no on a game.**
+  - The stub comment already sits in `TriggerService.initialize_triggers`; the trigger
+    itself is the easy part (pre_condition NO + GAME, condition via a domain predicate
+    in `GameRules`, same shape as the low-availability one).
+  - Needs a keeper designation first: `Role` is the single access-role enum
+    (PLAYER/ADMIN/…), so keeper is an orthogonal *position* attribute on the player
+    (e.g. `position` field on `TelegramUser`), not a new `Role` value.
+  - Admins assign it via a flow analogous to `/assign_roles` (reuse that slice's
+    pattern in `features/roles/`).
 - [ ] **Redesign the menu / submenu experience for accessibility.**
   - The reply-keyboard layout is built in `TelegramService` (fixed per-screen layouts)
     + the state → commands rendering; rework it now that nodes live in feature slices.
