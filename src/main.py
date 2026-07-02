@@ -52,7 +52,7 @@ async def send_hi(context: ContextTypes.DEFAULT_TYPE):
 async def register_bot_commands(context: ContextTypes.DEFAULT_TYPE):
     # Telegram's global command menu (the '/' button). Everything else is reachable
     # via the reply keyboard and inline menus.
-    await application.bot.set_my_commands([
+    await context.bot.set_my_commands([
         BotCommand('start', 'Start chatting with me :)'),
         BotCommand('help', 'Show all available commands'),
         BotCommand('privacy', 'Show the privacy policy of the bot'),

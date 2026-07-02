@@ -41,11 +41,7 @@ class AddEventFieldsNode(Node):
         self.fallback_action = self.handle_user_input
 
     def _discard_draft(self, user_to_state: UsersToState) -> None:
-        try:
-            temp_data = self.event_service.get_draft(user_to_state.user_id)
-        except NoTempDataFoundException:
-            return
-        self.event_service.discard_draft(temp_data)
+        self.event_service.discard_draft_if_any(user_to_state.user_id)
 
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         self._discard_draft(user_to_state)

@@ -78,9 +78,12 @@ class AdminMenuCallbackNode(CallbackNode):
 
     async def _show_panel(self, update: Update, query):
         # Back-to-menu is also the escape hatch out of a typed-input flow (website URL,
-        # field value): whatever was staged is dropped so the next text isn't misread.
+        # field value, wizard): whatever was staged is dropped so the next text isn't
+        # misread - same cleanup the typed keyboard escapes run.
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         if user_to_state.state is not UserState.DEFAULT:
+            if user_to_state.state is UserState.ADMIN_ADD_EVENT:
+                self.event_service.discard_draft_if_any(user_to_state.user_id)
             user_to_state.additional_info = ''
             self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
         await self._edit(query, AdminMenu.PANEL_TEXT, AdminMenu.build_panel_markup())

@@ -12,6 +12,8 @@ from Enums.Event import Event
 
 from domain.entities.TempData import TempData
 
+from Utils.CustomExceptions import NoTempDataFoundException
+
 
 class EventService:
     def __init__(self, data_access: DataAccess):
@@ -30,6 +32,14 @@ class EventService:
 
     def discard_draft(self, draft: TempData) -> None:
         self.data_access.delete(draft)
+
+    def discard_draft_if_any(self, user_id: str) -> None:
+        """Drop the user's in-flight draft, if one exists - the cleanup every
+        escape route out of the add-event wizard shares."""
+        try:
+            self.discard_draft(self.get_draft(user_id))
+        except NoTempDataFoundException:
+            return
 
     def finalize_draft(self, draft: TempData):
         """Persist the finished event and discard the draft in one step, so a saved

@@ -113,10 +113,13 @@ class EventsCallbackNode(CallbackNode):
             await self._show_event_gone(query, event_type)
             return
 
-        with open(ics_file_path, 'rb') as ics_file:
-            await self.telegram_service.send_file(update, path=InputFile(ics_file))
+        # Answer first so the button spinner clears even if the send fails.
         await query.answer()
-        os.remove(ics_file_path)
+        try:
+            with open(ics_file_path, 'rb') as ics_file:
+                await self.telegram_service.send_file(update, path=InputFile(ics_file))
+        finally:
+            os.remove(ics_file_path)
 
     async def _show_field_chooser(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str):
         try:

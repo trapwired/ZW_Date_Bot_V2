@@ -80,8 +80,10 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
     placed = {command for row in layout for command in row}
 
     result = [present for row in layout if (present := [c.title() for c in row if c in all_commands])]
-    # Keep any command not covered by the fixed layout on its own row, so nothing silently disappears.
-    result.extend([c] for c in all_commands if c not in placed)
+    # Keep any command not covered by the fixed layout on its own row, so nothing silently
+    # disappears. Same Title-casing as the layout rows; slash commands stay verbatim
+    # (Telegram matches them literally).
+    result.extend([c if c.startswith('/') else c.title()] for c in all_commands if c not in placed)
     return result
 
 

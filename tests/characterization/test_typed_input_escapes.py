@@ -58,6 +58,19 @@ async def test_website_escapes_the_url_input(node_handler, data_access, bot):
     assert_no_error_reported(bot)
 
 
+async def test_admin_menu_back_button_discards_an_in_flight_draft(node_handler, data_access, bot):
+    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)))
+    assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_ADD_EVENT
+
+    await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.PANEL))
+
+    assert current_state(data_access, ADMIN_ID) == UserState.DEFAULT
+    with pytest.raises(NoTempDataFoundException):
+        data_access.get_temp_data(uts.user_id)
+    assert_no_error_reported(bot)
+
+
 async def test_admin_menu_back_button_resets_a_typed_input_state(node_handler, data_access, bot):
     # Pressing 'Back' on the admin menu message while a typed input is pending is the
     # inline escape hatch: staged input is dropped, state returns to the main menu.
