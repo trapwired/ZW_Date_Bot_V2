@@ -15,4 +15,7 @@ ADD_EVENT_USER_STATE = {
 
 
 def add_event_user_state(event_type: Event) -> UserState:
-    return ADD_EVENT_USER_STATE[event_type]
+    try:
+        return ADD_EVENT_USER_STATE[event_type]
+    except KeyError:
+        raise ValueError(f'No add-event UserState for event type: {event_type}')

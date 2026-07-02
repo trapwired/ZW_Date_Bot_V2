@@ -298,8 +298,8 @@ class FirebaseRepository(object):
 
     def update_user_via_telegram_id(self, user: TelegramUser):
         user_id = self.get_user(user.telegramId).doc_id
-        user_with_id = user.add_document_id(user_id)
-        return self.update(user_with_id, self.tables.get(Table.USERS_TABLE))
+        user.add_document_id(user_id)  # sets doc_id in place (add_document_id mutates + returns self)
+        return self.update(user, self.tables.get(Table.USERS_TABLE))
 
     ##########
     # DELETE #
