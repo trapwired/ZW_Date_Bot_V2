@@ -81,6 +81,11 @@ class FakeDocumentRef:
     def delete(self):
         self._collection.store.pop(self.id, None)
 
+    def collection(self, name: str) -> "FakeCollection":
+        # Subcollections key the shared storage by path, mirroring Firestore's hierarchy.
+        # Works even for a doc that doesn't exist yet - Firestore allows that too.
+        return FakeCollection(self._collection._client, f"{self._collection.name}/{self.id}/{name}")
+
 
 class FakeQuery:
     def __init__(self, collection: "FakeCollection", filters):

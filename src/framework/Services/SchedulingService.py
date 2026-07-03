@@ -2,6 +2,7 @@ import datetime
 import random
 
 from data.DataAccess import DataAccess
+from data.TenantContext import team_context
 
 from framework.Services.TelegramService import TelegramService
 from features.stats.StatisticsService import StatisticsService
@@ -48,7 +49,18 @@ class SchedulingService:
         self.individual_timekeeping_reminder_frequency = api_config.get_int_list('Scheduling', 'TIMEKEEPING_INDIVIDUAL')
         self.is_test_system = api_config.get_bool('Flags', 'TEST_SYSTEM')
 
+    async def _for_each_team(self, job_body, *args):
+        """Every scheduled job runs once per team, inside that team's tenant context, so
+        all reads and sends inside the body are team-scoped. One team's failure must not
+        skip the remaining teams."""
+        for team in self.data_access.get_all_teams():
+            with team_context(team.doc_id):
+                await job_body(*args)
+
     async def send_same_day_game_reminder(self, context: ContextTypes.DEFAULT_TYPE):
+        await self._for_each_team(self._send_same_day_game_reminder)
+
+    async def _send_same_day_game_reminder(self):
         # find game that takes place today
         try:
             all_future_events = self.get_ordered_events(Event.GAME)
@@ -62,6 +74,9 @@ class SchedulingService:
                 'Exception caught in SchedulingService.send_same_day_game_reminder()', e)
 
     async def send_previous_day_training_reminder(self, context: ContextTypes.DEFAULT_TYPE):
+        await self._for_each_team(self._send_previous_day_training_reminder)
+
+    async def _send_previous_day_training_reminder(self):
         # find training that takes place tomorrow
         try:
             all_future_events = self.get_ordered_events(Event.TRAINING)
@@ -84,12 +99,15 @@ class SchedulingService:
                 'Exception caught in SchedulingService.send_previous_day_training_reminder()', e)
 
     async def send_individual_game_reminders(self, context: ContextTypes.DEFAULT_TYPE):
-        await self._send_individual_event_reminders(Event.GAME)
+        await self._for_each_team(self._send_individual_event_reminders, Event.GAME)
 
     async def send_individual_training_reminders(self, context: ContextTypes.DEFAULT_TYPE):
-        await self._send_individual_event_reminders(Event.TRAINING)
+        await self._for_each_team(self._send_individual_event_reminders, Event.TRAINING)
 
     async def send_individual_tke_reminders(self, context: ContextTypes.DEFAULT_TYPE):
+        await self._for_each_team(self._send_individual_tke_reminders)
+
+    async def _send_individual_tke_reminders(self):
         try:
             all_future_events = self.get_ordered_events(Event.TIMEKEEPING)
             reminder_frequency = self.get_reminder_frequency(Event.TIMEKEEPING)
@@ -195,13 +213,13 @@ class SchedulingService:
         return messages_sent_count
 
     async def send_game_summary(self, context: ContextTypes.DEFAULT_TYPE):
-        await self._send_event_summary(Event.GAME)
+        await self._for_each_team(self._send_event_summary, Event.GAME)
 
     async def send_training_summary(self, context: ContextTypes.DEFAULT_TYPE):
-        await self._send_event_summary(Event.TRAINING)
+        await self._for_each_team(self._send_event_summary, Event.TRAINING)
 
     async def send_timekeeping_summary(self, context: ContextTypes.DEFAULT_TYPE):
-        await self._send_event_summary(Event.TIMEKEEPING)
+        await self._for_each_team(self._send_event_summary, Event.TIMEKEEPING)
 
     async def _send_event_summary(self, event_type: Event):
         try:

@@ -34,7 +34,10 @@ from features.adminpanel.AdminMenuCallbackNode import AdminMenuCallbackNode
 from features.roles import RoleAssignment
 from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
 
+from domain.entities.UsersToState import UsersToState
+
 from data.DataAccess import DataAccess
+from data.TenantContext import set_current_team, reset_current_team
 
 from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundException, MissingCommandDescriptionException
 from framework.CommandDescriptions import CommandDescriptions
@@ -109,6 +112,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         return None
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        context_token = None
         try:
             if update.effective_chat is None:
                 # Chat-less updates (e.g. poll answers) have no state to route; ignore them.
@@ -122,6 +126,11 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                 # Handle group messages
                 return
 
+            users_to_state = self._lookup_user_state(update.effective_chat.id)
+            # Resolve the tenant once per update; INIT/REJECTED users have no team and only
+            # ever touch global collections - any accidental domain read fails closed.
+            context_token = set_current_team(users_to_state.team_id if users_to_state else None)
+
             if update.callback_query:
                 callback_node = self.get_callback_node(update.callback_query.data)
                 if callback_node is None:
@@ -130,7 +139,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                     await update.callback_query.answer()
                     await self.telegram_service.edit_callback_message(update.callback_query, EXPIRED_MENU_TEXT)
                     return
-                if not self.is_caller_allowed(update, callback_node):
+                if not self.is_caller_allowed(users_to_state, callback_node):
                     # Forwarded inline buttons keep working callback_data; gate admin actions
                     # by the pressing user's role, mirroring Transition.allowed_roles for text.
                     await update.callback_query.answer()
@@ -142,7 +151,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                 # Handle pictures and else
                 return
 
-            users_to_state, node = self.get_user_state_and_node(update)
+            node = self.nodes[users_to_state.state] if users_to_state else self.nodes[UserState.INIT]
             await node.handle(update, users_to_state)
         except BadRequest as e:
             if "Message is not modified" in str(e):
@@ -151,18 +160,15 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             await self.telegram_service.report_exception('Exception in NodeHandler.handle_message', e, update)
         except Exception as e:
             await self.telegram_service.report_exception('Exception in NodeHandler.handle_message', e, update)
+        finally:
+            if context_token is not None:
+                reset_current_team(context_token)
 
-    def get_user_state_and_node(self, update):
-        telegram_id = update.effective_chat.id
+    def _lookup_user_state(self, telegram_id) -> UsersToState | None:
         try:
-            users_to_state = self.user_state_service.get_user_state(telegram_id)
-            user_state = users_to_state.state
+            return self.user_state_service.get_user_state(telegram_id)
         except ObjectNotFoundException:
-            users_to_state = None
-            user_state = UserState.INIT
-
-        node = self.nodes[user_state]
-        return users_to_state, node
+            return None
 
     def initialize_nodes(self, telegram_service: TelegramService, user_state_service: UserStateService,
                          data_access: DataAccess, api_config: ApiConfig):
@@ -222,12 +228,10 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         check_all_user_states_have_node(self.nodes)
         check_all_commands_have_description(self.nodes)
 
-    def is_caller_allowed(self, update, callback_node) -> bool:
-        try:
-            role = self.user_state_service.get_user_state(update.effective_chat.id).role
-        except ObjectNotFoundException:
-            return False
-        return role in callback_node.required_roles
+    def is_caller_allowed(self, users_to_state, callback_node) -> bool:
+        # Forwarded inline buttons keep working callback_data; an unregistered presser
+        # (no state) is never allowed, and otherwise gate by the pressing user's role.
+        return users_to_state is not None and users_to_state.role in callback_node.required_roles
 
     def get_callback_node(self, callback_data: str):
         """Route a callback press to its slice's node by data prefix; None means the

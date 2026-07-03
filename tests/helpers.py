@@ -11,6 +11,7 @@ from Enums.Event import Event
 from Enums.AttendanceState import AttendanceState
 from domain.entities.TelegramUser import TelegramUser
 from domain.entities.Attendance import Attendance
+from data.TenantContext import peek_team_id
 
 
 # TelegramService branches on `type(update) is Update`, so tests must pass real
@@ -24,12 +25,16 @@ def make_text_update(chat_id: int, text: str, first_name: str = "Test",
 
 
 def seed_user(data_access, telegram_id: int, role: Role, state: UserState,
-              first_name: str = "Test", additional_info: str = ""):
-    """Create a user already past /start, in a known role + state. Returns the UsersToState."""
+              first_name: str = "Test", additional_info: str = "", team_id: str = None):
+    """Create a user already past /start, in a known role + state. Returns the UsersToState.
+
+    Stamps the ambient team by default so seeded users belong to the fixture's team;
+    pass team_id explicitly to seed a teamless (INIT/REJECTED) or cross-team user."""
     user_to_state = data_access.add(TelegramUser(telegram_id, first_name, "User"))
     user_to_state.role = role
     user_to_state.state = state
     user_to_state.additional_info = additional_info
+    user_to_state.team_id = team_id if team_id is not None else peek_team_id()
     data_access.update(user_to_state)
     return user_to_state
 

@@ -46,6 +46,9 @@ class InitNode(Node):
         if await self.is_in_group_chat(telegram_id):
             new_state = UserState.DEFAULT
             user_to_state = user_to_state.add_role(Role.PLAYER)
+            team = self.data_access.find_team_by_group_chat(self.group_chat_id)
+            if team is not None:
+                user_to_state.team_id = team.doc_id
             self.user_state_service.update_user_state(user_to_state, new_state)
             await self.telegram_service.send_message(
                 update=update,
