@@ -59,12 +59,13 @@ def parse(data: str) -> tuple[str, list[str]] | None:
 ###########
 
 def build_panel_markup() -> InlineKeyboardMarkup:
+    # Max 2 buttons per row: 3-way rows truncate the longer labels on phones.
     return InlineKeyboardMarkup([
         [InlineKeyboardButton('➕ Add event', callback_data=encode(ADD_CHOOSER)),
          InlineKeyboardButton('📊 Statistics', callback_data=encode(STATS_MENU))],
         [InlineKeyboardButton('👥 Roles', callback_data=RoleAssignment.encode_home()),
-         InlineKeyboardButton('🌐 Set website', callback_data=encode(WEBSITE_PROMPT)),
-         InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
+         InlineKeyboardButton('🌐 Set website', callback_data=encode(WEBSITE_PROMPT))],
+        [InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
     ])
 
 
