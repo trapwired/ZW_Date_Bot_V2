@@ -48,7 +48,7 @@ def data_access(monkeypatch, fake_firestore, api_config):
 
     data_access = DataAccess(api_config)
     team = data_access.add(Team('Züri West',
-                                group_chat_id=int(api_config.get_key('Telegram', 'group_chat_id')),
+                                group_chat_id=int(api_config.get_key('Chat_Ids', 'GROUP_CHAT')),
                                 spectator_password=api_config.get_key('Chats', 'SPECTATOR_PASSWORD')))
     token = set_current_team(team.doc_id)
     try:
