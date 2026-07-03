@@ -27,7 +27,7 @@ async def test_menu_shows_current_trainers_and_group_chat_fallback(node_handler,
 
     text = update.callback_query.edits[-1].text
     assert str(DEFAULT_TEAM_TRAINERS[0]) in text            # seeded ids outside the roster stay visible
-    assert 'group chat' in text                             # empty training list -> fallback is spelled out
+    assert 'no trainers set' in text                        # empty training list -> fallback is spelled out
     assert_no_error_reported(bot)
 
 

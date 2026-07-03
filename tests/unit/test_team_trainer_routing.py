@@ -29,10 +29,15 @@ def test_team_without_trainers_falls_back_to_its_group_chat(event_type):
 
 def test_toggle_trainer_adds_then_removes():
     team = _team()
-    assert team.toggle_trainer(Event.GAME, 7) is True
+    team.toggle_trainer(Event.GAME, 7)
     assert team.trainers_games == [7] and team.trainers_training == []
-    assert team.toggle_trainer(Event.GAME, 7) is False
+    team.toggle_trainer(Event.GAME, 7)
     assert team.trainers_games == []
+
+
+def test_trainer_lists_coerce_hand_edited_string_ids():
+    team = Team('Berg', group_chat_id=GROUP, trainers_games=['911000001'])
+    assert team.trainers_games == [911000001]
 
 
 def test_toggle_trainer_via_timekeeping_edits_the_games_list():

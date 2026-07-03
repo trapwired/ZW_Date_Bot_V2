@@ -11,28 +11,30 @@ class Team(DatabaseEntity):
         self.name = name
         self.group_chat_id = int(group_chat_id)
         self.spectator_password = spectator_password
-        # Copy: the entity owns its lists - callers (and the Firestore doubles in tests)
-        # must not share mutable state with it.
-        self.trainers_games = list(trainers_games) if trainers_games is not None else []
-        self.trainers_training = list(trainers_training) if trainers_training is not None else []
+        # Copy + coerce: the entity owns its lists (callers and the Firestore doubles in
+        # tests must not share mutable state with it), and hand-edited docs may hold
+        # string ids - toggle/removal matching needs ints.
+        self.trainers_games = [int(chat_id) for chat_id in trainers_games] if trainers_games is not None else []
+        self.trainers_training = [int(chat_id) for chat_id in trainers_training] if trainers_training is not None else []
 
     def trainer_chat_ids(self, event_type: Event) -> list[int]:
         """Where this team's trainer-facing messages (summaries, trigger warnings) go.
         A team with no trainers configured falls back to its group chat - always
         sendable, so a freshly registered team never loses messages."""
-        return self._trainers_for(event_type) or [self.group_chat_id]
+        return self.trainers_for(event_type) or [self.group_chat_id]
 
-    def toggle_trainer(self, event_type: Event, chat_id: int) -> bool:
+    def toggle_trainer(self, event_type: Event, chat_id: int) -> None:
         """Add chat_id to (or remove it from) the trainer list for this event group.
-        Returns whether chat_id is a trainer afterwards. Caller persists the team."""
-        trainers = self._trainers_for(event_type)
+        Persist through TeamService.toggle_trainer, which owns the write."""
+        trainers = self.trainers_for(event_type)
         if chat_id in trainers:
             trainers.remove(chat_id)
-            return False
-        trainers.append(chat_id)
-        return True
+        else:
+            trainers.append(chat_id)
 
-    def _trainers_for(self, event_type: Event) -> list[int]:
+    def trainers_for(self, event_type: Event) -> list[int]:
+        """THE event-group-to-trainer-list mapping - render, toggle and routing all
+        resolve through here so they cannot drift apart."""
         match event_type:
             case Event.TRAINING:
                 return self.trainers_training
@@ -50,8 +52,8 @@ class Team(DatabaseEntity):
         return {'name': self.name,
                 'groupChatId': self.group_chat_id,
                 'spectatorPassword': self.spectator_password,
-                'trainersGames': self.trainers_games,
-                'trainersTraining': self.trainers_training}
+                'trainersGames': list(self.trainers_games),
+                'trainersTraining': list(self.trainers_training)}
 
     def __repr__(self):
         return f"Team(name={self.name}, group_chat_id={self.group_chat_id}, spectator_password={self.spectator_password}, trainers_games={self.trainers_games}, trainers_training={self.trainers_training}, doc_id={self.doc_id})"

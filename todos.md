@@ -40,6 +40,16 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Optional / nice-to-have
 
+- [ ] **Guard forwarded admin buttons against cross-team writes.** Callback
+  authorization gates only on the presser's role; the ambient tenant is the
+  presser's team. A forwarded roles button (`RA#A#<user_doc_id>#<role>`, global
+  users table) or trainer toggle (`AP#TX#<event>#<id>`, raw telegram id valid in
+  any tenant) pressed by an admin of ANOTHER team writes into the presser's team
+  with foreign ids. Low risk (requires an admin knowingly pressing a foreign
+  button) but systematic: consider stamping the team id into admin callback data
+  and dropping mismatches in `NodeHandler.is_caller_allowed`, which fixes every
+  admin slice at once instead of per-button roster checks.
+
 - [ ] **Invite deep-links for spectators (and maybe players).** Replace/augment the
   shared spectator password with admin-generated links (`t.me/<Bot>?start=<random
   token>`): unguessable, revocable, optionally one-time or expiring — removes the
