@@ -79,5 +79,9 @@ class TeamService:
             self._all_teams = None
 
     def update_team(self, team: Team) -> None:
-        self.data_access.update(team)
-        self._all_teams = None
+        try:
+            self.data_access.update(team)
+        finally:
+            # Also on failure: callers mutate the cached Team before persisting, so force
+            # the next read to refetch the stored truth instead of a phantom edit.
+            self._all_teams = None

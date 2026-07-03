@@ -4,6 +4,7 @@ from framework.Nodes.CallbackNode import CallbackNode
 
 from Enums.EventField import EventField
 from Enums.Event import Event
+from Enums.Role import Role
 from Enums.RoleSet import RoleSet
 from Enums.UserState import UserState
 
@@ -34,7 +35,7 @@ class AdminMenuCallbackNode(CallbackNode):
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  user_state_service: UserStateService, statistics_service, website_service, event_service,
-                 add_event_node, team_service):
+                 add_event_node, team_service, role_service):
         super().__init__(telegram_service, data_access, trigger_service)
         self.user_state_service = user_state_service
         self.statistics_service = statistics_service
@@ -42,6 +43,7 @@ class AdminMenuCallbackNode(CallbackNode):
         self.event_service = event_service
         self.add_event_node = add_event_node
         self.team_service = team_service
+        self.role_service = role_service
 
     async def handle(self, update: Update):
         query = update.callback_query
@@ -74,6 +76,12 @@ class AdminMenuCallbackNode(CallbackNode):
                 await self._prompt_spectator_password(update, query)
             case AdminMenu.SPECTATOR_PASSWORD_SAVE | AdminMenu.SPECTATOR_PASSWORD_CANCEL:
                 await self._finish_spectator_password(update, query, action)
+            case AdminMenu.TRAINERS_MENU:
+                await self._show_trainers_menu(query)
+            case AdminMenu.TRAINERS_LIST:
+                await self._show_trainer_list(query, Event(int(args[0])))
+            case AdminMenu.TRAINERS_TOGGLE:
+                await self._toggle_trainer(query, Event(int(args[0])), int(args[1]))
             case AdminMenu.WIZARD_CANCEL | AdminMenu.WIZARD_RESTART | AdminMenu.WIZARD_SAVE:
                 await self._handle_wizard_action(update, query, action)
             case _:
@@ -205,6 +213,50 @@ class AdminMenuCallbackNode(CallbackNode):
         user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, '')
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD)
         await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+
+    ############
+    # TRAINERS #
+    ############
+
+    async def _show_trainers_menu(self, query):
+        team = self.team_service.current_team()
+        names = dict(self._trainer_candidates(current_trainer_ids=[]))
+
+        def render(trainer_ids: list[int]) -> str:
+            if not trainer_ids:
+                return Format.italic('group chat (no trainers set)')
+            return Format.escape(', '.join(names.get(chat_id, str(chat_id)) for chat_id in trainer_ids))
+
+        message = (Format.bold('Trainers') + '\n'
+                   'Attendance summaries and warnings go to the trainers of each event group; '
+                   'a group without trainers uses the team group chat instead.\n\n'
+                   f'{AdminMenu.TRAINER_GROUP_LABELS[Event.GAME]}: {render(team.trainers_games)}\n'
+                   f'{AdminMenu.TRAINER_GROUP_LABELS[Event.TRAINING]}: {render(team.trainers_training)}')
+        await self._edit(query, message, AdminMenu.build_trainers_menu_markup())
+
+    async def _show_trainer_list(self, query, event_type: Event):
+        team = self.team_service.current_team()
+        trainer_ids = team.trainers_training if event_type is Event.TRAINING else team.trainers_games
+        entries = self._trainer_candidates(current_trainer_ids=trainer_ids)
+        message = (f'{AdminMenu.TRAINER_GROUP_LABELS[event_type]} - tap a person to add or remove them '
+                   'as trainer. Changes apply immediately.')
+        await self._edit(query, message, AdminMenu.build_trainer_toggle_markup(event_type, entries, trainer_ids))
+
+    async def _toggle_trainer(self, query, event_type: Event, telegram_id: int):
+        team = self.team_service.current_team()
+        team.toggle_trainer(event_type, telegram_id)
+        self.team_service.update_team(team)
+        await self._show_trainer_list(query, event_type)
+
+    def _trainer_candidates(self, current_trainer_ids: list[int]) -> list[tuple[int, str]]:
+        members = []
+        for role in (Role.ADMIN, Role.PLAYER):
+            for _, user in self.role_service.users_with_role(role):
+                members.append((user.telegramId, PrintUtils.get_player_display_name(user)))
+        known_ids = {telegram_id for telegram_id, _ in members}
+        # Config-seeded or hand-edited trainer ids outside the roster stay visible/removable.
+        strays = [(chat_id, str(chat_id)) for chat_id in current_trainer_ids if chat_id not in known_ids]
+        return members + strays
 
     ####################
     # ADD-EVENT WIZARD #

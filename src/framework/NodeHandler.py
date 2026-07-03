@@ -230,7 +230,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             self.attendance_service, self.event_service, self.events_view)
         self.admin_menu_callback_node = AdminMenuCallbackNode(
             telegram_service, data_access, trigger_service, user_state_service, self.statistics_service,
-            self.website_service, self.event_service, self.nodes[UserState.ADMIN_ADD_EVENT], self.team_service)
+            self.website_service, self.event_service, self.nodes[UserState.ADMIN_ADD_EVENT], self.team_service,
+            self.role_service)
         self.assign_roles_callback_node = AssignRolesCallbackNode(
             telegram_service, data_access, trigger_service, user_state_service, self, self.role_service)
 

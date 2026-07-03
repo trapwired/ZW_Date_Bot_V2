@@ -13,7 +13,9 @@ from Utils import Format
 PREFIX = 'AP'
 DELIMITER = '#'
 
-PANEL_TEXT = Format.bold('Admin menu') + '\nAdd events, look at statistics, manage roles or set the website link.'
+PANEL_TEXT = (Format.bold('Admin menu')
+              + '\nAdd events, look at statistics, manage roles and trainers, '
+                'or set the website link and spectator password.')
 
 # Actions (kept short to stay well under Telegram's 64-byte callback_data limit).
 PANEL = 'P'             # (re-)show the admin menu home
@@ -27,6 +29,9 @@ WEBSITE_NO = 'WN'       # discard the typed URL
 SPECTATOR_PASSWORD_PROMPT = 'K'   # K as in key/Kennwort ('S'/'P' were taken)   # start typing a new spectator password
 SPECTATOR_PASSWORD_SAVE = 'KY'    # commit the typed spectator password
 SPECTATOR_PASSWORD_CANCEL = 'KN'  # discard the typed spectator password
+TRAINERS_MENU = 'T'     # show the trainer-routing overview
+TRAINERS_LIST = 'TL'    # arg: event group (Event int) - show the toggle list for it
+TRAINERS_TOGGLE = 'TX'  # args: event group + telegram id - flip that person's trainer flag
 WIZARD_CANCEL = 'ZC'    # add-event wizard: discard the draft
 WIZARD_RESTART = 'ZR'   # add-event wizard: discard and start over
 WIZARD_SAVE = 'ZS'      # add-event wizard: persist the finished draft
@@ -35,6 +40,8 @@ REMINDER_STATISTICS = 'REM'  # STATS_MENU arg for the reminder statistics (other
 
 ADD_LABELS = {Event.GAME: 'Game', Event.TRAINING: 'Training', Event.TIMEKEEPING: 'Timekeeping'}
 STATS_LABELS = {Event.GAME: 'Games', Event.TRAINING: 'Trainings', Event.TIMEKEEPING: 'Timekeeping'}
+# Trainer routing knows two lists (Team.trainer_chat_ids): GAME covers timekeeping too.
+TRAINER_GROUP_LABELS = {Event.GAME: '🥅 Games & timekeeping', Event.TRAINING: '🏃 Trainings'}
 
 
 def encode(action: str, *args) -> str:
@@ -65,8 +72,26 @@ def build_panel_markup() -> InlineKeyboardMarkup:
          InlineKeyboardButton('📊 Statistics', callback_data=encode(STATS_MENU))],
         [InlineKeyboardButton('👥 Roles', callback_data=RoleAssignment.encode_home()),
          InlineKeyboardButton('🌐 Set website', callback_data=encode(WEBSITE_PROMPT))],
-        [InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
+        [InlineKeyboardButton('🧑‍🏫 Trainers', callback_data=encode(TRAINERS_MENU)),
+         InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
     ])
+
+
+def build_trainers_menu_markup() -> InlineKeyboardMarkup:
+    rows = [[InlineKeyboardButton(label, callback_data=encode(TRAINERS_LIST, int(event_type)))]
+            for event_type, label in TRAINER_GROUP_LABELS.items()]
+    rows.append([InlineKeyboardButton('« Back', callback_data=encode(PANEL))])
+    return InlineKeyboardMarkup(rows)
+
+
+def build_trainer_toggle_markup(event_type: Event, entries: list[tuple[int, str]],
+                                trainer_ids: list[int]) -> InlineKeyboardMarkup:
+    # entries: (telegram_id, display_name) - one full-width toggle row per person.
+    rows = [[InlineKeyboardButton(f'{"✅" if telegram_id in trainer_ids else "▫️"} {name}',
+                                  callback_data=encode(TRAINERS_TOGGLE, int(event_type), telegram_id))]
+            for telegram_id, name in entries]
+    rows.append([InlineKeyboardButton('« Back', callback_data=encode(TRAINERS_MENU))])
+    return InlineKeyboardMarkup(rows)
 
 
 def build_add_chooser_markup() -> InlineKeyboardMarkup:

@@ -6,14 +6,6 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Features (M)
 
-- [ ] **Configure team trainers from the bot.** `/register_team` creates teams with
-  empty `trainersGames`/`trainersTraining` and no flow ever sets them — today the only
-  way is hand-editing the Firestore doc, and `TeamService`'s process-lifetime cache
-  ignores console edits until a bot restart. Until this exists, every attendance
-  summary and low-availability warning for such teams lands in the whole group chat
-  (the intended `Team.trainer_chat_ids` fallback — but as a permanent default, not a
-  bridge). Natural home: an admin-panel action (like the 🔑 password flow) writing via
-  `TeamService.update_team` (currently caller-less), which also invalidates the cache.
 - [ ] **Admin `/announce` broadcast** ("what's new" to admins/players).
   - Reuse the existing fan-out (`notify_all_players` / `TelegramService`); add a
     shared `NotificationService.broadcast(role_set, message)` the scheduling loops

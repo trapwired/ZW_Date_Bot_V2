@@ -11,21 +11,35 @@ class Team(DatabaseEntity):
         self.name = name
         self.group_chat_id = int(group_chat_id)
         self.spectator_password = spectator_password
-        self.trainers_games = trainers_games if trainers_games is not None else []
-        self.trainers_training = trainers_training if trainers_training is not None else []
+        # Copy: the entity owns its lists - callers (and the Firestore doubles in tests)
+        # must not share mutable state with it.
+        self.trainers_games = list(trainers_games) if trainers_games is not None else []
+        self.trainers_training = list(trainers_training) if trainers_training is not None else []
 
     def trainer_chat_ids(self, event_type: Event) -> list[int]:
         """Where this team's trainer-facing messages (summaries, trigger warnings) go.
         A team with no trainers configured falls back to its group chat - always
         sendable, so a freshly registered team never loses messages."""
+        return self._trainers_for(event_type) or [self.group_chat_id]
+
+    def toggle_trainer(self, event_type: Event, chat_id: int) -> bool:
+        """Add chat_id to (or remove it from) the trainer list for this event group.
+        Returns whether chat_id is a trainer afterwards. Caller persists the team."""
+        trainers = self._trainers_for(event_type)
+        if chat_id in trainers:
+            trainers.remove(chat_id)
+            return False
+        trainers.append(chat_id)
+        return True
+
+    def _trainers_for(self, event_type: Event) -> list[int]:
         match event_type:
             case Event.TRAINING:
-                trainers = self.trainers_training
+                return self.trainers_training
             case Event.GAME | Event.TIMEKEEPING:
-                trainers = self.trainers_games
+                return self.trainers_games
             case _:
                 raise ValueError(f'Unhandled event type: {event_type}')
-        return trainers or [self.group_chat_id]
 
     @staticmethod
     def from_dict(doc_id: str, source: dict):
