@@ -86,3 +86,30 @@ start and a rough effort (S / M / L). Pick top-down within a group.
     section.
   - Prerequisites before advertising: onboarding guide (PR4), invite deep-links or
     a polished password flow, and a support/contact path for new team admins.
+
+## Maybe
+
+Fun/engagement ideas, not committed. Each is its own vertical slice under
+`features/`; attendance + reminder stats already carry most of the data.
+
+- [ ] **Season Wrapped 🎁 (M).** End-of-season "Spotify Wrapped" per player (DM) +
+  team ranking in the group: most reliable, fastest responder, serial last-minute
+  canceller, longest attendance streak, "most likely to say UNSURE". Data exists in
+  attendance + reminder statistics — but the season reset wipes reminder stats, so
+  check what must be snapshotted BEFORE the reset (hook into the End-season flow).
+  Fire it from the reset confirmation: "season ended - here's your Wrapped".
+- [ ] **Tippspiel / prediction game 🎯 (M).** Before each game players predict the
+  score via inline buttons; admin enters the result afterwards; season leaderboard.
+  Needs a result field on Game — useful on its own (website, stats). Weekly
+  engagement loop.
+- [ ] **Bierkasse / fine ledger 🍺 (M).** Bot auto-suggests fines from events it
+  already witnesses (cancel <24h before a game, no response by game day), admin
+  confirms with one tap; running tab per player, `/schulden` shows it. Manual
+  entries for offenses the bot can't see (late arrival).
+- [ ] **Roast-mode reminders 🔥 (S).** Escalating reminder personality: first polite,
+  second sassy, third savage. Static line pool, per-team on/off toggle (team doc
+  flag). Cheap, screenshot-worthy — free bot advertising.
+- [ ] **MVP voting 🏆 (S-M).** After each game players vote MVP (not themselves),
+  reveal in the group, season MVP table. Pairs with the Tippspiel's result entry.
+- [ ] **Mitfahrbörse / carpool 🚗 (M).** Per away game: drivers tap "I drive, N
+  seats", players claim seats, bot posts the manifest with the game reminder.
