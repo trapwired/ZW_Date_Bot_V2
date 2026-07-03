@@ -6,6 +6,14 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Features (M)
 
+- [ ] **Configure team trainers from the bot.** `/register_team` creates teams with
+  empty `trainersGames`/`trainersTraining` and no flow ever sets them — today the only
+  way is hand-editing the Firestore doc, and `TeamService`'s process-lifetime cache
+  ignores console edits until a bot restart. Until this exists, every attendance
+  summary and low-availability warning for such teams lands in the whole group chat
+  (the intended `Team.trainer_chat_ids` fallback — but as a permanent default, not a
+  bridge). Natural home: an admin-panel action (like the 🔑 password flow) writing via
+  `TeamService.update_team` (currently caller-less), which also invalidates the cache.
 - [ ] **Admin `/announce` broadcast** ("what's new" to admins/players).
   - Reuse the existing fan-out (`notify_all_players` / `TelegramService`); add a
     shared `NotificationService.broadcast(role_set, message)` the scheduling loops
@@ -49,9 +57,30 @@ start and a rough effort (S / M / L). Pick top-down within a group.
   menu gets a "create invite link" action. The password flow + its throttle
   (`domain/SpectatorPasswordPolicy`) can stay as fallback or be retired then.
 
+- [ ] **Live-test more group chats / teams.** Register additional real Telegram
+  groups as teams (beyond Züri West + the scratch test group) and walk the full
+  flow per team: `/register_team` → membership gate on `/start` → spectator
+  password → events + attendance → scheduled reminders/summaries routing to the
+  right group and trainers. Goal: confidence that team isolation and per-team
+  routing hold with real chat ids, not just the fake-Firestore tests.
+
 - [ ] **General onboarding material for new teams.** The new-member guide (PR4 of the
   tenancy work) covers players/spectators of an existing team; still open: guiding a
   fresh team admin end-to-end (add bot to group → /register_team → set spectator
   password → add first event → invite members), plus screenshots or a short video
   once the UI is stable. Entry point: `features/onboarding/WelcomeGuide.py` and
   `docs/onboarding-guide.md`.
+
+## Advertising / adoption (non-code)
+
+- [ ] **Promote the bot at different locations.** Once multi-team is live-verified,
+  actively recruit teams. Candidate channels:
+  - Own club first: other Züri West teams / other squads in the club.
+  - League/association contacts: teams the club plays against (trainers already
+    exchange schedules), regional handball/unihockey association newsletters.
+  - Local sports venues / clubhouses (notice board, QR code to the bot).
+  - Online: Telegram bot directories, team-sport subreddits/forums, a simple
+    landing page (the website link the bot already serves) with a "get started"
+    section.
+  - Prerequisites before advertising: onboarding guide (PR4), invite deep-links or
+    a polished password flow, and a support/contact path for new team admins.

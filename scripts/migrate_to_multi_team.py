@@ -62,8 +62,9 @@ def team_subcollection(db, tables: Tables, table: Table, team_id: str):
 
 def resolve_or_create_team(db, tables: Tables, api_config: ApiConfig) -> str:
     # The team's identity anchor is the MEMBERSHIP group ([Telegram] group_chat_id -
-    # the chat InitNode gates /start against). [Chat_Ids] GROUP_CHAT is a routing
-    # target (points at the maintainer on the test system) and must not identify the team.
+    # the chat InitNode gates /start against). Group-message routing reads the same
+    # field from the team doc at runtime; the former [Chat_Ids] GROUP_CHAT routing
+    # key is retired.
     group_chat_id = int(api_config.get_key('Telegram', 'group_chat_id'))
     teams_col = db.collection(tables.get(Table.TEAMS_TABLE))
 
