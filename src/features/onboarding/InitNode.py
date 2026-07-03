@@ -21,6 +21,8 @@ from domain.entities.Team import Team
 from domain.entities.TelegramUser import TelegramUser
 from domain.entities.UsersToState import UsersToState
 
+from features.onboarding import WelcomeGuide
+
 from Utils.CustomExceptions import ObjectNotFoundException
 
 
@@ -55,6 +57,10 @@ class InitNode(Node):
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
                 message_type=MessageType.WELCOME,
                 message_extra_text=team.name)
+            await self.telegram_service.send_message(
+                update=update,
+                all_buttons=None,
+                message=WelcomeGuide.build_guide(user_to_state.role, team.name))
         else:
             new_state = UserState.REJECTED
             user_to_state = user_to_state.add_role(Role.REJECTED)
