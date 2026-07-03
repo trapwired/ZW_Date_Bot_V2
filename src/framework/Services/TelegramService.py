@@ -18,6 +18,7 @@ from telegram.error import BadRequest, Forbidden
 from Utils.CustomExceptions import ExpectedException
 
 from framework.Services.UserStateService import UserStateService
+from framework.Services.TeamService import TeamService
 
 
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
@@ -88,13 +89,14 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
 
 
 class TelegramService(object):
-    def __init__(self, bot: telegram.Bot, api_config: ApiConfig, user_state_service: UserStateService):
+    def __init__(self, bot: telegram.Bot, api_config: ApiConfig, user_state_service: UserStateService,
+                 team_service: TeamService):
         self.bot = bot
         self.user_state_service = user_state_service
+        self.team_service = team_service
+        # The maintainer is the only config-global chat id; group + trainer routing is
+        # per team (read from the ambient tenant context's Team doc).
         self.maintainer_chat_id = api_config.get_key('Chat_Ids', 'MAINTAINER')
-        self.trainers_games = api_config.get_int_list('Chat_Ids', 'TRAINERS_GAMES')
-        self.trainers_training = api_config.get_int_list('Chat_Ids', 'TRAINERS_TRAINING')
-        self.group_chat_id = api_config.get_key('Chat_Ids', 'GROUP_CHAT')
 
     async def _send_message(self, chat_id: int, message: str, reply_markup=None):
         try:
@@ -191,7 +193,8 @@ class TelegramService(object):
 
     async def send_group_message(self, message: str):
         # Caller builds the HTML via the Format helpers (dynamic parts already escaped).
-        return await self.bot.send_message(chat_id=int(self.group_chat_id), text=message,
+        group_chat_id = self.team_service.current_team().group_chat_id
+        return await self.bot.send_message(chat_id=group_chat_id, text=message,
                                            parse_mode=telegram.constants.ParseMode.HTML)
 
     def get_reply_keyboard(self, message_type: MessageType, all_commands: [str]):
@@ -206,15 +209,8 @@ class TelegramService(object):
             return None
         return ReplyKeyboardMarkup(generate_keyboard(all_commands), one_time_keyboard=False)
 
-    def get_chat_ids(self, event_type):
-        match event_type:
-            case Event.GAME:
-                return self.trainers_games
-            case Event.TRAINING:
-                return self.trainers_training
-            case Event.TIMEKEEPING:
-                return self.trainers_games
-        return []
+    def get_chat_ids(self, event_type: Event) -> list[int]:
+        return self.team_service.current_team().trainer_chat_ids(event_type)
 
     async def delete_message(self, message_id: int | None, chat_id: int):
         """Best-effort chat cleanup (e.g. consumed wizard prompts); deleting can fail

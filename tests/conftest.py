@@ -49,7 +49,9 @@ def data_access(monkeypatch, fake_firestore, api_config):
     data_access = DataAccess(api_config)
     team = data_access.add(Team('Züri West',
                                 group_chat_id=int(api_config.get_key('Telegram', 'group_chat_id')),
-                                spectator_password=api_config.get_key('Chats', 'SPECTATOR_PASSWORD')))
+                                spectator_password=api_config.get_key('Chats', 'SPECTATOR_PASSWORD'),
+                                trainers_games=api_config.get_int_list('Chat_Ids', 'TRAINERS_GAMES'),
+                                trainers_training=api_config.get_int_list('Chat_Ids', 'TRAINERS_TRAINING')))
     token = set_current_team(team.doc_id)
     try:
         yield data_access
@@ -86,8 +88,8 @@ def services(data_access, bot, api_config):
     from framework.Services.TeamService import TeamService
 
     user_state_service = UserStateService(data_access)
-    telegram_service = TelegramService(bot, api_config, user_state_service)
     team_service = TeamService(data_access)
+    telegram_service = TelegramService(bot, api_config, user_state_service, team_service)
     return {
         "user_state_service": user_state_service,
         "telegram_service": telegram_service,
