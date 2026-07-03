@@ -256,12 +256,6 @@ class DataAccess(object):
     def get_all_teams(self) -> list[Team]:
         return self.firebase_repository.get_all_teams()
 
-    def find_team_by_group_chat(self, group_chat_id: int) -> Team | None:
-        # Teams number in the handfuls: an in-memory scan beats maintaining an index.
-        for team in self.get_all_teams():
-            if team.group_chat_id == int(group_chat_id):
-                return team
-        return None
 
     def get_stats_event(self, event_id: str, event_type: Event) -> (list, list, list):
         # Summary rules:

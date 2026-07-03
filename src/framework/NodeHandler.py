@@ -12,6 +12,7 @@ from Enums.RoleSet import RoleSet
 from features.attendance.IcsService import IcsService
 from framework.Services.UserStateService import UserStateService
 from framework.Services.TelegramService import TelegramService
+from framework.Services.TeamService import TeamService
 from framework.Services.TriggerService import TriggerService
 from features.eventmgmt.EventService import EventService
 from features.attendance.AttendanceService import AttendanceService
@@ -24,6 +25,9 @@ from features.onboarding.InitNode import InitNode
 from features.onboarding.RejectedNode import RejectedNode
 from features.eventmgmt.AddEventFieldsNode import AddEventFieldsNode
 from features.eventmgmt.EditEventFieldNode import EditEventFieldNode
+from features.teams import TeamRegistration as team_registration_command
+from features.teams.TeamRegistration import TeamRegistration
+from features.teams.UpdateSpectatorPasswordNode import UpdateSpectatorPasswordNode
 from features.website.UpdateWebsiteNode import UpdateWebsiteNode
 
 from features.events import EventsMenu
@@ -85,7 +89,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                  user_state_service: UserStateService, ics_service: IcsService,
                  data_access: DataAccess, trigger_service: TriggerService, event_service: EventService,
                  attendance_service: AttendanceService, role_service: RoleService, website_service: WebsiteService,
-                 statistics_service: StatisticsService):
+                 statistics_service: StatisticsService, team_service: TeamService):
         super().__init__(self.handle_message)
         self.bot = bot
         self.user_state_service = user_state_service
@@ -96,6 +100,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.role_service = role_service
         self.website_service = website_service
         self.statistics_service = statistics_service
+        self.team_service = team_service
+        self.team_registration = TeamRegistration(bot, telegram_service, user_state_service, team_service)
 
         self.events_view = EventsView(event_service, attendance_service, statistics_service)
 
@@ -123,7 +129,9 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             chat_type = update.effective_chat.type
 
             if chat_type in self.GROUP_TYPES:
-                # Handle group messages
+                # Groups are ignored except for the one command that claims a group as a team.
+                if team_registration_command.is_register_team_command(update):
+                    await self.team_registration.handle(update)
                 return
 
             if update.callback_query:
@@ -173,21 +181,17 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
     def initialize_nodes(self, telegram_service: TelegramService, user_state_service: UserStateService,
                          data_access: DataAccess, api_config: ApiConfig):
 
-        init_node = InitNode(UserState.INIT, telegram_service, user_state_service, data_access, api_config, self.bot)
+        init_node = InitNode(UserState.INIT, telegram_service, user_state_service, data_access, self.bot,
+                             self.team_service)
         init_node.add_transition('/start', init_node.handle_start, allowed_roles=RoleSet.REALLY_EVERYONE)
 
-        rejected_node = RejectedNode(UserState.INIT, telegram_service, user_state_service, data_access,
-                                     api_config.get_key('Telegram', 'group_chat_id'))
-        rejected_node.add_transition(
-            api_config.get_key('Chats', 'SPECTATOR_PASSWORD'),
-            rejected_node.handle_correct_password,
-            new_state=UserState.DEFAULT,
-            allowed_roles=RoleSet.REJECTED,
-            needs_description=False,
-            in_keyboard=False)
+        # Any unmatched text on the REJECTED node is treated as a spectator-password
+        # attempt (RejectedNode.fallback_action); the password identifies the team.
+        rejected_node = RejectedNode(UserState.REJECTED, telegram_service, user_state_service, data_access,
+                                     self.team_service)
 
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access,
-                                   self.website_service, self.events_view)
+                                   self.website_service, self.events_view, self.team_service)
         default_node.add_transition('events', default_node.handle_events)
         default_node.add_transition('admin', default_node.handle_admin, allowed_roles=RoleSet.ADMINS)
         default_node.add_transition('website', default_node.handle_website)
@@ -204,6 +208,10 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         update_website_node = UpdateWebsiteNode(UserState.ADMIN_UPDATE_WEBSITE, telegram_service, user_state_service,
                                                 data_access, self.website_service)
 
+        update_spectator_password_node = UpdateSpectatorPasswordNode(
+            UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, telegram_service, user_state_service, data_access,
+            self.team_service)
+
         return {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
@@ -211,6 +219,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_ADD_EVENT: add_event_node,
             UserState.ADMIN_UPDATE_EVENT_FIELD: edit_event_field_node,
             UserState.ADMIN_UPDATE_WEBSITE: update_website_node,
+            UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD: update_spectator_password_node,
         }
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
@@ -221,7 +230,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             self.attendance_service, self.event_service, self.events_view)
         self.admin_menu_callback_node = AdminMenuCallbackNode(
             telegram_service, data_access, trigger_service, user_state_service, self.statistics_service,
-            self.website_service, self.event_service, self.nodes[UserState.ADMIN_ADD_EVENT])
+            self.website_service, self.event_service, self.nodes[UserState.ADMIN_ADD_EVENT], self.team_service)
         self.assign_roles_callback_node = AssignRolesCallbackNode(
             telegram_service, data_access, trigger_service, user_state_service, self, self.role_service)
 

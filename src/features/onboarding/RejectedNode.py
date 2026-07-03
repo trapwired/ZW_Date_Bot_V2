@@ -11,22 +11,25 @@ from domain.entities.UsersToState import UsersToState
 
 class RejectedNode(Node):
 
-    def __init__(self, state, telegram_service, user_state_service, data_access, group_chat_id):
+    def __init__(self, state, telegram_service, user_state_service, data_access, team_service):
         super().__init__(state, telegram_service, user_state_service, data_access)
-        # The (single, config-driven) team the spectator password admits into; the
-        # per-team password flow replaces this in the onboarding rework.
-        self.group_chat_id = group_chat_id
+        self.team_service = team_service
+        # Free text on the REJECTED screen is a spectator-password attempt.
+        self.fallback_action = self.handle_password_attempt
 
-    async def handle_correct_password(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        # The role change and team stamp are persisted by the framework's post-transition
-        # update_user_state (this transition has update_state=True), so no explicit write
-        # is needed here.
-        user_to_state = user_to_state.add_role(Role.SPECTATOR)
-        self.user_state_service.bind_team_from_group_chat(user_to_state, self.group_chat_id)
+    async def handle_password_attempt(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        # The password identifies the team (unique across teams); matching is exact and
+        # case-sensitive on the raw text.
+        team = self.team_service.find_team_by_spectator_password(update.message.text.strip())
+        if team is None:
+            await self.handle_help(update, user_to_state, new_state)
+            return
+        self.user_state_service.join_team(user_to_state, team.doc_id, Role.SPECTATOR)
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
-            message_type=MessageType.WELCOME)
+            all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
+            message_type=MessageType.WELCOME,
+            message_extra_text=team.name)
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(

@@ -27,7 +27,7 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
         case MessageType.WRONG_START_COMMAND:
             return 'Please start chatting with me by sending the command /start'
         case MessageType.WELCOME:
-            return 'Hi ' + Format.escape(first_name) + ', welcome to the ' + Format.bold('Züri West manager') + ' 👋'
+            return 'Hi ' + Format.escape(first_name) + ', welcome to the ' + Format.bold(Format.escape(extra_text) + ' manager') + ' 👋'
         case MessageType.WEBSITE:
             return 'Here you go :)'
         case MessageType.PRIVACY:

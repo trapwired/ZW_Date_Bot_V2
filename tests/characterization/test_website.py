@@ -33,9 +33,9 @@ async def test_typed_url_is_staged_and_confirmation_asked(node_handler, data_acc
 
     await drive(node_handler, ADMIN_ID, NEW_URL)
 
-    from features.website.WebsiteService import WebsiteService
+    from Utils import InlineInputStaging
     assert data_access.get_website() is None                       # nothing committed yet
-    _, _, staged_url = WebsiteService.parse_pending(data_access.get_user_state(ADMIN_ID).additional_info)
+    _, _, staged_url = InlineInputStaging.parse(data_access.get_user_state(ADMIN_ID).additional_info)
     assert staged_url == NEW_URL
     confirm = [m for m in bot.sent if m.chat_id == ADMIN_ID][-1]
     data = [b.callback_data for row in confirm.reply_markup.inline_keyboard for b in row]
@@ -53,11 +53,11 @@ async def test_typed_url_updates_the_menu_message_in_place(node_handler, data_ac
     await drive(node_handler, ADMIN_ID, NEW_URL)
     await drive(node_handler, ADMIN_ID, OLD_URL)     # retyping replaces the staged value
 
-    from features.website.WebsiteService import WebsiteService
+    from Utils import InlineInputStaging
     menu_edits = [e for e in bot.edits if e.message_id == 33]
     assert any(NEW_URL in e.text for e in menu_edits)
     assert any(OLD_URL in e.text for e in menu_edits)          # second URL re-rendered in place
-    _, _, staged_url = WebsiteService.parse_pending(data_access.get_user_state(ADMIN_ID).additional_info)
+    _, _, staged_url = InlineInputStaging.parse(data_access.get_user_state(ADMIN_ID).additional_info)
     assert staged_url == OLD_URL
     assert data_access.get_website() is None                   # still nothing committed
     assert len(bot.deleted) == 2                               # both typed URL messages cleaned up

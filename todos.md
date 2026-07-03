@@ -40,4 +40,9 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Optional / nice-to-have
 
-*(nothing right now)*
+- [ ] **General onboarding material for new teams.** The new-member guide (PR4 of the
+  tenancy work) covers players/spectators of an existing team; still open: guiding a
+  fresh team admin end-to-end (add bot to group → /register_team → set spectator
+  password → add first event → invite members), plus screenshots or a short video
+  once the UI is stable. Entry point: `features/onboarding/WelcomeGuide.py` and
+  `docs/onboarding-guide.md`.

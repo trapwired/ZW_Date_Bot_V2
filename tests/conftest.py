@@ -48,7 +48,7 @@ def data_access(monkeypatch, fake_firestore, api_config):
 
     data_access = DataAccess(api_config)
     team = data_access.add(Team('Züri West',
-                                group_chat_id=int(api_config.get_key('Chat_Ids', 'GROUP_CHAT')),
+                                group_chat_id=int(api_config.get_key('Telegram', 'group_chat_id')),
                                 spectator_password=api_config.get_key('Chats', 'SPECTATOR_PASSWORD')))
     token = set_current_team(team.doc_id)
     try:
@@ -83,13 +83,16 @@ def services(data_access, bot, api_config):
     from features.roles.RoleService import RoleService
     from features.website.WebsiteService import WebsiteService
     from features.stats.StatisticsService import StatisticsService
+    from framework.Services.TeamService import TeamService
 
     user_state_service = UserStateService(data_access)
     telegram_service = TelegramService(bot, api_config, user_state_service)
+    team_service = TeamService(data_access)
     return {
         "user_state_service": user_state_service,
         "telegram_service": telegram_service,
-        "ics_service": IcsService(data_access),
+        "team_service": team_service,
+        "ics_service": IcsService(data_access, team_service),
         "trigger_service": TriggerService(data_access, telegram_service),
         "event_service": EventService(data_access),
         "attendance_service": AttendanceService(data_access),
@@ -107,5 +110,5 @@ def node_handler(bot, api_config, data_access, services):
         services["telegram_service"], services["user_state_service"],
         services["ics_service"], data_access, services["trigger_service"], services["event_service"],
         services["attendance_service"], services["role_service"], services["website_service"],
-        services["statistics_service"],
+        services["statistics_service"], services["team_service"],
     )

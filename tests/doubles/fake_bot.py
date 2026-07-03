@@ -16,8 +16,11 @@ class FakeBot:
         self.documents = []     # send_document calls
         self.deleted = []       # delete_message calls
         self._message_id = 0
+        # Per-(chat, user) membership; any pair not set falls back to default_chat_member.
+        # Multi-team tests seed specific groups here; single-team tests just flip the default.
+        self.chat_members = {}  # (chat_id, user_id) -> ChatMember...
         # Default: every queried user is a group member. Tests override to exercise rejection.
-        self.chat_member = ChatMemberMember(user=User(id=1, first_name="member", is_bot=False))
+        self.default_chat_member = ChatMemberMember(user=User(id=1, first_name="member", is_bot=False))
 
     def _next_message_id(self) -> int:
         self._message_id += 1
@@ -35,7 +38,7 @@ class FakeBot:
         return record
 
     async def get_chat_member(self, chat_id, user_id):
-        return self.chat_member
+        return self.chat_members.get((int(chat_id), int(user_id)), self.default_chat_member)
 
     async def send_document(self, chat_id, document):
         self.documents.append(SimpleNamespace(chat_id=chat_id, document=document))

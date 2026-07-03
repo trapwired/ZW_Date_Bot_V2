@@ -2,7 +2,7 @@
 from datetime import datetime
 from types import SimpleNamespace
 
-from telegram import Update, Message, Chat, User
+from telegram import Update, Message, Chat, User, ChatMemberAdministrator
 from telegram.constants import ChatType
 
 from Enums.Role import Role
@@ -22,6 +22,33 @@ def make_text_update(chat_id: int, text: str, first_name: str = "Test",
     user = User(id=chat_id, first_name=first_name, last_name=last_name, is_bot=False)
     message = Message(message_id=1, date=datetime.now(), chat=chat, from_user=user, text=text)
     return Update(update_id=update_id, message=message)
+
+
+def make_group_update(group_chat_id: int, from_user_id: int, text: str, update_id: int = 1) -> Update:
+    """A real telegram Update sent to a GROUP chat, from a user distinct from the chat.
+    Mirrors make_text_update but flips the chat type so NodeHandler takes its group branch
+    (where only /register_team is acted on)."""
+    chat = Chat(id=group_chat_id, type=ChatType.GROUP)
+    user = User(id=from_user_id, first_name="Group", last_name="Member", is_bot=False)
+    message = Message(message_id=1, date=datetime.now(), chat=chat, from_user=user, text=text)
+    return Update(update_id=update_id, message=message)
+
+
+async def drive_group(node_handler, group_chat_id: int, from_user_id: int, text: str) -> None:
+    """Feed one group-chat text message through the real NodeHandler entry point."""
+    await node_handler.handle_message(make_group_update(group_chat_id, from_user_id, text), context=None)
+
+
+def group_admin_member(user_id: int) -> ChatMemberAdministrator:
+    """A real ChatMemberAdministrator (TeamRegistration checks `type(member) in (...)`, so
+    a SimpleNamespace won't do). All the granular permission flags are irrelevant to the
+    membership check, so they're all False."""
+    return ChatMemberAdministrator(
+        user=User(id=user_id, first_name="Admin", is_bot=False),
+        can_be_edited=False, is_anonymous=False, can_manage_chat=False,
+        can_delete_messages=False, can_manage_video_chats=False, can_restrict_members=False,
+        can_promote_members=False, can_change_info=False, can_invite_users=False,
+        can_post_stories=False, can_edit_stories=False, can_delete_stories=False)
 
 
 def seed_user(data_access, telegram_id: int, role: Role, state: UserState,

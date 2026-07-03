@@ -10,6 +10,7 @@ from features.adminpanel import AdminMenu
 from features.website.WebsiteService import WebsiteService
 
 from Utils import Format
+from Utils import InlineInputStaging
 
 
 class UpdateWebsiteNode(Node):
@@ -36,9 +37,9 @@ class UpdateWebsiteNode(Node):
         # Any free text typed in this state is the new website URL. Stage it next to the
         # menu-message ids (it doesn't fit in callback_data) and re-render that message
         # with Save/Cancel; retyping just replaces the staged value.
-        message_id, chat_id, _ = self.website_service.parse_pending(user_to_state.additional_info)
+        message_id, chat_id, _ = InlineInputStaging.parse(user_to_state.additional_info)
         new_url = update.message.text.strip()
-        user_to_state.additional_info = self.website_service.build_pending(message_id, chat_id, new_url)
+        user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, new_url)
         self.user_state_service.update_user_state(user_to_state, self.state)
 
         message = f'Set the website link to:\n{Format.escape(new_url)}\n\nSave it?'
