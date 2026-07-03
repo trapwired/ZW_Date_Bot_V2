@@ -7,11 +7,11 @@ back to its own group chat.
 """
 import datetime
 
+from Enums.Event import Event
 from domain.entities.Team import Team
 from domain.entities.Training import Training
 from domain.EventDateTimeParser import parse
 from data.TenantContext import team_context
-from framework.Services.SchedulingService import SchedulingService
 
 TEAM_B_GROUP = -200999888
 
@@ -21,19 +21,13 @@ def _training_in_days(data_access, days: int, location: str):
     return data_access.add(Training(parse(f"{day.strftime('%d.%m.%Y')} 19:00").value, location))
 
 
-def _scheduling(services, data_access, api_config):
-    return SchedulingService(data_access, services["telegram_service"],
-                             services["statistics_service"], api_config)
-
-
-async def test_group_reminder_goes_to_each_teams_own_group_chat(services, data_access, bot, api_config,
-                                                                default_team):
+async def test_group_reminder_goes_to_each_teams_own_group_chat(services, data_access, bot, default_team):
     team_b = data_access.add(Team('Berg', group_chat_id=TEAM_B_GROUP))
     _training_in_days(data_access, days=1, location='zueri hall')
     with team_context(team_b.doc_id):
         _training_in_days(data_access, days=1, location='berg hall')
 
-    await _scheduling(services, data_access, api_config).send_previous_day_training_reminder(context=None)
+    await services["scheduling_service"].send_previous_day_training_reminder(context=None)
 
     zw_texts = bot.texts_to(default_team.group_chat_id)
     berg_texts = bot.texts_to(TEAM_B_GROUP)
@@ -42,15 +36,15 @@ async def test_group_reminder_goes_to_each_teams_own_group_chat(services, data_a
 
 
 async def test_trainer_summary_goes_to_own_trainers_or_falls_back_to_group_chat(services, data_access, bot,
-                                                                                api_config, default_team):
-    # Summaries fire min(TRAINING_INDIVIDUAL) - 1 days ahead.
-    summary_day = min(api_config.get_int_list('Scheduling', 'TRAINING_INDIVIDUAL')) - 1
+                                                                                default_team):
+    scheduling = services["scheduling_service"]
+    summary_day = scheduling.get_summary_reminder_day(Event.TRAINING)[0]
     team_b = data_access.add(Team('Berg', group_chat_id=TEAM_B_GROUP))  # no trainers configured
     _training_in_days(data_access, days=summary_day, location='zueri hall')
     with team_context(team_b.doc_id):
         _training_in_days(data_access, days=summary_day, location='berg hall')
 
-    await _scheduling(services, data_access, api_config).send_training_summary(context=None)
+    await scheduling.send_training_summary(context=None)
 
     trainer_texts = bot.texts_to(default_team.trainers_training[0])
     berg_texts = bot.texts_to(TEAM_B_GROUP)

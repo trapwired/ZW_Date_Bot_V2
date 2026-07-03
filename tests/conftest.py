@@ -9,6 +9,10 @@ import pytest
 from tests.doubles.fake_firestore import FakeFirestoreClient, FakeFieldFilter
 from tests.doubles.fake_bot import FakeBot
 
+# Literal fake ids: the default team's routing must not depend on the developer's
+# real secrets/api_config.ini (its TRAINERS_* keys are migration seed only).
+DEFAULT_TEAM_TRAINERS = [911000001, 911000002]
+
 
 @pytest.fixture
 def fake_firestore():
@@ -50,8 +54,8 @@ def data_access(monkeypatch, fake_firestore, api_config):
     team = data_access.add(Team('Züri West',
                                 group_chat_id=int(api_config.get_key('Telegram', 'group_chat_id')),
                                 spectator_password=api_config.get_key('Chats', 'SPECTATOR_PASSWORD'),
-                                trainers_games=api_config.get_int_list('Chat_Ids', 'TRAINERS_GAMES'),
-                                trainers_training=api_config.get_int_list('Chat_Ids', 'TRAINERS_TRAINING')))
+                                trainers_games=DEFAULT_TEAM_TRAINERS,
+                                trainers_training=DEFAULT_TEAM_TRAINERS))
     token = set_current_team(team.doc_id)
     try:
         yield data_access
@@ -86,10 +90,12 @@ def services(data_access, bot, api_config):
     from features.website.WebsiteService import WebsiteService
     from features.stats.StatisticsService import StatisticsService
     from framework.Services.TeamService import TeamService
+    from framework.Services.SchedulingService import SchedulingService
 
     user_state_service = UserStateService(data_access)
     team_service = TeamService(data_access)
     telegram_service = TelegramService(bot, api_config, user_state_service, team_service)
+    statistics_service = StatisticsService(data_access)
     return {
         "user_state_service": user_state_service,
         "telegram_service": telegram_service,
@@ -100,7 +106,8 @@ def services(data_access, bot, api_config):
         "attendance_service": AttendanceService(data_access),
         "role_service": RoleService(data_access),
         "website_service": WebsiteService(data_access),
-        "statistics_service": StatisticsService(data_access),
+        "statistics_service": statistics_service,
+        "scheduling_service": SchedulingService(data_access, telegram_service, statistics_service, api_config),
     }
 
 
