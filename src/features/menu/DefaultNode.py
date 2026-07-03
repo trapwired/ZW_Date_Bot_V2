@@ -20,10 +20,11 @@ class DefaultNode(Node):
     keyboard's entries open inline menus (events, admin) or answer directly."""
 
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, website_service, events_view: EventsView):
+                 data_access: DataAccess, website_service, events_view: EventsView, team_service):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.website_service = website_service
         self.events_view = events_view
+        self.team_service = team_service
 
     async def handle_events(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         text, markup = self.events_view.build_list(user_to_state.role, update.effective_chat.id, None)
@@ -49,7 +50,7 @@ class DefaultNode(Node):
                 message='The website link is not configured yet - an admin can set it via the admin menu.')
             return
         reply_markup = InlineKeyboardMarkup(
-            inline_keyboard=[[InlineKeyboardButton(text="handball.ch/Züri West 1", url=website)]])
+            inline_keyboard=[[InlineKeyboardButton(text=self.team_service.current_team().name, url=website)]])
         await self.telegram_service.send_message(
             update=update,
             all_buttons=None,

@@ -40,4 +40,18 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Optional / nice-to-have
 
-*(nothing right now)*
+- [ ] **Invite deep-links for spectators (and maybe players).** Replace/augment the
+  shared spectator password with admin-generated links (`t.me/<Bot>?start=<random
+  token>`): unguessable, revocable, optionally one-time or expiring — removes the
+  brute-force surface entirely. Telegram delivers the token as the `/start` payload,
+  so the entry point is `InitNode.handle_start` (parse the payload before the
+  membership gate); tokens live on the team doc or an `invites` subcollection; admin
+  menu gets a "create invite link" action. The password flow + its throttle
+  (`domain/SpectatorPasswordPolicy`) can stay as fallback or be retired then.
+
+- [ ] **General onboarding material for new teams.** The new-member guide (PR4 of the
+  tenancy work) covers players/spectators of an existing team; still open: guiding a
+  fresh team admin end-to-end (add bot to group → /register_team → set spectator
+  password → add first event → invite members), plus screenshots or a short video
+  once the UI is stable. Entry point: `features/onboarding/WelcomeGuide.py` and
+  `docs/onboarding-guide.md`.

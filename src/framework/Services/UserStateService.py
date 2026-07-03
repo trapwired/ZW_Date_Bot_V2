@@ -20,15 +20,14 @@ class UserStateService(object):
         user_to_state.state = new_state
         self.data_access.update(user_to_state)
 
-    def bind_team_from_group_chat(self, user_to_state: UsersToState, group_chat_id) -> bool:
-        """Stamp the team owning the given membership group chat (the tenant-binding
-        seam, ADR 0001); False when no team is registered for that chat. The caller's
-        subsequent full-document update persists the stamp."""
-        team = self.data_access.find_team_by_group_chat(group_chat_id)
-        if team is None:
-            return False
-        user_to_state.team_id = team.doc_id
-        return True
+    def join_team(self, user_to_state: UsersToState, team_id: str, role: Role,
+                  new_state: UserState = UserState.DEFAULT) -> None:
+        """THE seam that attaches a user to a team (ADR 0001): team, role and state land
+        in one persisted write, so no onboarding path can stamp one without the others."""
+        user_to_state.add_role(role)
+        user_to_state.team_id = team_id
+        user_to_state.state = new_state
+        self.data_access.update(user_to_state)
 
     def set_user_inactive(self, chat_id: int):
         user_to_state = self.data_access.get_user_state(chat_id)

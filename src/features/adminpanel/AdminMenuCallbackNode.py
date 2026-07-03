@@ -15,8 +15,11 @@ from framework.Services.UserStateService import UserStateService
 
 from features.adminpanel import AdminMenu
 
+from Utils import Format
+from Utils import InlineInputStaging
 from Utils import PrintUtils
-from Utils.CustomExceptions import NoTempDataFoundException
+from Utils.CustomExceptions import NoTempDataFoundException, \
+    SpectatorPasswordAlreadyTakenException, SpectatorPasswordNotAllowedException
 
 RESET_CONFIRM_TEXT = ('Are you sure you want to end the current season?\n\n'
                       'This permanently resets the reminder statistics for ALL players and cannot be undone.')
@@ -31,13 +34,14 @@ class AdminMenuCallbackNode(CallbackNode):
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  user_state_service: UserStateService, statistics_service, website_service, event_service,
-                 add_event_node):
+                 add_event_node, team_service):
         super().__init__(telegram_service, data_access, trigger_service)
         self.user_state_service = user_state_service
         self.statistics_service = statistics_service
         self.website_service = website_service
         self.event_service = event_service
         self.add_event_node = add_event_node
+        self.team_service = team_service
 
     async def handle(self, update: Update):
         query = update.callback_query
@@ -66,6 +70,10 @@ class AdminMenuCallbackNode(CallbackNode):
                 await self._prompt_website(update, query)
             case AdminMenu.WEBSITE_YES | AdminMenu.WEBSITE_NO:
                 await self._finish_website(update, query, action)
+            case AdminMenu.SPECTATOR_PASSWORD_PROMPT:
+                await self._prompt_spectator_password(update, query)
+            case AdminMenu.SPECTATOR_PASSWORD_SAVE | AdminMenu.SPECTATOR_PASSWORD_CANCEL:
+                await self._finish_spectator_password(update, query, action)
             case AdminMenu.WIZARD_CANCEL | AdminMenu.WIZARD_RESTART | AdminMenu.WIZARD_SAVE:
                 await self._handle_wizard_action(update, query, action)
             case _:
@@ -118,17 +126,17 @@ class AdminMenuCallbackNode(CallbackNode):
 
     async def _prompt_website(self, update: Update, query):
         current = self.website_service.get_url()
-        current_text = current if current else 'not set'
+        current_text = Format.escape(current) if current else 'not set'
         message = (f'The website link shown to players is currently:\n{current_text}\n\n'
                    'Send me the new URL.')
 
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         # Remember which menu message to keep re-rendering while the admin types URLs;
         # nothing hits Firestore until they press Save.
-        user_to_state.additional_info = self.website_service.build_pending(
+        user_to_state.additional_info = InlineInputStaging.build(
             query.message.message_id, query.message.chat_id, '')
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_WEBSITE)
-        await self._edit(query, message, AdminMenu.build_website_prompt_markup())
+        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
 
     async def _finish_website(self, update: Update, query, action: str):
         telegram_id = update.effective_chat.id
@@ -146,6 +154,57 @@ class AdminMenuCallbackNode(CallbackNode):
             message = f'✅ The website link was updated to:\n{new_url}'
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
         await self._edit(query, message, AdminMenu.build_back_to_panel_markup())
+
+    ######################
+    # SPECTATOR PASSWORD #
+    ######################
+
+    async def _prompt_spectator_password(self, update: Update, query):
+        current = self.team_service.current_team().spectator_password
+        current_text = Format.escape(current) if current else 'not set'
+        message = (f'The spectator password for this team is currently:\n{current_text}\n\n'
+                   'Send me the new password.')
+
+        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        # Remember which menu message to keep re-rendering while the admin types passwords;
+        # nothing hits Firestore until they press Save.
+        user_to_state.additional_info = InlineInputStaging.build(
+            query.message.message_id, query.message.chat_id, '')
+        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD)
+        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+
+    async def _finish_spectator_password(self, update: Update, query, action: str):
+        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        message_id, chat_id, password = InlineInputStaging.parse(user_to_state.additional_info)
+
+        if action == AdminMenu.SPECTATOR_PASSWORD_CANCEL:
+            user_to_state.additional_info = ''
+            self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+            await self._show_panel(update, query)
+            return
+
+        try:
+            self.team_service.set_spectator_password(self.team_service.current_team(), password)
+        except SpectatorPasswordNotAllowedException:
+            await self._reprompt_password(query, user_to_state, message_id, chat_id,
+                                          '⚠️ That password cannot be used (at least 6 characters, no help commands) - '
+                                          'send me a different one.')
+            return
+        except SpectatorPasswordAlreadyTakenException:
+            await self._reprompt_password(query, user_to_state, message_id, chat_id,
+                                          '⚠️ Another team already uses that password - send me a different one.')
+            return
+
+        user_to_state.additional_info = ''
+        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+        await self._edit(query, '✅ The spectator password was updated.', AdminMenu.build_back_to_panel_markup())
+
+    async def _reprompt_password(self, query, user_to_state, message_id, chat_id, message: str):
+        # A rejected password shouldn't cost the admin the whole flow: stay in the
+        # typed-input state so the next message is simply another attempt.
+        user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, '')
+        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD)
+        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
 
     ####################
     # ADD-EVENT WIZARD #

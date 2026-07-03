@@ -44,3 +44,18 @@ class MissingCommandDescriptionException(Exception):
     def __init__(self, missing_commands):
         message = 'We are missing a description for the following commands: ' + ', '.join(missing_commands)
         super().__init__(message)
+
+
+class GroupChatAlreadyRegisteredException(ExpectedException):
+    def __init__(self, group_chat_id):
+        message = f'A team is already registered for group chat "{group_chat_id}"'
+        super().__init__(message)
+
+
+class SpectatorPasswordNotAllowedException(ExpectedException):
+    """Empty or reserved - a password that could never admit a spectator."""
+
+
+class SpectatorPasswordAlreadyTakenException(ExpectedException):
+    def __init__(self):
+        super().__init__('This spectator password is already taken by another team')

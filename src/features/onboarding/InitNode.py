@@ -1,6 +1,9 @@
 
+import logging
+
 import telegram
 from telegram import Update, ChatMemberRestricted, ChatMemberMember, ChatMemberAdministrator, ChatMemberOwner
+from telegram.error import TelegramError
 
 from framework.Nodes.Node import Node
 
@@ -12,12 +15,13 @@ from data.DataAccess import DataAccess
 
 from framework.Services.UserStateService import UserStateService
 from framework.Services.TelegramService import TelegramService
+from framework.Services.TeamService import TeamService
 
+from domain.entities.Team import Team
 from domain.entities.TelegramUser import TelegramUser
 from domain.entities.UsersToState import UsersToState
 
 from Utils.CustomExceptions import ObjectNotFoundException
-from Utils.ApiConfig import ApiConfig
 
 
 def create_user(update: Update) -> TelegramUser:
@@ -27,10 +31,10 @@ def create_user(update: Update) -> TelegramUser:
 class InitNode(Node):
 
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, api_config: ApiConfig, bot: telegram.Bot):
+                 data_access: DataAccess, bot: telegram.Bot, team_service: TeamService):
         super().__init__(state, telegram_service, user_state_service, data_access)
-        self.group_chat_id = api_config.get_key('Telegram', 'group_chat_id')
         self.bot = bot
+        self.team_service = team_service
 
     async def handle(self, update: Update, user_to_state: UsersToState):
         telegram_id = update.effective_chat.id
@@ -43,20 +47,14 @@ class InitNode(Node):
 
     async def handle_start(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         telegram_id = update.effective_chat.id
-        if await self.is_in_group_chat(telegram_id):
-            new_state = UserState.DEFAULT
-            user_to_state = user_to_state.add_role(Role.PLAYER)
-            if not self.user_state_service.bind_team_from_group_chat(user_to_state, self.group_chat_id):
-                # Onboarding still succeeds (pre-migration deploys have no team doc yet),
-                # but a teamless player fails closed on every domain read - alert loudly.
-                await self.telegram_service.send_maintainer_message(
-                    f'/start: no team registered for group chat {self.group_chat_id} - '
-                    f'user {telegram_id} was onboarded without a team')
-            self.user_state_service.update_user_state(user_to_state, new_state)
+        team = await self.find_membership_team(telegram_id)
+        if team is not None:
+            self.user_state_service.join_team(user_to_state, team.doc_id, Role.PLAYER)
             await self.telegram_service.send_message(
                 update=update,
-                all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
-                message_type=MessageType.WELCOME)
+                all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
+                message_type=MessageType.WELCOME,
+                message_extra_text=team.name)
         else:
             new_state = UserState.REJECTED
             user_to_state = user_to_state.add_role(Role.REJECTED)
@@ -66,9 +64,22 @@ class InitNode(Node):
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
                 message_type=MessageType.REJECTED)
 
-    async def is_in_group_chat(self, telegram_id: int):
-        chat_type = await self.bot.get_chat_member(self.group_chat_id, telegram_id)
-        return type(chat_type) in [ChatMemberOwner, ChatMemberAdministrator, ChatMemberMember, ChatMemberRestricted]
+    async def find_membership_team(self, telegram_id) -> Team | None:
+        """A team whose group chat the user is a member of. Iteration order is arbitrary
+        (Firestore doc order) - belonging to several teams' groups is a non-goal per
+        ADR 0001, whoever matches first wins. A team whose group the bot cannot query
+        (kicked, bad id, transient API error) is skipped, not fatal."""
+        teams = self.team_service.get_all_teams()
+        if not teams:
+            logging.warning('/start with no registered teams - every member is rejected')
+        for team in teams:
+            try:
+                member = await self.bot.get_chat_member(team.group_chat_id, telegram_id)
+            except TelegramError:
+                continue
+            if isinstance(member, (ChatMemberOwner, ChatMemberAdministrator, ChatMemberMember, ChatMemberRestricted)):
+                return team
+        return None
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(

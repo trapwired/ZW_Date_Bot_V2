@@ -24,6 +24,9 @@ RESET_CONFIRMED = 'RY'  # reset the season statistics
 WEBSITE_PROMPT = 'W'    # start typing a new website URL
 WEBSITE_YES = 'WY'      # commit the typed URL
 WEBSITE_NO = 'WN'       # discard the typed URL
+SPECTATOR_PASSWORD_PROMPT = 'K'   # K as in key/Kennwort ('S'/'P' were taken)   # start typing a new spectator password
+SPECTATOR_PASSWORD_SAVE = 'KY'    # commit the typed spectator password
+SPECTATOR_PASSWORD_CANCEL = 'KN'  # discard the typed spectator password
 WIZARD_CANCEL = 'ZC'    # add-event wizard: discard the draft
 WIZARD_RESTART = 'ZR'   # add-event wizard: discard and start over
 WIZARD_SAVE = 'ZS'      # add-event wizard: persist the finished draft
@@ -60,7 +63,8 @@ def build_panel_markup() -> InlineKeyboardMarkup:
         [InlineKeyboardButton('➕ Add event', callback_data=encode(ADD_CHOOSER)),
          InlineKeyboardButton('📊 Statistics', callback_data=encode(STATS_MENU))],
         [InlineKeyboardButton('👥 Roles', callback_data=RoleAssignment.encode_home()),
-         InlineKeyboardButton('🌐 Set website', callback_data=encode(WEBSITE_PROMPT))],
+         InlineKeyboardButton('🌐 Set website', callback_data=encode(WEBSITE_PROMPT)),
+         InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
     ])
 
 
@@ -108,7 +112,14 @@ def build_website_confirm_markup() -> InlineKeyboardMarkup:
     ])
 
 
-def build_website_prompt_markup() -> InlineKeyboardMarkup:
+def build_spectator_password_confirm_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton('💾 Save', callback_data=encode(SPECTATOR_PASSWORD_SAVE)),
+         InlineKeyboardButton('Cancel', callback_data=encode(SPECTATOR_PASSWORD_CANCEL))],
+    ])
+
+
+def build_typed_input_prompt_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data=encode(PANEL))]])
 
 

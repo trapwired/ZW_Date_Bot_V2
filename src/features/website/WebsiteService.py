@@ -18,7 +18,7 @@ from data.DataAccess import DataAccess
 
 from domain.entities.UsersToState import UsersToState
 
-_DELIMITER = '#'
+from Utils import InlineInputStaging
 
 
 class WebsiteService:
@@ -28,22 +28,6 @@ class WebsiteService:
     def get_url(self) -> str | None:
         return self.data_access.get_website()
 
-    @staticmethod
-    def build_pending(message_id: int | None, chat_id: int | None, url: str) -> str:
-        return _DELIMITER.join([str(message_id or ''), str(chat_id or ''), url])
-
-    @staticmethod
-    def parse_pending(staged: str) -> tuple[int | None, int | None, str]:
-        """-> (menu message_id, chat_id, url). URLs may contain '#', so only the two
-        leading id fields are split off; a legacy plain-URL value parses as id-less."""
-        parts = staged.split(_DELIMITER, 2)
-        if len(parts) != 3:
-            return None, None, staged
-        message_id, chat_id, url = parts
-        try:
-            return int(message_id), int(chat_id), url
-        except ValueError:
-            return None, None, url
 
     def commit_pending_url(self, telegram_id: int) -> tuple[str | None, UsersToState]:
         """Persist the staged URL (normalized to an http(s) link) if it is valid.
@@ -62,7 +46,7 @@ class WebsiteService:
 
     def _take_pending(self, telegram_id: int) -> tuple[UsersToState, str]:
         user_to_state = self.data_access.get_user_state(telegram_id)
-        _, _, pending_url = self.parse_pending(user_to_state.additional_info)
+        _, _, pending_url = InlineInputStaging.parse(user_to_state.additional_info)
         user_to_state.additional_info = ''
         return user_to_state, pending_url
 

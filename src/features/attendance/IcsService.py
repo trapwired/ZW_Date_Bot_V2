@@ -16,8 +16,9 @@ def init_directory():
 
 
 class IcsService(object):
-    def __init__(self, data_access: DataAccess):
+    def __init__(self, data_access: DataAccess, team_service):
         self.data_access = data_access
+        self.team_service = team_service
         init_directory()
 
         self.DURATION_GAME = timedelta(minutes=90)
@@ -29,7 +30,7 @@ class IcsService(object):
         event = self.data_access.get_event(event_type, doc_id)
         event_title = event_type.name.lower()
 
-        name = f'Handball {event_title.capitalize()} Züri West'
+        name = f'Handball {event_title.capitalize()} {self.team_service.current_team().name}'
         begin = event.timestamp
 
         match event_type:
