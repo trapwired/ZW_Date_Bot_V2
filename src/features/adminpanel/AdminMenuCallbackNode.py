@@ -76,9 +76,9 @@ class AdminMenuCallbackNode(CallbackNode):
                 await self._finish_spectator_password(update, query, action)
             case AdminMenu.TRAINERS_MENU:
                 await self._show_trainers_menu(query)
-            case AdminMenu.TRAINERS_LIST:
+            case AdminMenu.TRAINERS_LIST if len(args) == 1:
                 await self._show_trainer_list(query, Event(int(args[0])))
-            case AdminMenu.TRAINERS_TOGGLE:
+            case AdminMenu.TRAINERS_TOGGLE if len(args) == 2:
                 await self._toggle_trainer(query, Event(int(args[0])), int(args[1]))
             case AdminMenu.WIZARD_CANCEL | AdminMenu.WIZARD_RESTART | AdminMenu.WIZARD_SAVE:
                 await self._handle_wizard_action(update, query, action)

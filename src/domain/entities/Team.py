@@ -11,11 +11,8 @@ class Team(DatabaseEntity):
         self.name = name
         self.group_chat_id = int(group_chat_id)
         self.spectator_password = spectator_password
-        # Copy + coerce: the entity owns its lists (callers and the Firestore doubles in
-        # tests must not share mutable state with it), and hand-edited docs may hold
-        # string ids - toggle/removal matching needs ints.
-        self.trainers_games = [int(chat_id) for chat_id in trainers_games] if trainers_games is not None else []
-        self.trainers_training = [int(chat_id) for chat_id in trainers_training] if trainers_training is not None else []
+        self.trainers_games = self._clean_trainer_ids(trainers_games)
+        self.trainers_training = self._clean_trainer_ids(trainers_training)
 
     def trainer_chat_ids(self, event_type: Event) -> list[int]:
         """Where this team's trainer-facing messages (summaries, trigger warnings) go.
@@ -31,6 +28,16 @@ class Team(DatabaseEntity):
             trainers.remove(chat_id)
         else:
             trainers.append(chat_id)
+
+    @staticmethod
+    def _clean_trainer_ids(chat_ids: list | None) -> list[int]:
+        # Copy + int-coerce + dedupe (order-preserving): the entity owns its lists
+        # (callers and test doubles must not share mutable state with it), and
+        # hand-edited docs may hold string ids or duplicates - toggle/removal
+        # matching needs clean ints.
+        if chat_ids is None:
+            return []
+        return list(dict.fromkeys(int(chat_id) for chat_id in chat_ids))
 
     def trainers_for(self, event_type: Event) -> list[int]:
         """THE event-group-to-trainer-list mapping - render, toggle and routing all

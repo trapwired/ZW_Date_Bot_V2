@@ -35,9 +35,9 @@ def test_toggle_trainer_adds_then_removes():
     assert team.trainers_games == []
 
 
-def test_trainer_lists_coerce_hand_edited_string_ids():
-    team = Team('Berg', group_chat_id=GROUP, trainers_games=['911000001'])
-    assert team.trainers_games == [911000001]
+def test_trainer_lists_coerce_and_dedupe_hand_edited_ids():
+    team = Team('Berg', group_chat_id=GROUP, trainers_games=['911000001', 911000001, 7])
+    assert team.trainers_games == [911000001, 7]
 
 
 def test_toggle_trainer_via_timekeeping_edits_the_games_list():

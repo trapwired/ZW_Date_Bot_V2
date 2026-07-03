@@ -75,3 +75,15 @@ async def test_routing_follows_toggles_without_restart(node_handler, services, d
     for stray in DEFAULT_TEAM_TRAINERS:
         assert bot.texts_to(stray) == []
     assert_no_error_reported(bot)
+
+
+async def test_malformed_trainer_callbacks_are_ignored(node_handler, data_access, bot, default_team):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    before = TeamService(data_access).get_team(default_team.doc_id).trainers_games
+
+    for data in [AdminMenu.encode(AdminMenu.TRAINERS_LIST),                       # missing event arg
+                 AdminMenu.encode(AdminMenu.TRAINERS_TOGGLE, int(Event.GAME))]:   # missing id arg
+        await drive_callback(node_handler, ADMIN_ID, data)
+
+    assert TeamService(data_access).get_team(default_team.doc_id).trainers_games == before
+    assert_no_error_reported(bot)
