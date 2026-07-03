@@ -49,9 +49,30 @@ start and a rough effort (S / M / L). Pick top-down within a group.
   menu gets a "create invite link" action. The password flow + its throttle
   (`domain/SpectatorPasswordPolicy`) can stay as fallback or be retired then.
 
+- [ ] **Live-test more group chats / teams.** Register additional real Telegram
+  groups as teams (beyond Züri West + the scratch test group) and walk the full
+  flow per team: `/register_team` → membership gate on `/start` → spectator
+  password → events + attendance → scheduled reminders/summaries routing to the
+  right group and trainers. Goal: confidence that team isolation and per-team
+  routing hold with real chat ids, not just the fake-Firestore tests.
+
 - [ ] **General onboarding material for new teams.** The new-member guide (PR4 of the
   tenancy work) covers players/spectators of an existing team; still open: guiding a
   fresh team admin end-to-end (add bot to group → /register_team → set spectator
   password → add first event → invite members), plus screenshots or a short video
   once the UI is stable. Entry point: `features/onboarding/WelcomeGuide.py` and
   `docs/onboarding-guide.md`.
+
+## Advertising / adoption (non-code)
+
+- [ ] **Promote the bot at different locations.** Once multi-team is live-verified,
+  actively recruit teams. Candidate channels:
+  - Own club first: other Züri West teams / other squads in the club.
+  - League/association contacts: teams the club plays against (trainers already
+    exchange schedules), regional handball/unihockey association newsletters.
+  - Local sports venues / clubhouses (notice board, QR code to the bot).
+  - Online: Telegram bot directories, team-sport subreddits/forums, a simple
+    landing page (the website link the bot already serves) with a "get started"
+    section.
+  - Prerequisites before advertising: onboarding guide (PR4), invite deep-links or
+    a polished password flow, and a support/contact path for new team admins.
