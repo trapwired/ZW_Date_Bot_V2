@@ -77,7 +77,7 @@ class InitNode(Node):
                 member = await self.bot.get_chat_member(team.group_chat_id, telegram_id)
             except TelegramError:
                 continue
-            if type(member) in [ChatMemberOwner, ChatMemberAdministrator, ChatMemberMember, ChatMemberRestricted]:
+            if isinstance(member, (ChatMemberOwner, ChatMemberAdministrator, ChatMemberMember, ChatMemberRestricted)):
                 return team
         return None
 

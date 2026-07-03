@@ -15,6 +15,7 @@ from framework.Services.UserStateService import UserStateService
 
 from features.adminpanel import AdminMenu
 
+from Utils import Format
 from Utils import InlineInputStaging
 from Utils import PrintUtils
 from Utils.CustomExceptions import NoTempDataFoundException, \
@@ -125,7 +126,7 @@ class AdminMenuCallbackNode(CallbackNode):
 
     async def _prompt_website(self, update: Update, query):
         current = self.website_service.get_url()
-        current_text = current if current else 'not set'
+        current_text = Format.escape(current) if current else 'not set'
         message = (f'The website link shown to players is currently:\n{current_text}\n\n'
                    'Send me the new URL.')
 
@@ -160,7 +161,7 @@ class AdminMenuCallbackNode(CallbackNode):
 
     async def _prompt_spectator_password(self, update: Update, query):
         current = self.team_service.current_team().spectator_password
-        current_text = current if current else 'not set'
+        current_text = Format.escape(current) if current else 'not set'
         message = (f'The spectator password for this team is currently:\n{current_text}\n\n'
                    'Send me the new password.')
 

@@ -90,7 +90,7 @@ class TeamRegistration:
         except TelegramError:
             # Can't verify -> don't register. The issuer can simply retry.
             return False
-        return type(member) in (ChatMemberOwner, ChatMemberAdministrator)
+        return isinstance(member, (ChatMemberOwner, ChatMemberAdministrator))
 
     def _lookup_user_state(self, telegram_id: int):
         try:
