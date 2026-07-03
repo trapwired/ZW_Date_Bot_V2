@@ -132,3 +132,37 @@ async def test_website_button_is_labelled_with_the_team_name(node_handler, data_
               for row in m.reply_markup.inline_keyboard for b in row]
     assert default_team.name in labels
     assert_no_error_reported(bot)
+
+
+async def test_password_guessing_locks_after_max_attempts(node_handler, data_access, bot, api_config):
+    from domain import SpectatorPasswordPolicy as policy
+    seed_user(data_access, NEW_USER_ID, Role.REJECTED, UserState.REJECTED, team_id='')
+
+    for attempt in range(policy.MAX_FAILED_ATTEMPTS):
+        await drive(node_handler, NEW_USER_ID, f'wrong-guess-{attempt}')
+
+    # Crossing the threshold alerted the maintainer exactly once.
+    lockout_alerts = [m.text for m in bot.sent if 'lockout' in m.text]
+    assert len(lockout_alerts) == 1
+
+    # Even the CORRECT password is ignored while locked.
+    await drive(node_handler, NEW_USER_ID, api_config.get_key('Chats', 'SPECTATOR_PASSWORD'))
+    locked = data_access.get_user_state(NEW_USER_ID)
+    assert locked.state == UserState.REJECTED
+    assert locked.role == Role.REJECTED
+    assert any('Too many attempts' in text for text in bot.texts_to(NEW_USER_ID))
+    assert_no_error_reported(bot)
+
+
+async def test_successful_password_clears_the_attempt_record(node_handler, data_access, bot, api_config,
+                                                             default_team):
+    seed_user(data_access, NEW_USER_ID, Role.REJECTED, UserState.REJECTED, team_id='')
+    await drive(node_handler, NEW_USER_ID, 'wrong-guess')          # one failure on record
+
+    await drive(node_handler, NEW_USER_ID, api_config.get_key('Chats', 'SPECTATOR_PASSWORD'))
+
+    joined = data_access.get_user_state(NEW_USER_ID)
+    assert joined.role == Role.SPECTATOR
+    assert joined.team_id == default_team.doc_id
+    assert joined.additional_info == ''                            # attempt record gone
+    assert_no_error_reported(bot)

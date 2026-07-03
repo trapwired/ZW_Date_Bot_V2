@@ -57,11 +57,15 @@ class TeamService:
     # Case-insensitive because the REJECTED screen's help transitions match lowercased
     # input BEFORE the password fallback - these words could never admit anyone.
     RESERVED_SPECTATOR_PASSWORDS = {'help', '/help'}
+    # The password is the only thing between a stranger and a team's attendance data;
+    # trivially guessable ones must not be storable in the first place.
+    MIN_SPECTATOR_PASSWORD_LENGTH = 6
 
     def set_spectator_password(self, team: Team, password: str) -> None:
         """The password identifies the team at entry, so it must be unique across teams
         and actually enterable - both halves of the invariant live here."""
-        if not password or password.lower() in self.RESERVED_SPECTATOR_PASSWORDS:
+        if len(password or '') < self.MIN_SPECTATOR_PASSWORD_LENGTH \
+                or password.lower() in self.RESERVED_SPECTATOR_PASSWORDS:
             raise SpectatorPasswordNotAllowedException()
         other = self.find_team_by_spectator_password(password)
         if other is not None and other.doc_id != team.doc_id:

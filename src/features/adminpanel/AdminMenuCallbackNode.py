@@ -186,7 +186,8 @@ class AdminMenuCallbackNode(CallbackNode):
             self.team_service.set_spectator_password(self.team_service.current_team(), password)
         except SpectatorPasswordNotAllowedException:
             await self._reprompt_password(query, user_to_state, message_id, chat_id,
-                                          '⚠️ That password cannot be used - send me a different one.')
+                                          '⚠️ That password cannot be used (at least 6 characters, no help commands) - '
+                                          'send me a different one.')
             return
         except SpectatorPasswordAlreadyTakenException:
             await self._reprompt_password(query, user_to_state, message_id, chat_id,
