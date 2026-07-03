@@ -29,6 +29,10 @@ class _StubDataAccess:
         self._games = list(games)
         self._trainings = list(trainings)
 
+    def get_all_teams(self):
+        # Scheduled jobs iterate teams via _for_each_team; one team makes the body run once.
+        return [SimpleNamespace(doc_id="team-1")]
+
     def get_ordered_games(self):
         return self._games
 

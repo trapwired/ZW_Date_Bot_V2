@@ -28,7 +28,11 @@ def api_config():
 
 @pytest.fixture
 def data_access(monkeypatch, fake_firestore, api_config):
-    """Real DataAccess + FirebaseRepository on top of the in-memory Firestore client."""
+    """Real DataAccess + FirebaseRepository on top of the in-memory Firestore client.
+
+    Registers a single default team and sets it as the ambient tenant context, so the
+    team-scoped collections most tests touch are reachable. The /start flow rebinds the
+    same team via find_team_by_group_chat on [Telegram] group_chat_id (the membership group)."""
     import firebase_admin
     import firebase_admin.credentials  # noqa: F401 - ensure submodule is importable before patching
     import data.FirebaseRepository as fr
@@ -39,7 +43,24 @@ def data_access(monkeypatch, fake_firestore, api_config):
     monkeypatch.setattr(fr, "FieldFilter", FakeFieldFilter)
 
     from data.DataAccess import DataAccess
-    return DataAccess(api_config)
+    from domain.entities.Team import Team
+    from data.TenantContext import set_current_team, reset_current_team
+
+    data_access = DataAccess(api_config)
+    team = data_access.add(Team('Züri West',
+                                group_chat_id=int(api_config.get_key('Chat_Ids', 'GROUP_CHAT')),
+                                spectator_password=api_config.get_key('Chats', 'SPECTATOR_PASSWORD')))
+    token = set_current_team(team.doc_id)
+    try:
+        yield data_access
+    finally:
+        reset_current_team(token)
+
+
+@pytest.fixture
+def default_team(data_access):
+    """The team the data_access fixture registered and made the ambient context."""
+    return data_access.get_all_teams()[0]
 
 
 @pytest.fixture

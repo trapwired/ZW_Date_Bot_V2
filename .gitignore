@@ -108,6 +108,9 @@ ENV/
 [Ll]ib64
 [Ll]ocal
 [Ss]cripts
+# ... but our repo-level migration/ops scripts are source, not build output
+!/scripts/
+!/scripts/*.py
 pyvenv.cfg
 .venv
 pip-selfcheck.json

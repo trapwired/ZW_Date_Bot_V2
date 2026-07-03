@@ -46,6 +46,12 @@ class InitNode(Node):
         if await self.is_in_group_chat(telegram_id):
             new_state = UserState.DEFAULT
             user_to_state = user_to_state.add_role(Role.PLAYER)
+            if not self.user_state_service.bind_team_from_group_chat(user_to_state, self.group_chat_id):
+                # Onboarding still succeeds (pre-migration deploys have no team doc yet),
+                # but a teamless player fails closed on every domain read - alert loudly.
+                await self.telegram_service.send_maintainer_message(
+                    f'/start: no team registered for group chat {self.group_chat_id} - '
+                    f'user {telegram_id} was onboarded without a team')
             self.user_state_service.update_user_state(user_to_state, new_state)
             await self.telegram_service.send_message(
                 update=update,

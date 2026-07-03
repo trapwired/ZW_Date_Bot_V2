@@ -2,7 +2,7 @@ import pandas as pd
 from multipledispatch import dispatch
 
 from data.FirebaseRepository import FirebaseRepository
-from data.Tables import Tables
+from data.Tables import Tables, EVENT_ATTENDANCE_TABLES
 
 from Enums.UserState import UserState
 from Enums.Table import Table
@@ -12,6 +12,7 @@ from Enums.Event import Event
 from Enums.EventField import EventField
 
 from domain.entities.Game import Game
+from domain.entities.Team import Team
 from domain.entities.TelegramUser import TelegramUser
 from domain.entities.UsersToState import UsersToState
 from domain.entities.TimekeepingEvent import TimekeepingEvent
@@ -24,16 +25,10 @@ from domain.entities.Settings import Settings
 from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException
 from Utils.ApiConfig import ApiConfig
 
-TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
-          Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
-          Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}
-
-
 class DataAccess(object):
 
     def __init__(self, api_config: ApiConfig):
-        self.tables = Tables(api_config)
-        self.firebase_repository = FirebaseRepository(api_config, self.tables)
+        self.firebase_repository = FirebaseRepository(api_config, Tables(api_config))
 
     #######
     # ADD #
@@ -41,31 +36,36 @@ class DataAccess(object):
 
     @dispatch(TelegramUser)
     def add(self, user: TelegramUser) -> UsersToState:
-        doc_ref = self.firebase_repository.add(user, self.tables.get(Table.USERS_TABLE))
+        doc_ref = self.firebase_repository.add(user, Table.USERS_TABLE)
         user_doc_id = doc_ref[1].id
         user_to_state = UsersToState(user_doc_id, UserState.INIT)
-        doc_id = self.firebase_repository.add(user_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
+        doc_id = self.firebase_repository.add(user_to_state, Table.USERS_TO_STATE_TABLE)
         return user_to_state.add_document_id(doc_id[1].id)
 
     @dispatch(Game)
     def add(self, game: Game) -> Game:
-        doc_ref = self.firebase_repository.add(game, self.tables.get(Table.GAMES_TABLE))
+        doc_ref = self.firebase_repository.add(game, Table.GAMES_TABLE)
         return game.add_document_id(doc_ref[1].id)
 
     @dispatch(Training)
     def add(self, training: Training) -> Training:
-        doc_ref = self.firebase_repository.add(training, self.tables.get(Table.TRAININGS_TABLE))
+        doc_ref = self.firebase_repository.add(training, Table.TRAININGS_TABLE)
         return training.add_document_id(doc_ref[1].id)
 
     @dispatch(TimekeepingEvent)
     def add(self, timekeeping_event: TimekeepingEvent) -> TimekeepingEvent:
-        doc_ref = self.firebase_repository.add(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
+        doc_ref = self.firebase_repository.add(timekeeping_event, Table.TIMEKEEPING_TABLE)
         return timekeeping_event.add_document_id(doc_ref[1].id)
 
     @dispatch(TempData)
     def add(self, temp_data: TempData) -> TempData:
-        doc_ref = self.firebase_repository.add(temp_data, self.tables.get(Table.TEMP_DATA_TABLE))
+        doc_ref = self.firebase_repository.add(temp_data, Table.TEMP_DATA_TABLE)
         return temp_data.add_document_id(doc_ref[1].id)
+
+    @dispatch(Team)
+    def add(self, team: Team) -> Team:
+        doc_ref = self.firebase_repository.add(team, Table.TEAMS_TABLE)
+        return team.add_document_id(doc_ref[1].id)
 
     ##########
     # UPDATE #
@@ -98,41 +98,41 @@ class DataAccess(object):
         if users_to_state.doc_id is None:
             return self.firebase_repository.update_user_state_via_user_id(users_to_state)
         else:
-            return self.firebase_repository.update(users_to_state, self.tables.get(Table.USERS_TO_STATE_TABLE))
+            return self.firebase_repository.update(users_to_state, Table.USERS_TO_STATE_TABLE)
 
     @dispatch(TelegramUser)
     def update(self, user: TelegramUser):
         if user.doc_id is None:
             return self.firebase_repository.update_user_via_telegram_id(user)
         else:
-            return self.firebase_repository.update(user, self.tables.get(Table.USERS_TABLE))
+            return self.firebase_repository.update(user, Table.USERS_TABLE)
 
     @dispatch(Game)
     def update(self, game: Game):
         if game.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(game, self.tables.get(Table.GAMES_TABLE))
+        return self.firebase_repository.update(game, Table.GAMES_TABLE)
 
     @dispatch(Training)
     def update(self, training: Training):
         if training.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(training, self.tables.get(Table.TRAININGS_TABLE))
+        return self.firebase_repository.update(training, Table.TRAININGS_TABLE)
 
     @dispatch(PlayerMetric)
     def update(self, player_metric: PlayerMetric):
         if player_metric.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(player_metric, self.tables.get(Table.PLAYER_METRIC))
+        return self.firebase_repository.update(player_metric, Table.PLAYER_METRIC)
 
     @dispatch(TimekeepingEvent)
     def update(self, timekeeping_event: TimekeepingEvent):
         if timekeeping_event.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(timekeeping_event, self.tables.get(Table.TIMEKEEPING_TABLE))
+        return self.firebase_repository.update(timekeeping_event, Table.TIMEKEEPING_TABLE)
 
     def update_attendance(self, attendance: Attendance, event_type: Event) -> Attendance:
-        table = TABLES[event_type]
+        table = EVENT_ATTENDANCE_TABLES[event_type]
         doc_id = self.firebase_repository.get_event_attendance_doc_id(attendance, table)
         if doc_id is None:
             return self._add_attendance(attendance, table)
@@ -153,7 +153,13 @@ class DataAccess(object):
     def update(self, temp_data: TempData):
         if temp_data.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(temp_data, self.tables.get(Table.TEMP_DATA_TABLE))
+        return self.firebase_repository.update(temp_data, Table.TEMP_DATA_TABLE)
+
+    @dispatch(Team)
+    def update(self, team: Team):
+        if team.doc_id is None:
+            raise DocumentIdNotPresentException()
+        return self.firebase_repository.update(team, Table.TEAMS_TABLE)
 
     #######
     # GET #
@@ -181,7 +187,7 @@ class DataAccess(object):
 
     def get_attendance(self, telegram_id: str, event_doc_id: str, event_type: Event) -> Attendance:
         user = self.firebase_repository.get_user(telegram_id)
-        table = TABLES[event_type]
+        table = EVENT_ATTENDANCE_TABLES[event_type]
         try:
             return self.firebase_repository.get_attendance(user, event_doc_id, table)
         except ObjectNotFoundException:
@@ -244,6 +250,19 @@ class DataAccess(object):
     def get_user_state_for_user(self, user: TelegramUser) -> UsersToState:
         return self.firebase_repository.get_user_state(user)
 
+    def get_team(self, doc_id: str) -> Team:
+        return self.firebase_repository.get_team(doc_id)
+
+    def get_all_teams(self) -> list[Team]:
+        return self.firebase_repository.get_all_teams()
+
+    def find_team_by_group_chat(self, group_chat_id: int) -> Team | None:
+        # Teams number in the handfuls: an in-memory scan beats maintaining an index.
+        for team in self.get_all_teams():
+            if team.group_chat_id == int(group_chat_id):
+                return team
+        return None
+
     def get_stats_event(self, event_id: str, event_type: Event) -> (list, list, list):
         # Summary rules:
         # - YES lists everyone who said yes, including retired/inactive players.
@@ -260,7 +279,7 @@ class DataAccess(object):
         ]
         active_player_id_set = set(active_player_ids)
 
-        event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=TABLES[event_type])
+        event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=EVENT_ATTENDANCE_TABLES[event_type])
         for attendance in event_attendance_list:
             new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
             user_id = new_attendance.user_id
@@ -377,7 +396,7 @@ class DataAccess(object):
 
     @dispatch(TempData)
     def delete(self, temp_data: TempData):
-        self.firebase_repository.delete(temp_data)
+        self.firebase_repository.delete_temp_data(temp_data)
 
     def reset_statistics(self) -> int:
         # Ends the current season: hard-deletes every player's reminder statistics.
@@ -388,4 +407,4 @@ class DataAccess(object):
     ########
 
     def reset_all_player_event_attendance(self, event_type: Event, doc_id: str):
-        self.firebase_repository.reset_all_player_event_attendance(doc_id, TABLES[event_type])
+        self.firebase_repository.reset_all_player_event_attendance(doc_id, EVENT_ATTENDANCE_TABLES[event_type])
