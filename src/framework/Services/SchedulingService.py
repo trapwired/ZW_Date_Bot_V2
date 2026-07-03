@@ -51,11 +51,21 @@ class SchedulingService:
 
     async def _for_each_team(self, job_body, *args):
         """Every scheduled job runs once per team, inside that team's tenant context, so
-        all reads and sends inside the body are team-scoped. One team's failure must not
-        skip the remaining teams."""
-        for team in self.data_access.get_all_teams():
+        all reads inside the body are team-scoped (message routing becomes per-team with
+        the routing rework). The loop itself guarantees one team's failure cannot skip
+        the remaining teams - it does not rely on each body catching its own errors."""
+        try:
+            teams = self.data_access.get_all_teams()
+        except Exception as e:
+            await self.telegram_service.report_exception('Exception listing teams for scheduled job', e)
+            return
+        for team in teams:
             with team_context(team.doc_id):
-                await job_body(*args)
+                try:
+                    await job_body(*args)
+                except Exception as e:
+                    await self.telegram_service.report_exception(
+                        f'Exception in scheduled job for team {team.doc_id}', e)
 
     async def send_same_day_game_reminder(self, context: ContextTypes.DEFAULT_TYPE):
         await self._for_each_team(self._send_same_day_game_reminder)

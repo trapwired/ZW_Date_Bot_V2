@@ -126,11 +126,6 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                 # Handle group messages
                 return
 
-            users_to_state = self._lookup_user_state(update.effective_chat.id)
-            # Resolve the tenant once per update; INIT/REJECTED users have no team and only
-            # ever touch global collections - any accidental domain read fails closed.
-            context_token = set_current_team(users_to_state.team_id if users_to_state else None)
-
             if update.callback_query:
                 callback_node = self.get_callback_node(update.callback_query.data)
                 if callback_node is None:
@@ -139,9 +134,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                     await update.callback_query.answer()
                     await self.telegram_service.edit_callback_message(update.callback_query, EXPIRED_MENU_TEXT)
                     return
+                users_to_state, context_token = self._resolve_tenant(update.effective_chat.id)
                 if not self.is_caller_allowed(users_to_state, callback_node):
-                    # Forwarded inline buttons keep working callback_data; gate admin actions
-                    # by the pressing user's role, mirroring Transition.allowed_roles for text.
                     await update.callback_query.answer()
                     return
                 await callback_node.handle(update)
@@ -151,6 +145,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                 # Handle pictures and else
                 return
 
+            users_to_state, context_token = self._resolve_tenant(update.effective_chat.id)
             node = self.nodes[users_to_state.state] if users_to_state else self.nodes[UserState.INIT]
             await node.handle(update, users_to_state)
         except BadRequest as e:
@@ -164,11 +159,16 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             if context_token is not None:
                 reset_current_team(context_token)
 
-    def _lookup_user_state(self, telegram_id) -> UsersToState | None:
+    def _resolve_tenant(self, telegram_id) -> tuple[UsersToState | None, object]:
+        """The one user-state read per update, plus the tenant-context switch derived
+        from it. INIT/REJECTED users have no team and only ever touch global
+        collections - any accidental domain read fails closed."""
         try:
-            return self.user_state_service.get_user_state(telegram_id)
+            users_to_state = self.user_state_service.get_user_state(telegram_id)
         except ObjectNotFoundException:
-            return None
+            users_to_state = None
+        token = set_current_team(users_to_state.team_id if users_to_state else None)
+        return users_to_state, token
 
     def initialize_nodes(self, telegram_service: TelegramService, user_state_service: UserStateService,
                          data_access: DataAccess, api_config: ApiConfig):
@@ -176,7 +176,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         init_node = InitNode(UserState.INIT, telegram_service, user_state_service, data_access, api_config, self.bot)
         init_node.add_transition('/start', init_node.handle_start, allowed_roles=RoleSet.REALLY_EVERYONE)
 
-        rejected_node = RejectedNode(UserState.INIT, telegram_service, user_state_service, data_access)
+        rejected_node = RejectedNode(UserState.INIT, telegram_service, user_state_service, data_access,
+                                     api_config.get_key('Telegram', 'group_chat_id'))
         rejected_node.add_transition(
             api_config.get_key('Chats', 'SPECTATOR_PASSWORD'),
             rejected_node.handle_correct_password,

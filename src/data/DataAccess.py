@@ -2,7 +2,7 @@ import pandas as pd
 from multipledispatch import dispatch
 
 from data.FirebaseRepository import FirebaseRepository
-from data.Tables import Tables
+from data.Tables import Tables, EVENT_ATTENDANCE_TABLES
 
 from Enums.UserState import UserState
 from Enums.Table import Table
@@ -25,16 +25,10 @@ from domain.entities.Settings import Settings
 from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException
 from Utils.ApiConfig import ApiConfig
 
-TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
-          Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
-          Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}
-
-
 class DataAccess(object):
 
     def __init__(self, api_config: ApiConfig):
-        self.tables = Tables(api_config)
-        self.firebase_repository = FirebaseRepository(api_config, self.tables)
+        self.firebase_repository = FirebaseRepository(api_config, Tables(api_config))
 
     #######
     # ADD #
@@ -138,7 +132,7 @@ class DataAccess(object):
         return self.firebase_repository.update(timekeeping_event, Table.TIMEKEEPING_TABLE)
 
     def update_attendance(self, attendance: Attendance, event_type: Event) -> Attendance:
-        table = TABLES[event_type]
+        table = EVENT_ATTENDANCE_TABLES[event_type]
         doc_id = self.firebase_repository.get_event_attendance_doc_id(attendance, table)
         if doc_id is None:
             return self._add_attendance(attendance, table)
@@ -193,7 +187,7 @@ class DataAccess(object):
 
     def get_attendance(self, telegram_id: str, event_doc_id: str, event_type: Event) -> Attendance:
         user = self.firebase_repository.get_user(telegram_id)
-        table = TABLES[event_type]
+        table = EVENT_ATTENDANCE_TABLES[event_type]
         try:
             return self.firebase_repository.get_attendance(user, event_doc_id, table)
         except ObjectNotFoundException:
@@ -285,7 +279,7 @@ class DataAccess(object):
         ]
         active_player_id_set = set(active_player_ids)
 
-        event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=TABLES[event_type])
+        event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=EVENT_ATTENDANCE_TABLES[event_type])
         for attendance in event_attendance_list:
             new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
             user_id = new_attendance.user_id
@@ -413,4 +407,4 @@ class DataAccess(object):
     ########
 
     def reset_all_player_event_attendance(self, event_type: Event, doc_id: str):
-        self.firebase_repository.reset_all_player_event_attendance(doc_id, TABLES[event_type])
+        self.firebase_repository.reset_all_player_event_attendance(doc_id, EVENT_ATTENDANCE_TABLES[event_type])

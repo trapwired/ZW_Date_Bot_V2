@@ -32,7 +32,7 @@ def data_access(monkeypatch, fake_firestore, api_config):
 
     Registers a single default team and sets it as the ambient tenant context, so the
     team-scoped collections most tests touch are reachable. The /start flow rebinds the
-    same team via find_team_by_group_chat ([Telegram] group_chat_id)."""
+    same team via find_team_by_group_chat on [Telegram] group_chat_id (the membership group)."""
     import firebase_admin
     import firebase_admin.credentials  # noqa: F401 - ensure submodule is importable before patching
     import data.FirebaseRepository as fr

@@ -36,10 +36,13 @@ async def test_start_as_non_member_is_rejected(node_handler, data_access, bot):
     assert_no_error_reported(bot)
 
 
-async def test_rejected_user_with_correct_password_reaches_default(node_handler, data_access, bot, api_config):
-    seed_user(data_access, NEW_USER_ID, Role.REJECTED, UserState.REJECTED)
+async def test_rejected_user_with_correct_password_reaches_default(node_handler, data_access, bot, api_config,
+                                                                   default_team):
+    seed_user(data_access, NEW_USER_ID, Role.REJECTED, UserState.REJECTED, team_id='')
 
     await drive(node_handler, NEW_USER_ID, api_config.get_key('Chats', 'SPECTATOR_PASSWORD'))
 
-    assert current_state(data_access, NEW_USER_ID) == UserState.DEFAULT
+    updated = data_access.get_user_state(NEW_USER_ID)
+    assert updated.state == UserState.DEFAULT
+    assert updated.team_id == default_team.doc_id     # spectators get the team too
     assert_no_error_reported(bot)

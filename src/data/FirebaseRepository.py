@@ -4,7 +4,7 @@ import firebase_admin
 from firebase_admin import firestore
 from google.cloud.firestore_v1 import FieldFilter
 
-from data.Tables import Tables
+from data.Tables import Tables, EVENT_TABLES, EVENT_ATTENDANCE_TABLES
 from data.TenantContext import current_team_id
 
 from Enums.Table import Table
@@ -105,15 +105,16 @@ class FirebaseRepository(object):
         query_ref = self._collection(table).document(doc_id)
         return query_ref.get()
 
-    def get_user(self, key: int | str) -> TelegramUser | None:
-        if isinstance(key, str):
-            res = self.get_document(key, Table.USERS_TABLE)
+    def get_user(self, telegram_id_or_doc_id: int | str) -> TelegramUser | None:
+        if isinstance(telegram_id_or_doc_id, str):
+            res = self.get_document(telegram_id_or_doc_id, Table.USERS_TABLE)
             return TelegramUser.from_dict(res.id, res.to_dict())
 
-        query_ref = self._collection(Table.USERS_TABLE).where(filter=FieldFilter("telegramId", "==", key))
+        query_ref = self._collection(Table.USERS_TABLE).where(
+            filter=FieldFilter("telegramId", "==", telegram_id_or_doc_id))
         res = query_ref.get()
         if len(res) == 0:
-            raise ObjectNotFoundException(self.tables.get(Table.USERS_TABLE), key)
+            raise ObjectNotFoundException(self.tables.get(Table.USERS_TABLE), telegram_id_or_doc_id)
         if len(res) == 1:
             return TelegramUser.from_dict(res[0].id, res[0].to_dict())
         else:
@@ -263,13 +264,20 @@ class FirebaseRepository(object):
         return entries
 
     def get_users_to_state_by_role(self, role: Role):
-        query_ref = self._collection(Table.USERS_TO_STATE_TABLE).where(
-            filter=FieldFilter("role", "==", role))
+        # users_to_state is a global identity table, but role queries are roster views -
+        # inherently team-scoped, so they filter on the ambient team (and fail closed
+        # without one) even though the collection itself is not partitioned.
+        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
+            .where(filter=FieldFilter("role", "==", role)) \
+            .where(filter=FieldFilter("teamId", "==", current_team_id()))
         return query_ref.get()
 
     def get_all_active_players_to_state(self):
-        query_ref = self._collection(Table.USERS_TO_STATE_TABLE).where(
-            filter=FieldFilter("role", "in", RoleSet.ACTIVE_PLAYERS))
+        # Roster view over the global identity table - team-filtered like
+        # get_users_to_state_by_role above.
+        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
+            .where(filter=FieldFilter("role", "in", RoleSet.ACTIVE_PLAYERS)) \
+            .where(filter=FieldFilter("teamId", "==", current_team_id()))
         entries = query_ref.get()
         return entries
 
@@ -356,26 +364,10 @@ class FirebaseRepository(object):
     ########
 
     def get_event_attendance_table(self, event_type: Event) -> Table:
-        match event_type:
-            case Event.GAME:
-                return Table.GAME_ATTENDANCE_TABLE
-            case Event.TRAINING:
-                return Table.TRAINING_ATTENDANCE_TABLE
-            case Event.TIMEKEEPING:
-                return Table.TIMEKEEPING_ATTENDANCE_TABLE
-            case _:
-                raise ValueError(f'Unhandled event type: {event_type}')
+        return EVENT_ATTENDANCE_TABLES[event_type]
 
     def get_event_table(self, event_type: Event) -> Table:
-        match event_type:
-            case Event.GAME:
-                return Table.GAMES_TABLE
-            case Event.TRAINING:
-                return Table.TRAININGS_TABLE
-            case Event.TIMEKEEPING:
-                return Table.TIMEKEEPING_TABLE
-            case _:
-                raise ValueError(f'Unhandled event type: {event_type}')
+        return EVENT_TABLES[event_type]
 
     def reset_all_player_event_attendance(self, doc_id: str, table: Table):
         collection_reference = self._collection(table)

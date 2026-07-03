@@ -1,5 +1,6 @@
 import configparser
 
+from Enums.Event import Event
 from Enums.Table import Table
 
 from Utils.ApiConfig import ApiConfig
@@ -28,3 +29,14 @@ class Tables(object):
 
     def get(self, table: Table):
         return self.tables[table]
+
+
+# The per-event-type table pairs, defined once so the repository and DataAccess
+# cannot drift apart.
+EVENT_TABLES = {Event.GAME: Table.GAMES_TABLE,
+                Event.TRAINING: Table.TRAININGS_TABLE,
+                Event.TIMEKEEPING: Table.TIMEKEEPING_TABLE}
+
+EVENT_ATTENDANCE_TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
+                           Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
+                           Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}

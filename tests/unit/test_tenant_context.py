@@ -87,3 +87,18 @@ def test_users_to_state_team_id_roundtrip(data_access):
         'role': int(Role.PLAYER),
     })
     assert legacy.team_id is None
+
+
+async def test_rosters_are_team_scoped(data_access):
+    # users_to_state is global, but role queries are roster views: a player of team A
+    # must be invisible in team B's roster and role counts.
+    from tests.helpers import seed_user
+    from Enums.Role import Role as R
+    from Enums.UserState import UserState as US
+    seed_user(data_access, 4200, R.PLAYER, US.DEFAULT)
+
+    other = data_access.add(Team('Other', group_chat_id=998))
+    with team_context(other.doc_id):
+        assert data_access.get_all_players() == []
+        assert data_access.get_role_user_count(R.PLAYER) == 0
+    assert len(data_access.get_all_players()) == 1
