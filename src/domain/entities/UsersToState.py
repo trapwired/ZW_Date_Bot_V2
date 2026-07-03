@@ -47,4 +47,4 @@ class UsersToState(DatabaseEntity):
                 'teamId': self.team_id}
 
     def __repr__(self):
-        return f"PlayerToState(userId={self.user_id}, state={UserState(self.state)}, additionalInfo={self.additional_info}, doc_id={self.doc_id}, role={self.role}, team_id={self.team_id})"
+        return f"UserToState(userId={self.user_id}, state={UserState(self.state)}, additionalInfo={self.additional_info}, doc_id={self.doc_id}, role={self.role}, team_id={self.team_id})"
