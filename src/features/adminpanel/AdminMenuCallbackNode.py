@@ -74,6 +74,12 @@ class AdminMenuCallbackNode(CallbackNode):
                 await self._prompt_spectator_password(update, query)
             case AdminMenu.SPECTATOR_PASSWORD_SAVE | AdminMenu.SPECTATOR_PASSWORD_CANCEL:
                 await self._finish_spectator_password(update, query, action)
+            case AdminMenu.TRAINERS_MENU:
+                await self._show_trainers_menu(query)
+            case AdminMenu.TRAINERS_LIST if len(args) == 1:
+                await self._show_trainer_list(query, Event(int(args[0])))
+            case AdminMenu.TRAINERS_TOGGLE if len(args) == 2:
+                await self._toggle_trainer(query, Event(int(args[0])), int(args[1]))
             case AdminMenu.WIZARD_CANCEL | AdminMenu.WIZARD_RESTART | AdminMenu.WIZARD_SAVE:
                 await self._handle_wizard_action(update, query, action)
             case _:
@@ -205,6 +211,48 @@ class AdminMenuCallbackNode(CallbackNode):
         user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, '')
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD)
         await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+
+    ############
+    # TRAINERS #
+    ############
+
+    async def _show_trainers_menu(self, query):
+        team = self.team_service.current_team()
+        names = dict(self._roster_members())
+
+        def render(trainer_ids: list[int]) -> str:
+            if not trainer_ids:
+                return Format.italic('group chat (no trainers set)')
+            return Format.escape(', '.join(names.get(chat_id, str(chat_id)) for chat_id in trainer_ids))
+
+        message = (Format.bold('Trainers') + '\n'
+                   'Attendance summaries and warnings go to the trainers of each event group; '
+                   'a group without trainers uses the team group chat instead.\n\n'
+                   f'{AdminMenu.TRAINER_GROUP_LABELS[Event.GAME]}: {render(team.trainers_games)}\n'
+                   f'{AdminMenu.TRAINER_GROUP_LABELS[Event.TRAINING]}: {render(team.trainers_training)}')
+        await self._edit(query, message, AdminMenu.build_trainers_menu_markup())
+
+    async def _show_trainer_list(self, query, event_type: Event):
+        trainer_ids = self.team_service.current_team().trainers_for(event_type)
+        entries = self._trainer_candidates(trainer_ids)
+        message = (f'{AdminMenu.TRAINER_GROUP_LABELS[event_type]} - tap a person to add or remove them '
+                   'as trainer. Changes apply immediately.')
+        await self._edit(query, message, AdminMenu.build_trainer_toggle_markup(event_type, entries, trainer_ids))
+
+    async def _toggle_trainer(self, query, event_type: Event, chat_id: int):
+        self.team_service.toggle_trainer(event_type, chat_id)
+        await self._show_trainer_list(query, event_type)
+
+    def _trainer_candidates(self, current_trainer_ids: list[int]) -> list[tuple[int, str]]:
+        members = self._roster_members()
+        known_ids = {chat_id for chat_id, _ in members}
+        # Config-seeded or hand-edited trainer ids outside the roster stay visible/removable.
+        strays = [(chat_id, str(chat_id)) for chat_id in current_trainer_ids if chat_id not in known_ids]
+        return members + strays
+
+    def _roster_members(self) -> list[tuple[int, str]]:
+        return [(user.telegramId, PrintUtils.get_player_display_name(user))
+                for user in self.data_access.get_all_players()]
 
     ####################
     # ADD-EVENT WIZARD #

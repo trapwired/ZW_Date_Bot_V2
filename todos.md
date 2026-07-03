@@ -6,14 +6,6 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Features (M)
 
-- [ ] **Configure team trainers from the bot.** `/register_team` creates teams with
-  empty `trainersGames`/`trainersTraining` and no flow ever sets them — today the only
-  way is hand-editing the Firestore doc, and `TeamService`'s process-lifetime cache
-  ignores console edits until a bot restart. Until this exists, every attendance
-  summary and low-availability warning for such teams lands in the whole group chat
-  (the intended `Team.trainer_chat_ids` fallback — but as a permanent default, not a
-  bridge). Natural home: an admin-panel action (like the 🔑 password flow) writing via
-  `TeamService.update_team` (currently caller-less), which also invalidates the cache.
 - [ ] **Admin `/announce` broadcast** ("what's new" to admins/players).
   - Reuse the existing fan-out (`notify_all_players` / `TelegramService`); add a
     shared `NotificationService.broadcast(role_set, message)` the scheduling loops
@@ -47,6 +39,16 @@ start and a rough effort (S / M / L). Pick top-down within a group.
     every read+write); `SchedulingService`'s global loops become per-team.
 
 ## Optional / nice-to-have
+
+- [ ] **Guard forwarded admin buttons against cross-team writes.** Callback
+  authorization gates only on the presser's role; the ambient tenant is the
+  presser's team. A forwarded roles button (`RA#A#<user_doc_id>#<role>`, global
+  users table) or trainer toggle (`AP#TX#<event>#<id>`, raw telegram id valid in
+  any tenant) pressed by an admin of ANOTHER team writes into the presser's team
+  with foreign ids. Low risk (requires an admin knowingly pressing a foreign
+  button) but systematic: consider stamping the team id into admin callback data
+  and dropping mismatches in `NodeHandler.is_caller_allowed`, which fixes every
+  admin slice at once instead of per-button roster checks.
 
 - [ ] **Invite deep-links for spectators (and maybe players).** Replace/augment the
   shared spectator password with admin-generated links (`t.me/<Bot>?start=<random
@@ -84,3 +86,30 @@ start and a rough effort (S / M / L). Pick top-down within a group.
     section.
   - Prerequisites before advertising: onboarding guide (PR4), invite deep-links or
     a polished password flow, and a support/contact path for new team admins.
+
+## Maybe
+
+Fun/engagement ideas, not committed. Each is its own vertical slice under
+`features/`; attendance + reminder stats already carry most of the data.
+
+- [ ] **Season Wrapped 🎁 (M).** End-of-season "Spotify Wrapped" per player (DM) +
+  team ranking in the group: most reliable, fastest responder, serial last-minute
+  canceller, longest attendance streak, "most likely to say UNSURE". Data exists in
+  attendance + reminder statistics — but the season reset wipes reminder stats, so
+  check what must be snapshotted BEFORE the reset (hook into the End-season flow).
+  Fire it from the reset confirmation: "season ended - here's your Wrapped".
+- [ ] **Tippspiel / prediction game 🎯 (M).** Before each game players predict the
+  score via inline buttons; admin enters the result afterwards; season leaderboard.
+  Needs a result field on Game — useful on its own (website, stats). Weekly
+  engagement loop.
+- [ ] **Bierkasse / fine ledger 🍺 (M).** Bot auto-suggests fines from events it
+  already witnesses (cancel <24h before a game, no response by game day), admin
+  confirms with one tap; running tab per player, `/schulden` shows it. Manual
+  entries for offenses the bot can't see (late arrival).
+- [ ] **Roast-mode reminders 🔥 (S).** Escalating reminder personality: first polite,
+  second sassy, third savage. Static line pool, per-team on/off toggle (team doc
+  flag). Cheap, screenshot-worthy — free bot advertising.
+- [ ] **MVP voting 🏆 (S-M).** After each game players vote MVP (not themselves),
+  reveal in the group, season MVP table. Pairs with the Tippspiel's result entry.
+- [ ] **Mitfahrbörse / carpool 🚗 (M).** Per away game: drivers tap "I drive, N
+  seats", players claim seats, bot posts the manifest with the game reminder.

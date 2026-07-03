@@ -78,6 +78,17 @@ class TeamService:
             # next read to refetch the persisted truth instead of a phantom password.
             self._all_teams = None
 
+    def toggle_trainer(self, event_type, chat_id: int) -> None:
+        """Mutate + persist + cache-invalidate in one step so no caller can flip a
+        trainer flag on the cached Team and forget the write."""
+        team = self.current_team()
+        team.toggle_trainer(event_type, chat_id)
+        self.update_team(team)
+
     def update_team(self, team: Team) -> None:
-        self.data_access.update(team)
-        self._all_teams = None
+        try:
+            self.data_access.update(team)
+        finally:
+            # Also on failure: callers mutate the cached Team before persisting, so force
+            # the next read to refetch the stored truth instead of a phantom edit.
+            self._all_teams = None
