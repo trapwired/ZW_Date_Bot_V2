@@ -134,7 +134,7 @@ class TelegramService(object):
         messages_to_send = PrintUtils.split_message(message)
         if len(messages_to_send) > 1:
             await self.send_maintainer_message('Message too long (3): \n\n' + message)
-        chat_ids = self.get_chat_ids(event_type)
+        chat_ids = self.team_service.current_team().trainer_chat_ids(event_type)
         for chat_id in chat_ids:
             for message_to_send in messages_to_send:
                 await self._send_message(chat_id=chat_id, message=message_to_send, reply_markup=None)
@@ -213,9 +213,6 @@ class TelegramService(object):
         if all_commands is None or len(all_commands) == 0:
             return None
         return ReplyKeyboardMarkup(generate_keyboard(all_commands), one_time_keyboard=False)
-
-    def get_chat_ids(self, event_type: Event) -> list[int]:
-        return self.team_service.current_team().trainer_chat_ids(event_type)
 
     async def delete_message(self, message_id: int | None, chat_id: int):
         """Best-effort chat cleanup (e.g. consumed wizard prompts); deleting can fail
