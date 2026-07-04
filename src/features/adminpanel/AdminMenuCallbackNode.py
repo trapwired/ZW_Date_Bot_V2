@@ -1,4 +1,5 @@
 from telegram import Update
+from telegram.error import TelegramError
 
 from framework.Nodes.CallbackNode import CallbackNode
 
@@ -229,21 +230,35 @@ class AdminMenuCallbackNode(CallbackNode):
         # Remember which menu message to keep re-rendering while the admin types;
         # nothing is sent until they pick a delivery channel.
         user_to_state.additional_info = InlineInputStaging.build(
-            query.message.message_id, query.message.chat_id, '')
+            query.message.message_id, query.message.chat.id, '')
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_ANNOUNCE)
         await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
 
     async def _finish_announcement(self, update: Update, query, action: str):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        if user_to_state.state is not UserState.ADMIN_ANNOUNCE:
+            # Stale button from an abandoned flow: additional_info may hold ANOTHER
+            # flow's staged value (a password, a URL) - never broadcast it, and never
+            # touch that flow's state.
+            await self._edit(query, 'This announcement is no longer active - start again via the admin menu.',
+                             AdminMenu.build_back_to_panel_markup())
+            return
         _, _, announcement = InlineInputStaging.parse(user_to_state.additional_info)
         if not announcement:
-            # Delivery pressed before any text arrived (stale button) - keep prompting.
+            # Delivery pressed before any text arrived - keep prompting.
             await self._edit(query, 'There is no announcement text yet - send me the text first.',
                              AdminMenu.build_typed_input_prompt_markup())
             return
 
         if action == AdminMenu.ANNOUNCE_TO_GROUP:
-            await self.announce_service.send_to_group(announcement)
+            try:
+                await self.announce_service.send_to_group(announcement)
+            except TelegramError:
+                # Keep state + staged text so the admin can retry or cancel.
+                await self._edit(query, '⚠️ Could not post in the group chat - is the bot still a member? '
+                                        'The announcement was not sent.',
+                                 AdminMenu.build_typed_input_prompt_markup())
+                return
             confirmation = '✅ The announcement was posted in the group chat.'
         else:
             reached = await self.announce_service.send_to_players(announcement)

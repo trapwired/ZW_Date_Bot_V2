@@ -34,6 +34,16 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Optional / nice-to-have
 
+- [ ] **Extract the typed-input flow skeleton (rule of three hit).** UpdateWebsiteNode,
+  UpdateSpectatorPasswordNode and AnnounceNode are near-verbatim copies of the same
+  dance (parse staging -> strip -> restage -> edit menu message -> delete loose
+  message), and AdminMenuCallbackNode holds three copies each of the prompt tail and
+  the finish tail (clear staging + state -> confirmation). Extract a shared
+  TypedInputNode base (hooks: confirm text, confirm markup, cancel sentence) plus
+  `_start_typed_input`/`_finish_typed_input` helpers in the callback node, so a fix
+  to the mechanics can't drift across the three flows. Pure refactor, own PR.
+
+
 - [ ] **Guard forwarded admin buttons against cross-team writes.** Callback
   authorization gates only on the presser's role; the ambient tenant is the
   presser's team. A forwarded roles button (`RA#A#<user_doc_id>#<role>`, global

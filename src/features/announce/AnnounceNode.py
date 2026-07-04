@@ -7,6 +7,7 @@ from Enums.UserState import UserState
 from domain.entities.UsersToState import UsersToState
 
 from features.adminpanel import AdminMenu
+from features.announce.AnnounceService import render_announcement, TELEGRAM_MESSAGE_LIMIT
 
 from Utils import Format
 from Utils import InlineInputStaging
@@ -39,16 +40,19 @@ class AnnounceNode(Node):
         # retyping just replaces the staged value.
         message_id, chat_id, _ = InlineInputStaging.parse(user_to_state.additional_info)
         announcement = update.message.text.strip()
-        user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, announcement)
-        self.user_state_service.update_user_state(user_to_state, self.state)
 
-        message = f'Send this announcement?\n\n{Format.escape(announcement)}'
-        markup = AdminMenu.build_announce_confirm_markup()
-        if message_id is not None:
-            await self.telegram_service.edit_inline_message_text(message, message_id, chat_id, markup)
-            # The typed text now lives in the menu message - drop the loose chat message.
-            await self.telegram_service.delete_message(update.message.message_id, update.effective_chat.id)
+        overlength = len(render_announcement(announcement)) - TELEGRAM_MESSAGE_LIMIT
+        if overlength > 0:
+            # Not staged: an over-long text must never sit behind the send buttons.
+            message = (f'⚠️ That announcement is about {overlength} characters too long for one '
+                       'Telegram message - please shorten it and send it again.')
+            markup = AdminMenu.build_typed_input_prompt_markup()
         else:
-            # Staged before the menu message was tracked (legacy in-flight flow).
-            await self.telegram_service.send_message(
-                update=update, all_buttons=None, message=message, reply_markup=markup)
+            user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, announcement)
+            self.user_state_service.update_user_state(user_to_state, self.state)
+            message = f'Send this announcement?\n\n{Format.escape(announcement)}'
+            markup = AdminMenu.build_announce_confirm_markup()
+
+        await self.telegram_service.edit_inline_message_text(message, message_id, chat_id, markup)
+        # The typed text now lives in the menu message - drop the loose chat message.
+        await self.telegram_service.delete_message(update.message.message_id, update.effective_chat.id)
