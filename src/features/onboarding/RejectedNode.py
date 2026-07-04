@@ -9,6 +9,8 @@ from framework.Nodes.Node import Node
 from domain import SpectatorPasswordPolicy
 from domain.entities.UsersToState import UsersToState
 
+from features.onboarding import WelcomeGuide
+
 from Utils import DateTimeUtils
 
 LOCKED_OUT_TEXT = 'Too many attempts - please try again tomorrow.'
@@ -46,6 +48,10 @@ class RejectedNode(Node):
             all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
             message_type=MessageType.WELCOME,
             message_extra_text=team.name)
+        await self.telegram_service.send_message(
+            update=update,
+            all_buttons=None,
+            message=WelcomeGuide.build_guide(user_to_state.role, team.name))
 
     async def _register_failed_attempt(self, update: Update, user_to_state: UsersToState, attempts, now):
         record = SpectatorPasswordPolicy.register_failure(attempts, now)
