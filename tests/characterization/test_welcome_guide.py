@@ -10,6 +10,7 @@ from tests.helpers import drive, seed_user, assert_no_error_reported
 
 PLAYER_ID = 1600
 SPECTATOR_ID = 1601
+ADMIN_ID = 1602
 
 
 async def test_player_gets_guide_after_welcome_on_start(node_handler, data_access, bot, default_team):
@@ -22,6 +23,19 @@ async def test_player_gets_guide_after_welcome_on_start(node_handler, data_acces
     guide = texts[1]
     assert 'events' in guide and 'Reminders' in guide and default_team.name in guide
     assert 'admin' not in guide.lower()
+    assert_no_error_reported(bot)
+
+
+async def test_restarting_admin_keeps_role_and_gets_admin_addendum(node_handler, data_access, bot, default_team):
+    # An admin whose state healed back to INIT re-runs /start: no demotion to PLAYER,
+    # and their guide includes the admin-panel block.
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.INIT, team_id='')
+
+    await drive(node_handler, ADMIN_ID, '/start')
+
+    assert data_access.get_user_state(ADMIN_ID).role == Role.ADMIN
+    guide = bot.texts_to(ADMIN_ID)[1]
+    assert 'admin' in guide and 'Reminders' in guide
     assert_no_error_reported(bot)
 
 

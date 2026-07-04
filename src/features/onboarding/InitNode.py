@@ -51,7 +51,10 @@ class InitNode(Node):
         telegram_id = update.effective_chat.id
         team = await self.find_membership_team(telegram_id)
         if team is not None:
-            self.user_state_service.join_team(user_to_state, team.doc_id, Role.PLAYER)
+            # A re-/starting admin (e.g. state healed back to INIT) must not be
+            # demoted - everyone else joins as PLAYER.
+            role = Role.ADMIN if user_to_state.role is Role.ADMIN else Role.PLAYER
+            self.user_state_service.join_team(user_to_state, team.doc_id, role)
             await self.telegram_service.send_message(
                 update=update,
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
