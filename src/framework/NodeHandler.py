@@ -29,6 +29,8 @@ from features.teams import TeamRegistration as team_registration_command
 from features.teams.TeamRegistration import TeamRegistration
 from features.teams.UpdateSpectatorPasswordNode import UpdateSpectatorPasswordNode
 from features.website.UpdateWebsiteNode import UpdateWebsiteNode
+from features.announce.AnnounceNode import AnnounceNode
+from features.announce.AnnounceService import AnnounceService
 
 from features.events import EventsMenu
 from features.events.EventsView import EventsView
@@ -212,6 +214,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, telegram_service, user_state_service, data_access,
             self.team_service)
 
+        announce_node = AnnounceNode(UserState.ADMIN_ANNOUNCE, telegram_service, user_state_service, data_access)
+
         return {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
@@ -220,6 +224,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_UPDATE_EVENT_FIELD: edit_event_field_node,
             UserState.ADMIN_UPDATE_WEBSITE: update_website_node,
             UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD: update_spectator_password_node,
+            UserState.ADMIN_ANNOUNCE: announce_node,
         }
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
@@ -230,7 +235,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             self.attendance_service, self.event_service, self.events_view)
         self.admin_menu_callback_node = AdminMenuCallbackNode(
             telegram_service, data_access, trigger_service, user_state_service, self.statistics_service,
-            self.website_service, self.event_service, self.nodes[UserState.ADMIN_ADD_EVENT], self.team_service)
+            self.website_service, self.event_service, self.nodes[UserState.ADMIN_ADD_EVENT], self.team_service,
+            AnnounceService(data_access, telegram_service))
         self.assign_roles_callback_node = AssignRolesCallbackNode(
             telegram_service, data_access, trigger_service, user_state_service, self, self.role_service)
 

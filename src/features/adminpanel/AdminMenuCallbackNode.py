@@ -34,7 +34,7 @@ class AdminMenuCallbackNode(CallbackNode):
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  user_state_service: UserStateService, statistics_service, website_service, event_service,
-                 add_event_node, team_service):
+                 add_event_node, team_service, announce_service):
         super().__init__(telegram_service, data_access, trigger_service)
         self.user_state_service = user_state_service
         self.statistics_service = statistics_service
@@ -42,6 +42,7 @@ class AdminMenuCallbackNode(CallbackNode):
         self.event_service = event_service
         self.add_event_node = add_event_node
         self.team_service = team_service
+        self.announce_service = announce_service
 
     async def handle(self, update: Update):
         query = update.callback_query
@@ -74,6 +75,10 @@ class AdminMenuCallbackNode(CallbackNode):
                 await self._prompt_spectator_password(update, query)
             case AdminMenu.SPECTATOR_PASSWORD_SAVE | AdminMenu.SPECTATOR_PASSWORD_CANCEL:
                 await self._finish_spectator_password(update, query, action)
+            case AdminMenu.ANNOUNCE_PROMPT:
+                await self._prompt_announcement(update, query)
+            case AdminMenu.ANNOUNCE_TO_PLAYERS | AdminMenu.ANNOUNCE_TO_GROUP:
+                await self._finish_announcement(update, query, action)
             case AdminMenu.TRAINERS_MENU:
                 await self._show_trainers_menu(query)
             case AdminMenu.TRAINERS_LIST if len(args) == 1:
@@ -211,6 +216,42 @@ class AdminMenuCallbackNode(CallbackNode):
         user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, '')
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD)
         await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+
+    ################
+    # ANNOUNCEMENT #
+    ################
+
+    async def _prompt_announcement(self, update: Update, query):
+        message = ('Send me the announcement text. You will choose afterwards whether it goes '
+                   'to every player privately or into the team group chat.')
+
+        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        # Remember which menu message to keep re-rendering while the admin types;
+        # nothing is sent until they pick a delivery channel.
+        user_to_state.additional_info = InlineInputStaging.build(
+            query.message.message_id, query.message.chat_id, '')
+        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_ANNOUNCE)
+        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+
+    async def _finish_announcement(self, update: Update, query, action: str):
+        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        _, _, announcement = InlineInputStaging.parse(user_to_state.additional_info)
+        if not announcement:
+            # Delivery pressed before any text arrived (stale button) - keep prompting.
+            await self._edit(query, 'There is no announcement text yet - send me the text first.',
+                             AdminMenu.build_typed_input_prompt_markup())
+            return
+
+        if action == AdminMenu.ANNOUNCE_TO_GROUP:
+            await self.announce_service.send_to_group(announcement)
+            confirmation = '✅ The announcement was posted in the group chat.'
+        else:
+            reached = await self.announce_service.send_to_players(announcement)
+            confirmation = f'✅ The announcement was sent to {reached} players.'
+
+        user_to_state.additional_info = ''
+        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+        await self._edit(query, confirmation, AdminMenu.build_back_to_panel_markup())
 
     ############
     # TRAINERS #

@@ -6,12 +6,6 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Features (M)
 
-- [ ] **Admin `/announce` broadcast** ("what's new" to admins/players).
-  - Reuse the existing fan-out (`notify_all_players` / `TelegramService`); add a
-    shared `NotificationService.broadcast(role_set, message)` the scheduling loops
-    can use too.
-  - Its own vertical slice; prefer an admin `/announce` command over a hardcoded
-    deploy-time changelog script.
 - [ ] **Per-user language switch (i18n).**
   - A `language` field on the user (`UsersToState` / `TelegramUser`); resolve it once
     per update (like the planned tenant context), don't thread it through every call.
