@@ -80,6 +80,11 @@ class AdminMenuCallbackNode(CallbackNode):
                 await self._prompt_team_name(update, query)
             case AdminMenu.TEAM_NAME_SAVE | AdminMenu.TEAM_NAME_CANCEL:
                 await self._finish_team_name(update, query, action)
+            case AdminMenu.SPECTATORS_MENU:
+                await self._show_spectators_menu(query)
+            case AdminMenu.SETUP_MENU:
+                await self._edit(query, 'Team setup - rarely needed, all in one place.',
+                                 AdminMenu.build_setup_menu_markup())
             case AdminMenu.SPECTATOR_INVITE:
                 await self._create_spectator_invite(query)
             case AdminMenu.ANNOUNCE_PROMPT:
@@ -259,9 +264,21 @@ class AdminMenuCallbackNode(CallbackNode):
         await self._finish_typed_input(query, user_to_state,
                                        f'✅ The team is now named "{Format.escape(new_name.strip())}".')
 
-    ####################
-    # SPECTATOR INVITE #
-    ####################
+    ##############
+    # SPECTATORS #
+    ##############
+
+    async def _show_spectators_menu(self, query):
+        team = self.team_service.current_team()
+        password = Format.escape(team.spectator_password) if team.spectator_password \
+            else Format.italic('not set - nobody can join by password yet')
+        outstanding = len(team.invite_tokens)
+        message = (Format.bold('Spectators') + '\n'
+                   'Fans and supporters follow the team read-only. They join with the '
+                   'password or a one-time invite link.\n\n'
+                   f'🔑 Password: {password}\n'
+                   f'🔗 Outstanding invite links: {outstanding}')
+        await self._edit(query, message, AdminMenu.build_spectators_menu_markup())
 
     async def _create_spectator_invite(self, query):
         token = self.team_service.create_spectator_invite(self.team_service.current_team())
