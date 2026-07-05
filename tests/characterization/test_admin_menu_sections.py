@@ -7,7 +7,7 @@ shown) and ⚙️ Setup (team name, website, trainers).
 from Enums.Role import Role
 from Enums.UserState import UserState
 from features.adminpanel import AdminMenu
-from framework.Services.TeamService import TeamService
+from Utils import Format
 from tests.helpers import drive_callback, seed_user, assert_no_error_reported
 
 ADMIN_ID = 2200
@@ -30,14 +30,16 @@ async def test_panel_is_three_rows_with_the_two_sections(node_handler, data_acce
     assert_no_error_reported(bot)
 
 
-async def test_spectators_section_shows_password_and_invite_count(node_handler, data_access, bot, default_team):
+async def test_spectators_section_shows_password_and_invite_count(node_handler, services, data_access, bot,
+                                                                  default_team):
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
-    TeamService(data_access).create_spectator_invite(default_team)
+    # Mint through the handler's own TeamService so its cache and the test agree.
+    services["team_service"].create_spectator_invite(default_team)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATORS_MENU))
 
     edit = update.callback_query.edits[-1]
-    assert default_team.spectator_password in edit.text
+    assert Format.escape(default_team.spectator_password) in edit.text
     assert 'Outstanding invite links: 1' in edit.text
     data = _button_data(edit)
     assert AdminMenu.encode(AdminMenu.SPECTATOR_PASSWORD_PROMPT) in data
