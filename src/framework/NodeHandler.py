@@ -49,11 +49,13 @@ from data.DataAccess import DataAccess
 from data.TenantContext import set_current_team, reset_current_team
 
 from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundException, MissingCommandDescriptionException
+from framework import TeamStamp
 from framework.CommandDescriptions import CommandDescriptions
 from Utils.ApiConfig import ApiConfig
 
 EXPIRED_MENU_TEXT = ('This menu is from an older version of the bot and no longer works - '
                      'use the keyboard below (Events / Admin) instead.')
+FOREIGN_TEAM_MENU_TEXT = 'This menu belongs to a different team.'
 
 
 def add_nodes_reference_to_all_nodes(nodes: dict):
@@ -157,6 +159,15 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                 users_to_state, context_token = self._resolve_tenant(update.effective_chat.id)
                 if not self.is_caller_allowed(users_to_state, callback_node):
                     await update.callback_query.answer()
+                    return
+                stamped_team = TeamStamp.stamped_team(update.callback_query.data)
+                if stamped_team is not None and stamped_team != users_to_state.team_id:
+                    # A forwarded button from another team's menu: acting would write
+                    # foreign ids into the presser's team. Unstamped (pre-stamp) buttons
+                    # pass - they lose nothing they had.
+                    await update.callback_query.answer()
+                    await self.telegram_service.edit_callback_message(
+                        update.callback_query, FOREIGN_TEAM_MENU_TEXT)
                     return
                 await callback_node.handle(update)
                 return
