@@ -63,8 +63,9 @@ async def test_pre_stamp_buttons_keep_working(node_handler, data_access, bot):
 
 
 def test_longest_stamped_callback_fits_telegrams_64_byte_limit():
+    from data.TenantContext import team_context
     doc_id = 'x' * 20                                     # Firestore auto-id length
-    longest = RoleAssignment.encode_assign(doc_id, Role.INACTIVE)
-    bare, stamp = TeamStamp.split(longest)
+    with team_context(doc_id):
+        bare = TeamStamp.strip(RoleAssignment.encode_assign(doc_id, Role.INACTIVE))
     padded = f'{bare}{TeamStamp.DELIMITER}{TeamStamp.MARKER}{doc_id}'   # worst-case stamp length
     assert len(padded.encode()) <= 64

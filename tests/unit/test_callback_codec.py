@@ -9,6 +9,8 @@ from Enums.EventField import EventField
 from Enums.AttendanceState import AttendanceState
 from Enums.Role import Role
 
+from data.TenantContext import team_context
+
 from Utils import CallbackUtils
 from features.events import EventsMenu
 from features.adminpanel import AdminMenu
@@ -58,16 +60,18 @@ def test_legacy_attendance_rejects_other_old_formats():
 # --- admin menu codec (AdminMenu) ---------------------------------------------
 
 def test_admin_menu_exact_wire_format():
-    assert AdminMenu.encode(AdminMenu.PANEL) == "AP#P"
-    assert AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)) == "AP#A#0"
-    assert AdminMenu.encode(AdminMenu.STATS_MENU, AdminMenu.REMINDER_STATISTICS) == "AP#S#REM"
-    assert AdminMenu.encode(AdminMenu.WIZARD_SAVE) == "AP#ZS"
+    with team_context('team1'):
+        assert AdminMenu.encode(AdminMenu.PANEL) == "AP#P#t:team1"
+        assert AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)) == "AP#A#0#t:team1"
+        assert AdminMenu.encode(AdminMenu.STATS_MENU, AdminMenu.REMINDER_STATISTICS) == "AP#S#REM#t:team1"
+        assert AdminMenu.encode(AdminMenu.WIZARD_SAVE) == "AP#ZS#t:team1"
 
 
 def test_admin_menu_detection_and_parse():
     assert AdminMenu.is_admin_menu_callback("AP#P") is True
     assert AdminMenu.is_admin_menu_callback("EV#L#0") is False
-    assert AdminMenu.parse("AP#A#0") == (AdminMenu.ADD_CHOOSER, ["0"])
+    assert AdminMenu.parse("AP#A#0") == (AdminMenu.ADD_CHOOSER, ["0"])   # pre-stamp buttons
+    assert AdminMenu.parse("AP#A#0#t:team1") == (AdminMenu.ADD_CHOOSER, ["0"])
     assert AdminMenu.parse("EV#L#0") is None
 
 
@@ -89,14 +93,16 @@ def test_additional_information_roundtrip_and_format():
 # --- role-assignment codec (RoleAssignment) ---------------------------------
 
 def test_role_callback_exact_wire_format():
-    assert RoleAssignment.encode_list_users(Role.PLAYER) == "ROLES#R#0"
-    assert RoleAssignment.encode_select_user("u1") == "ROLES#U#u1"
-    assert RoleAssignment.encode_assign("u1", Role.ADMIN) == "ROLES#A#u1#42"
-    assert RoleAssignment.encode_home() == "ROLES#H"
+    with team_context('team1'):
+        assert RoleAssignment.encode_list_users(Role.PLAYER) == "ROLES#R#0#t:team1"
+        assert RoleAssignment.encode_select_user("u1") == "ROLES#U#u1#t:team1"
+        assert RoleAssignment.encode_assign("u1", Role.ADMIN) == "ROLES#A#u1#42#t:team1"
+        assert RoleAssignment.encode_home() == "ROLES#H#t:team1"
 
 
 def test_role_callback_detection_and_parse():
     assert RoleAssignment.is_role_callback("ROLES#A#u1#42") is True
     assert RoleAssignment.is_role_callback("EDIT#GAME#YES#x") is False
-    assert RoleAssignment.parse("ROLES#A#u1#42") == ("A", ["u1", "42"])
+    assert RoleAssignment.parse("ROLES#A#u1#42") == ("A", ["u1", "42"])   # pre-stamp buttons
+    assert RoleAssignment.parse("ROLES#A#u1#42#t:team1") == ("A", ["u1", "42"])
     assert RoleAssignment.parse("EDIT#GAME#YES#x") is None

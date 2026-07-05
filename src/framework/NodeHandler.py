@@ -55,6 +55,7 @@ from Utils.ApiConfig import ApiConfig
 
 EXPIRED_MENU_TEXT = ('This menu is from an older version of the bot and no longer works - '
                      'use the keyboard below (Events / Admin) instead.')
+FOREIGN_TEAM_MENU_TEXT = 'This menu belongs to a different team.'
 
 
 def add_nodes_reference_to_all_nodes(nodes: dict):
@@ -166,7 +167,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                     # pass - they lose nothing they had.
                     await update.callback_query.answer()
                     await self.telegram_service.edit_callback_message(
-                        update.callback_query, 'This menu belongs to a different team.')
+                        update.callback_query, FOREIGN_TEAM_MENU_TEXT)
                     return
                 await callback_node.handle(update)
                 return

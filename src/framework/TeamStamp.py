@@ -11,30 +11,36 @@ The stamp is the LAST '#'-segment, marked 't:' (Firestore ids are alphanumeric, 
 the marker cannot collide with a real argument). Buttons rendered before this
 existed carry no stamp and stay usable - they keep the old, unguarded behavior
 until their menus get re-rendered.
+
+Only the admin channels (AP#, ROLES#) are stamped: their payloads (telegram ids,
+global user doc ids) are valid in ANY tenant. EV# already fails closed cross-team
+on team-scoped doc ids, and ONB# is for teamless users - both stay unstamped on
+purpose.
 """
-from data.TenantContext import peek_team_id
+from data.TenantContext import current_team_id
 
 DELIMITER = '#'
 MARKER = 't:'
 
 
 def stamp(data: str) -> str:
-    """Append the ambient team's id; outside a tenant context data stays bare."""
-    team_id = peek_team_id()
-    return f'{data}{DELIMITER}{MARKER}{team_id}' if team_id else data
+    """Append the ambient team's id. Fails loud (MissingTenantContextError) outside
+    a tenant context - a stamped menu rendered without one would silently disable
+    the guard for every button on it."""
+    return f'{data}{DELIMITER}{MARKER}{current_team_id()}'
 
 
 def strip(data: str) -> str:
-    bare, _ = split(data)
+    bare, _ = _split(data)
     return bare
 
 
 def stamped_team(data: str) -> str | None:
-    _, team_id = split(data)
+    _, team_id = _split(data)
     return team_id
 
 
-def split(data: str) -> tuple[str, str | None]:
+def _split(data: str) -> tuple[str, str | None]:
     head, _, tail = data.rpartition(DELIMITER)
     if tail.startswith(MARKER):
         return head, tail[len(MARKER):]

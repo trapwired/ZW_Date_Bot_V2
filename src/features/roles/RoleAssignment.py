@@ -17,20 +17,25 @@ ASSIGN = 'A'       # write a new role to one user
 HOME = 'H'         # back to the role overview
 
 
+def _encode(action: str, *args) -> str:
+    # THE encoder: every button goes through here so none can miss the team stamp.
+    return TeamStamp.stamp(DELIMITER.join([PREFIX, action, *[str(a) for a in args]]))
+
+
 def encode_list_users(role: Role) -> str:
-    return TeamStamp.stamp(DELIMITER.join([PREFIX, LIST_USERS, str(int(role))]))
+    return _encode(LIST_USERS, int(role))
 
 
 def encode_select_user(user_doc_id: str) -> str:
-    return TeamStamp.stamp(DELIMITER.join([PREFIX, SELECT_USER, user_doc_id]))
+    return _encode(SELECT_USER, user_doc_id)
 
 
 def encode_assign(user_doc_id: str, new_role: Role) -> str:
-    return TeamStamp.stamp(DELIMITER.join([PREFIX, ASSIGN, user_doc_id, str(int(new_role))]))
+    return _encode(ASSIGN, user_doc_id, int(new_role))
 
 
 def encode_home() -> str:
-    return TeamStamp.stamp(DELIMITER.join([PREFIX, HOME]))
+    return _encode(HOME)
 
 
 def is_role_callback(data: str) -> bool:
