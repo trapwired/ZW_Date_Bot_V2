@@ -116,6 +116,7 @@ async def test_removal_from_fresh_team_rolls_the_setup_back(node_handler, data_a
     assert any('cancelled' in t.lower() for t in bot.texts_to(ADDER_ID))
     maintainer = int(api_config.get_key('Chat_Ids', 'MAINTAINER'))
     assert any('rolled back' in t for t in bot.texts_to(maintainer))
+    assert_no_error_reported(bot)
 
 
 async def test_removal_from_team_with_more_members_keeps_the_data(node_handler, data_access, bot, api_config):
@@ -130,6 +131,7 @@ async def test_removal_from_team_with_more_members_keeps_the_data(node_handler, 
     assert data_access.get_user_state(ADDER_ID).role == Role.ADMIN                  # untouched
     maintainer = int(api_config.get_key('Chat_Ids', 'MAINTAINER'))
     assert any('Data kept' in t for t in bot.texts_to(maintainer))
+    assert_no_error_reported(bot)
 
 
 async def test_teamless_start_shows_two_way_choice(node_handler, data_access, bot):
@@ -188,6 +190,7 @@ async def test_removal_keeps_team_whose_only_event_is_in_the_past(node_handler, 
     assert TeamService(data_access).find_team_by_group_chat(GROUP) is not None
     maintainer = int(api_config.get_key('Chat_Ids', 'MAINTAINER'))
     assert any('Data kept' in t for t in bot.texts_to(maintainer))
+    assert_no_error_reported(bot)
 
 
 async def test_stale_team_name_save_never_commits_another_flows_staged_value(node_handler, data_access, bot,

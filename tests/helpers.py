@@ -41,21 +41,26 @@ async def drive_group(node_handler, group_chat_id: int, from_user_id: int, text:
 
 def make_my_chat_member_update(group_chat_id: int, title: str, user_id: int, first_name: str,
                                old_status: str, new_status: str):
-    """The bot's own membership changed in a group. SimpleNamespace like
-    make_callback_update; telegramId/firstname feed TelegramService's non-Update
-    send path (group replies)."""
-    member = SimpleNamespace(id=user_id, first_name=first_name, last_name='User')
-    return SimpleNamespace(
-        effective_chat=SimpleNamespace(id=group_chat_id, type=ChatType.SUPERGROUP, title=title),
-        effective_user=member,
-        message=None,
-        callback_query=None,
-        my_chat_member=SimpleNamespace(
-            from_user=member,
-            old_chat_member=SimpleNamespace(status=old_status),
-            new_chat_member=SimpleNamespace(status=new_status)),
-        telegramId=group_chat_id,
-        firstname=first_name,
+    """The bot's own membership changed in a group. A REAL Update (like
+    make_group_update): the error-report funnel dispatches on the Update type, so a
+    SimpleNamespace here would silently disable assert_no_error_reported."""
+    import datetime
+    from telegram import ChatMemberUpdated, ChatMemberMember, ChatMemberLeft
+    bot_user = User(id=999999, first_name='Bot', is_bot=True)
+    members = {
+        'member': ChatMemberMember(user=bot_user),
+        'left': ChatMemberLeft(user=bot_user),
+        'administrator': group_admin_member(999999),
+    }
+    return Update(
+        update_id=1,
+        my_chat_member=ChatMemberUpdated(
+            chat=Chat(id=group_chat_id, type=ChatType.SUPERGROUP, title=title),
+            from_user=User(id=user_id, first_name=first_name, is_bot=False),
+            date=datetime.datetime.now(),
+            old_chat_member=members[str(old_status)],
+            new_chat_member=members[str(new_status)],
+        ),
     )
 
 
