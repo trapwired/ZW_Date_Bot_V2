@@ -123,7 +123,7 @@ def build_announce_confirm_markup() -> InlineKeyboardMarkup:
 def build_trainers_menu_markup() -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(label, callback_data=encode(TRAINERS_LIST, int(event_type)))]
             for event_type, label in TRAINER_GROUP_LABELS.items()]
-    rows.append([InlineKeyboardButton('« Back', callback_data=encode(PANEL))])
+    rows.append([InlineKeyboardButton('« Back', callback_data=encode(SETUP_MENU))])
     return InlineKeyboardMarkup(rows)
 
 
@@ -188,8 +188,13 @@ def build_spectator_password_confirm_markup() -> InlineKeyboardMarkup:
     ])
 
 
-def build_typed_input_prompt_markup() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data=encode(PANEL))]])
+def build_typed_input_prompt_markup(back_action: str = None) -> InlineKeyboardMarkup:
+    # Cancel returns to the section the flow was launched from (default: panel root).
+    return InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data=encode(back_action or PANEL))]])
+
+
+def build_back_markup(back_action: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton('« Back', callback_data=encode(back_action))]])
 
 
 def build_back_to_panel_markup() -> InlineKeyboardMarkup:

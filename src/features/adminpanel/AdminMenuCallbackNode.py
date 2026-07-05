@@ -81,10 +81,9 @@ class AdminMenuCallbackNode(CallbackNode):
             case AdminMenu.TEAM_NAME_SAVE | AdminMenu.TEAM_NAME_CANCEL:
                 await self._finish_team_name(update, query, action)
             case AdminMenu.SPECTATORS_MENU:
-                await self._show_spectators_menu(query)
+                await self._show_spectators_menu(update, query)
             case AdminMenu.SETUP_MENU:
-                await self._edit(query, 'Team setup - rarely needed, all in one place.',
-                                 AdminMenu.build_setup_menu_markup())
+                await self._show_setup_menu(update, query)
             case AdminMenu.SPECTATOR_INVITE:
                 await self._create_spectator_invite(query)
             case AdminMenu.ANNOUNCE_PROMPT:
@@ -107,16 +106,19 @@ class AdminMenuCallbackNode(CallbackNode):
     ##############
 
     async def _show_panel(self, update: Update, query):
-        # Back-to-menu is also the escape hatch out of a typed-input flow (website URL,
-        # field value, wizard): whatever was staged is dropped so the next text isn't
-        # misread - same cleanup the typed keyboard escapes run.
+        await self._reset_typed_state(update)
+        await self._edit(query, AdminMenu.PANEL_TEXT, AdminMenu.build_panel_markup())
+
+    async def _reset_typed_state(self, update: Update):
+        # Every menu landing is also the escape hatch out of a typed-input flow
+        # (website URL, field value, wizard): whatever was staged is dropped so the
+        # next text isn't misread - same cleanup the typed keyboard escapes run.
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         if user_to_state.state is not UserState.DEFAULT:
             if user_to_state.state is UserState.ADMIN_ADD_EVENT:
                 await self.add_event_node.abort_draft(user_to_state)
             user_to_state.additional_info = ''
             self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-        await self._edit(query, AdminMenu.PANEL_TEXT, AdminMenu.build_panel_markup())
 
     async def _show_add_chooser(self, query):
         await self._edit(query, 'What kind of event do you want to add?', AdminMenu.build_add_chooser_markup())
@@ -147,19 +149,20 @@ class AdminMenuCallbackNode(CallbackNode):
     # TYPED INPUT #
     ###############
 
-    async def _start_typed_input(self, update: Update, query, target_state: UserState, prompt: str):
+    async def _start_typed_input(self, update: Update, query, target_state: UserState, prompt: str,
+                                 back_action: str = None):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         # Remember which menu message to keep re-rendering while the admin types;
         # nothing is persisted or sent until they confirm.
         user_to_state.additional_info = InlineInputStaging.build(
             query.message.message_id, query.message.chat.id, '')
         self.user_state_service.update_user_state(user_to_state, target_state)
-        await self._edit(query, prompt, AdminMenu.build_typed_input_prompt_markup())
+        await self._edit(query, prompt, AdminMenu.build_typed_input_prompt_markup(back_action))
 
-    async def _finish_typed_input(self, query, user_to_state, confirmation: str):
+    async def _finish_typed_input(self, query, user_to_state, confirmation: str, reply_markup=None):
         user_to_state.additional_info = ''
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-        await self._edit(query, confirmation, AdminMenu.build_back_to_panel_markup())
+        await self._edit(query, confirmation, reply_markup or AdminMenu.build_back_to_panel_markup())
 
     ###########
     # WEBSITE #
@@ -170,23 +173,28 @@ class AdminMenuCallbackNode(CallbackNode):
         current_text = Format.escape(current) if current else 'not set'
         message = (f'The website link shown to players is currently:\n{current_text}\n\n'
                    'Send me the new URL.')
-        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_WEBSITE, message)
+        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_WEBSITE, message,
+                                      back_action=AdminMenu.SETUP_MENU)
 
     async def _finish_website(self, update: Update, query, action: str):
         telegram_id = update.effective_chat.id
         if action == AdminMenu.WEBSITE_NO:
-            user_to_state = self.website_service.discard_pending_url(telegram_id)
-            self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-            await self._show_panel(update, query)
+            self.website_service.discard_pending_url(telegram_id)
+            await self._show_setup_menu(update, query)
             return
 
         new_url, user_to_state = self.website_service.commit_pending_url(telegram_id)
         if new_url is None:
-            message = ('⚠️ That doesn\'t look like a valid URL - it must start with http:// or https://.\n'
-                       'The website link was not changed.')
-        else:
-            message = f'✅ The website link was updated to:\n{new_url}'
-        await self._finish_typed_input(query, user_to_state, message)
+            await self._finish_typed_input(
+                query, user_to_state,
+                '⚠️ That doesn\'t look like a valid URL - it must start with http:// or https://.\n'
+                'The website link was not changed.',
+                AdminMenu.build_back_markup(AdminMenu.SETUP_MENU))
+            return
+        # The setup overview shows the committed link - that IS the confirmation.
+        user_to_state.additional_info = ''
+        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+        await self._show_setup_menu(update, query)
 
     ######################
     # SPECTATOR PASSWORD #
@@ -197,16 +205,15 @@ class AdminMenuCallbackNode(CallbackNode):
         current_text = Format.escape(current) if current else 'not set'
         message = (f'The spectator password for this team is currently:\n{current_text}\n\n'
                    'Send me the new password.')
-        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, message)
+        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, message,
+                                      back_action=AdminMenu.SPECTATORS_MENU)
 
     async def _finish_spectator_password(self, update: Update, query, action: str):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         message_id, chat_id, password = InlineInputStaging.parse(user_to_state.additional_info)
 
         if action == AdminMenu.SPECTATOR_PASSWORD_CANCEL:
-            user_to_state.additional_info = ''
-            self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-            await self._show_panel(update, query)
+            await self._show_spectators_menu(update, query)
             return
 
         try:
@@ -221,14 +228,18 @@ class AdminMenuCallbackNode(CallbackNode):
                                           '⚠️ Another team already uses that password - send me a different one.')
             return
 
-        await self._finish_typed_input(query, user_to_state, '✅ The spectator password was updated.')
+        # The spectators overview shows the new password - that IS the confirmation,
+        # and it is where an admin heads next anyway.
+        user_to_state.additional_info = ''
+        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+        await self._show_spectators_menu(update, query)
 
     async def _reprompt_password(self, query, user_to_state, message_id, chat_id, message: str):
         # A rejected password shouldn't cost the admin the whole flow: stay in the
         # typed-input state so the next message is simply another attempt.
         user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, '')
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD)
-        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup(AdminMenu.SPECTATORS_MENU))
 
     #############
     # TEAM NAME #
@@ -237,7 +248,8 @@ class AdminMenuCallbackNode(CallbackNode):
     async def _prompt_team_name(self, update: Update, query):
         current = Format.escape(self.team_service.current_team().name)
         message = f'The team is currently named:\n{current}\n\nSend me the new name.'
-        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_TEAM_NAME, message)
+        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_TEAM_NAME, message,
+                                      back_action=AdminMenu.SETUP_MENU)
 
     async def _finish_team_name(self, update: Update, query, action: str):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
@@ -249,9 +261,7 @@ class AdminMenuCallbackNode(CallbackNode):
                              AdminMenu.build_back_to_panel_markup())
             return
         if action == AdminMenu.TEAM_NAME_CANCEL:
-            user_to_state.additional_info = ''
-            self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-            await self._show_panel(update, query)
+            await self._show_setup_menu(update, query)
             return
 
         _, _, new_name = InlineInputStaging.parse(user_to_state.additional_info)
@@ -259,16 +269,19 @@ class AdminMenuCallbackNode(CallbackNode):
             self.team_service.rename_team(self.team_service.current_team(), new_name)
         except ValueError:
             await self._edit(query, '⚠️ The team name cannot be empty - send me a different one.',
-                             AdminMenu.build_typed_input_prompt_markup())
+                             AdminMenu.build_typed_input_prompt_markup(AdminMenu.SETUP_MENU))
             return
-        await self._finish_typed_input(query, user_to_state,
-                                       f'✅ The team is now named "{Format.escape(new_name.strip())}".')
+        # The setup overview shows the new name - that IS the confirmation.
+        user_to_state.additional_info = ''
+        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+        await self._show_setup_menu(update, query)
 
     ##############
     # SPECTATORS #
     ##############
 
-    async def _show_spectators_menu(self, query):
+    async def _show_spectators_menu(self, update: Update, query):
+        await self._reset_typed_state(update)
         team = self.team_service.current_team()
         password = Format.escape(team.spectator_password) if team.spectator_password \
             else Format.italic('not set - nobody can join by password yet')
@@ -280,6 +293,17 @@ class AdminMenuCallbackNode(CallbackNode):
                    f'🔗 Outstanding invite links: {outstanding}')
         await self._edit(query, message, AdminMenu.build_spectators_menu_markup())
 
+    async def _show_setup_menu(self, update: Update, query):
+        await self._reset_typed_state(update)
+        team = self.team_service.current_team()
+        website = self.website_service.get_url()
+        trainer_count = len(set(team.trainers_games) | set(team.trainers_training))
+        message = (Format.bold('Team setup') + '\n\n'
+                   f'✏️ Name: {Format.escape(team.name)}\n'
+                   f'🌐 Website: {Format.escape(website) if website else Format.italic("not set")}\n'
+                   f'🧑‍🏫 Trainers: {trainer_count if trainer_count else Format.italic("group chat fallback")}')
+        await self._edit(query, message, AdminMenu.build_setup_menu_markup())
+
     async def _create_spectator_invite(self, query):
         token = self.team_service.create_spectator_invite(self.team_service.current_team())
         username = await self.telegram_service.get_bot_username()
@@ -288,7 +312,7 @@ class AdminMenuCallbackNode(CallbackNode):
                    f'https://t.me/{username}?start={token}\n\n'
                    'Generate a new link for each spectator. The spectator password keeps '
                    'working as before.')
-        await self._edit(query, message, AdminMenu.build_back_to_panel_markup())
+        await self._edit(query, message, AdminMenu.build_back_markup(AdminMenu.SPECTATORS_MENU))
 
     ################
     # ANNOUNCEMENT #
