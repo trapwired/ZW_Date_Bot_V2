@@ -20,6 +20,12 @@ from Utils.ApiConfig import ApiConfig
 
 from domain.entities.TelegramUser import TelegramUser
 
+from localization.LanguageContext import language_context
+from localization.Languages import DEFAULT_LANGUAGE
+from localization.Translator import t
+
+from framework.RecipientLanguage import recipient_language_context
+
 
 def get_events_in_x_days(all_future_events, reminder_frequency):
     relevant_events = []
@@ -60,7 +66,10 @@ class SchedulingService:
             await self.telegram_service.report_exception('Exception listing teams for scheduled job', e)
             return
         for team in teams:
-            with team_context(team.doc_id):
+            # The team's language is the ambient default for this iteration (group
+            # summaries, trainer messages); per-recipient DM sends override it.
+            # getattr: fail open for team doubles/docs without the field.
+            with team_context(team.doc_id), language_context(getattr(team, 'language', DEFAULT_LANGUAGE)):
                 try:
                     await job_body(*args)
                 except Exception as e:
@@ -203,21 +212,22 @@ class SchedulingService:
 
     async def send_event_enroll_reminder(self, player, event_list, event_type: Event) -> int:
         messages_sent_count = 0
-        await self.telegram_service.send_message(
-            update=player,
-            all_buttons=None,
-            message_type=MessageType.ENROLLMENT_REMINDER)
-
-        for event in event_list:
-            pretty_print_event = PrintUtils.pretty_print(event, AttendanceState.UNSURE)
-            reply_markup = EventsMenu.build_attendance_markup(event_type, event.doc_id)
-            message_text = PrintUtils.event_label(event_type) + ' | ' + pretty_print_event
+        with recipient_language_context(self.data_access, player.telegramId):
             await self.telegram_service.send_message(
                 update=player,
                 all_buttons=None,
-                message=message_text,
-                reply_markup=reply_markup)
-            messages_sent_count += 1
+                message_type=MessageType.ENROLLMENT_REMINDER)
+
+            for event in event_list:
+                pretty_print_event = PrintUtils.pretty_print(event, AttendanceState.UNSURE)
+                reply_markup = EventsMenu.build_attendance_markup(event_type, event.doc_id)
+                message_text = PrintUtils.event_label(event_type) + ' | ' + pretty_print_event
+                await self.telegram_service.send_message(
+                    update=player,
+                    all_buttons=None,
+                    message=message_text,
+                    reply_markup=reply_markup)
+                messages_sent_count += 1
 
         self.statistics_service.increment_event_reminder_metric(event_type, player, messages_sent_count)
         return messages_sent_count
@@ -242,8 +252,8 @@ class SchedulingService:
                 stats_with_names = self.data_access.get_names(stats)
                 pretty_print_event = PrintUtils.pretty_print(event)
                 message = PrintUtils.pretty_print_event_summary(stats_with_names, pretty_print_event, event_type)
-                message = f'Hey, just a short summary for the upcoming {event_type.name.lower()} in {reminder_days[0]}' \
-                          f' days: \n\n' + message
+                message = t('Hey, just a short summary for the upcoming {event_type} in {days} days: \n\n',
+                            event_type=event_type.name.lower(), days=reminder_days[0]) + message
                 await self.telegram_service.send_info_message_to_trainers(message, event_type)
 
         except Exception as e:

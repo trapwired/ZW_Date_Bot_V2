@@ -8,6 +8,8 @@ from Enums.Event import Event as Ev
 
 from Utils import PathUtils
 
+from localization.Translator import t
+
 
 def init_directory():
     ics_directory = PathUtils.get_ics_files_path()
@@ -30,7 +32,8 @@ class IcsService(object):
         event = self.data_access.get_event(event_type, doc_id)
         event_title = event_type.name.lower()
 
-        name = f'Handball {event_title.capitalize()} {self.team_service.current_team().name}'
+        name = t('Handball {type} {team}', type=t(event_title.capitalize()),
+                 team=self.team_service.current_team().name)
         begin = event.timestamp
 
         match event_type:

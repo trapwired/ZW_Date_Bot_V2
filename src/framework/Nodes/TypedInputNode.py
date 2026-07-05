@@ -6,6 +6,8 @@ from Enums.UserState import UserState
 
 from domain.entities.UsersToState import UsersToState
 
+from localization.Translator import t
+
 from Utils import InlineInputStaging
 
 
@@ -40,7 +42,7 @@ class TypedInputNode(Node):
 
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         self._clear_staged_value(user_to_state)
-        await self.telegram_service.send_message(update=update, all_buttons=None, message=self.cancelled_text)
+        await self.telegram_service.send_message(update=update, all_buttons=None, message=t(self.cancelled_text))
 
     async def handle_typed_value(self, update: Update, user_to_state: UsersToState,
                                  new_state: UserState) -> None:
@@ -54,6 +56,8 @@ class TypedInputNode(Node):
         else:
             user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, value)
             self.user_state_service.update_user_state(user_to_state, self.state)
+            # confirm_text implementations localize themselves (t() around their own
+            # template) - finished text with the value inlined can't be a catalog key.
             message, markup = self.confirm_text(value), self.confirm_markup()
 
         if message_id is not None:

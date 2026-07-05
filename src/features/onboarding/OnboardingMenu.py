@@ -3,6 +3,8 @@ spectator, or set the bot up for a new team. Dedicated callback channel like the
 admin (AP#...) and roles (ROLES#...) menus; NodeHandler routes on PREFIX."""
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+from localization.Translator import t
+
 PREFIX = 'ONB'
 DELIMITER = '#'
 
@@ -27,6 +29,6 @@ def parse(data: str) -> str | None:
 
 def build_choice_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton('🔑 Join a team as spectator', callback_data=encode(SPECTATOR))],
-        [InlineKeyboardButton('🆕 Set up the bot for my team', callback_data=encode(NEW_TEAM))],
+        [InlineKeyboardButton(t('🔑 Join a team as spectator'), callback_data=encode(SPECTATOR))],
+        [InlineKeyboardButton(t('🆕 Set up the bot for my team'), callback_data=encode(NEW_TEAM))],
     ])

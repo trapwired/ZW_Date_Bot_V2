@@ -12,6 +12,9 @@ from Utils import Format
 from Utils import PrintUtils
 
 from features.events import EventsMenu
+from features.language import LanguageMenu
+
+from localization.Translator import t
 
 EVENT_TYPES_IN_ORDER = [Event.GAME, Event.TRAINING, Event.TIMEKEEPING]
 
@@ -28,7 +31,10 @@ class EventsView:
                    page: int = 0) -> tuple[str, InlineKeyboardMarkup | None]:
         events_by_type = self._upcoming_by_type(role)
         if len(events_by_type) == 0:
-            return 'There are no upcoming events at the moment.', None
+            # Even the empty list keeps the language entry - a new member's first
+            # screen is often this one.
+            return (t('There are no upcoming events at the moment.'),
+                    InlineKeyboardMarkup([LanguageMenu.build_entry_row()]))
         available_types = list(events_by_type.keys())
         if selected_type not in events_by_type:
             selected_type = available_types[0]
@@ -51,9 +57,14 @@ class EventsView:
                 callback_data=EventsMenu.encode_card(selected_type, event.doc_id))])
         if last_page > 0:
             rows.append(EventsMenu.build_page_row(selected_type, page, last_page))
+        # The per-member language switch lives on the menu every member opens.
+        rows.append(LanguageMenu.build_entry_row())
 
-        text = (f'{Format.bold(f"Upcoming {EventsMenu.FILTER_LABELS[selected_type]}")}\n'
-                'Tap an event for details' + ('' if role is Role.SPECTATOR else ' or to change your attendance') + ':')
+        header = t('<b>Upcoming {event_type}</b>',
+                   event_type=Format.escape(t(EventsMenu.FILTER_LABELS[selected_type])))
+        instruction = (t('Tap an event for details:') if role is Role.SPECTATOR
+                       else t('Tap an event for details or to change your attendance:'))
+        text = header + '\n' + instruction
         return text, InlineKeyboardMarkup(rows)
 
     def build_card(self, role: Role, telegram_id: int, event_type: Event, doc_id: str) -> tuple[str, InlineKeyboardMarkup]:
@@ -70,9 +81,9 @@ class EventsView:
             if event_type is Event.TIMEKEEPING and \
                     self.attendance_service.timekeeping_is_locked(own, event, yes_count=len(stats_with_names[0])):
                 can_attend = False
-                text += '\n' + Format.italic('Already enough people registered for this event.')
+                text += '\n' + t('<i>Already enough people registered for this event.</i>')
             else:
-                text += '\nYour answer: ' + PrintUtils.pretty_print_attendance(own.state)
+                text += '\n' + t('Your answer: {answer}', answer=PrintUtils.pretty_print_attendance(own.state))
 
         markup = EventsMenu.build_card_markup(event_type, doc_id, can_attend, is_admin=(role is Role.ADMIN))
         return text, markup

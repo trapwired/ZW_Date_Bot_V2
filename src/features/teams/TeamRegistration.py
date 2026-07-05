@@ -17,6 +17,8 @@ from framework.Services.TeamService import TeamService
 from framework.Services.TelegramService import TelegramService
 from framework.Services.UserStateService import UserStateService
 
+from localization.Translator import t
+
 from Utils import Format
 from Utils.CustomExceptions import GroupChatAlreadyRegisteredException, ObjectNotFoundException
 
@@ -66,34 +68,35 @@ class TeamRegistration:
         parts = update.message.text.split(maxsplit=1)
         team_name = parts[1].strip() if len(parts) > 1 else ''
         if not team_name:
-            await self._reply(update, USAGE_TEXT)
+            await self._reply(update, t(USAGE_TEXT))
             return
 
         if not await self._issuer_may_register(group_chat_id, issuer.id):
             # Any group member can see the command; only those Telegram itself trusts
             # with the group (owner/admin) may claim it as a team.
-            await self._reply(update, 'Only an admin or the owner of this group can register it as a team.')
+            await self._reply(update, t('Only an admin or the owner of this group can register it as a team.'))
             return
 
         issuer_state = self._lookup_user_state(issuer.id)
         if issuer_state is not None and issuer_state.team_id:
             # One user, one team (ADR 0001) - and the first admin must belong to the
             # team they just created.
-            await self._reply(update, 'You already belong to a team, so you cannot register another one.')
+            await self._reply(update, t('You already belong to a team, so you cannot register another one.'))
             return
 
         try:
             self._register_and_stamp_admin(team_name, group_chat_id, issuer, issuer_state)
         except GroupChatAlreadyRegisteredException:
-            await self._reply(update, 'This group already has a registered team.')
+            await self._reply(update, t('This group already has a registered team.'))
             return
 
         issuer_name = Format.escape(issuer.first_name)
         await self._reply(
             update,
-            f'✅ Team "{Format.escape(team_name)}" is registered, and {issuer_name} is its first admin!\n\n'
-            f'Everyone in this group: open a private chat with me and send /start to join. '
-            f'{issuer_name} can manage events, roles and more via the admin menu there.')
+            t('✅ Team "{team}" is registered, and {issuer} is its first admin!\n\n'
+              'Everyone in this group: open a private chat with me and send /start to join. '
+              '{issuer} can manage events, roles and more via the admin menu there.',
+              team=Format.escape(team_name), issuer=issuer_name))
 
     def _register_and_stamp_admin(self, team_name: str, group_chat_id: int, issuer, issuer_state) -> Team:
         team = self.team_service.register_team(team_name, group_chat_id)
@@ -127,19 +130,22 @@ class TeamRegistration:
 
         existing = self.team_service.find_team_by_group_chat(group_chat_id)
         if existing is not None:
-            await self._reply(update, f'Good to be back! This group is already the team '
-                                      f'"{Format.escape(existing.name)}" - members can open a private '
-                                      'chat with me and send /start to join.')
+            await self._reply(update, t('Good to be back! This group is already the team '
+                                        '"{team}" - members can open a private '
+                                        'chat with me and send /start to join.',
+                                        team=Format.escape(existing.name)))
             return
         if not await self._issuer_may_register(group_chat_id, adder.id):
-            await self._reply(update, 'Thanks for adding me! A group admin or the owner can set this '
-                                      f'group up as a team: remove and re-add me, or use the command.\n{USAGE_TEXT}')
+            await self._reply(update, t('Thanks for adding me! A group admin or the owner can set this '
+                                        'group up as a team: remove and re-add me, or use the command.\n{usage}',
+                                        usage=t(USAGE_TEXT)))
             return
         adder_state = self._lookup_user_state(adder.id)
         if adder_state is not None and adder_state.team_id:
-            await self._reply(update, f'{Format.escape(adder.first_name)} already belongs to a team, so they '
-                                      'cannot register another one - a different group admin can remove and '
-                                      f're-add me, or use the command.\n{USAGE_TEXT}')
+            await self._reply(update, t('{name} already belongs to a team, so they '
+                                        'cannot register another one - a different group admin can remove and '
+                                        're-add me, or use the command.\n{usage}',
+                                        name=Format.escape(adder.first_name), usage=t(USAGE_TEXT)))
             return
 
         team_name = (update.effective_chat.title or '').strip() or f'Team {group_chat_id}'
@@ -157,13 +163,16 @@ class TeamRegistration:
             # transient errors (timeouts, rate limits) re-raise into the normal
             # exception funnel instead of masquerading as 'unreachable'.
             username = await self.telegram_service.get_bot_username()
-            await self._reply(update, f'🎉 Team "{Format.escape(team.name)}" is registered! '
-                                      f'{Format.escape(adder.first_name)}, I cannot message you first - '
-                                      f'open https://t.me/{username} and press Start to finish the setup.')
+            await self._reply(update, t('🎉 Team "{team}" is registered! '
+                                        '{name}, I cannot message you first - '
+                                        'open https://t.me/{bot} and press Start to finish the setup.',
+                                        team=Format.escape(team.name),
+                                        name=Format.escape(adder.first_name), bot=username))
             return
-        await self._reply(update, f'🎉 This group is now the team "{Format.escape(team.name)}"! Everyone: '
-                                  'open a private chat with me and send /start to join. '
-                                  f'{Format.escape(adder.first_name)}, I sent you the setup steps.')
+        await self._reply(update, t('🎉 This group is now the team "{team}"! Everyone: '
+                                    'open a private chat with me and send /start to join. '
+                                    '{name}, I sent you the setup steps.',
+                                    team=Format.escape(team.name), name=Format.escape(adder.first_name)))
 
     async def _handle_removed_from_group(self, update: Update) -> None:
         team = self.team_service.find_team_by_group_chat(update.effective_chat.id)
@@ -187,8 +196,9 @@ class TeamRegistration:
             try:
                 user = self.data_access.get_user_by_doc_id(member.user_id)
                 await self.telegram_service.send_onboarding_message(
-                    user.telegramId, f'Setup cancelled - the team "{Format.escape(team.name)}" was rolled '
-                                     'back. Add me to a group chat again anytime to start over.')
+                    user.telegramId, t('Setup cancelled - the team "{team}" was rolled '
+                                       'back. Add me to a group chat again anytime to start over.',
+                                       team=Format.escape(team.name)))
             except (TelegramError, ObjectNotFoundException):
                 pass  # best-effort: rollback already happened, the next member still gets told
 

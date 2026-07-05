@@ -35,7 +35,8 @@ async def test_events_entry_sends_event_list_with_card_buttons(node_handler, dat
     await drive(node_handler, PLAYER_ID, "Events")
 
     buttons = _buttons(_last_markup(bot, PLAYER_ID))
-    assert [b.callback_data for b in buttons] == [EventsMenu.encode_card(Event.GAME, game.doc_id)]
+    # One card button per event, plus the trailing per-member language entry.
+    assert [b.callback_data for b in buttons] == [EventsMenu.encode_card(Event.GAME, game.doc_id), 'LANG#P']
     assert_no_error_reported(bot)
 
 
@@ -45,7 +46,8 @@ async def test_event_list_shows_own_attendance_prefix(node_handler, data_access,
 
     await drive(node_handler, PLAYER_ID, "events")
 
-    (button,) = _buttons(_last_markup(bot, PLAYER_ID))
+    (button,) = [b for b in _buttons(_last_markup(bot, PLAYER_ID))
+                 if b.callback_data.startswith(EventsMenu.PREFIX)]
     assert button.text.startswith("✅")
     assert_no_error_reported(bot)
 

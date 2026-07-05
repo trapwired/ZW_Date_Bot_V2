@@ -3,6 +3,7 @@ import secrets
 from data.DataAccess import DataAccess
 from data.TenantContext import current_team_id
 from domain.entities.Team import Team
+from localization.Languages import SUPPORTED_LANGUAGES
 from Utils.CustomExceptions import (GroupChatAlreadyRegisteredException, ObjectNotFoundException,
                                     SpectatorPasswordAlreadyTakenException,
                                     SpectatorPasswordNotAllowedException)
@@ -104,6 +105,12 @@ class TeamService:
                 self.update_team(team)
                 return team
         return None
+
+    def set_language(self, team: Team, language: str) -> None:
+        if language not in SUPPORTED_LANGUAGES:
+            raise ValueError(f'Unsupported team language: {language}')
+        team.language = language
+        self.update_team(team)
 
     def rename_team(self, team: Team, name: str) -> None:
         if not name.strip():

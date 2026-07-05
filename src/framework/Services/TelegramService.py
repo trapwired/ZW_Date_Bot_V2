@@ -20,59 +20,65 @@ from Utils.CustomExceptions import ExpectedException
 from framework.Services.UserStateService import UserStateService
 from framework.Services.TeamService import TeamService
 
+from localization.CommandLabels import display_label
+from localization.Translator import t
+
 
 def get_text(message_type: MessageType, extra_text: str = '', first_name: str = ''):
     match message_type:
         case MessageType.ERROR:
-            return 'Something went wrong - please try again, the maintainer has been notified :)'
+            return t('Something went wrong - please try again, the maintainer has been notified :)')
         case MessageType.WRONG_START_COMMAND:
-            return 'Please start chatting with me by sending the command /start'
+            return t('Please start chatting with me by sending the command /start')
         case MessageType.WELCOME:
-            return 'Hi ' + Format.escape(first_name) + ', welcome to the ' + Format.bold(Format.escape(extra_text) + ' manager') + ' 👋'
+            return t('Hi {name}, welcome to the <b>{team} manager</b> 👋',
+                     name=Format.escape(first_name), team=Format.escape(extra_text))
         case MessageType.WEBSITE:
-            return 'Here you go :)'
+            return t('Here you go :)')
         case MessageType.PRIVACY:
-            return ("Privacy Policy\n\n"
-                    "Hey there! I'm your friendly neighborhood Telegram bot, and I'm here to help manage your team's "
-                    "attendance for games, trainings, and timekeeping events. But first, let's talk about privacy.\n\n"
-                    "You see, even though I'm a bot, I respect your privacy just like any good friend would. "
-                    "Here's what I keep in my digital notebook:\n"
-                    "- Your first and last name, as you've shared in your profile,\n"
-                    "- Your unique chatId that Telegram gave you,\n"
-                    "- Your attendance status (YES, NO, or UNSURE) for past and future trainings, games, "
-                    "and timekeeping events."
-                    "Don't worry, I only know what you tell me!\n\n"
-                    "Now, where do I keep this information? In a top-notch, secure-as-a-fortress database, "
-                    "protected by a password and 2FA. Your personal details (name and chatId) have their own VIP table,"
-                    " and all other information is linked via randomly generated IDs.\n\n"
-                    "I'm not a blabbermouth, so your data stays with me indefinitely and is only accessible by my "
-                    "creator, the sole maintainer of this bot. I promise, your data is never sold, traded, or given "
-                    "away to any other folks or legal entities.\n\n"
-                    "So, that's it! Now let's get back to managing your team's schedule, shall we?")
+            return t("Privacy Policy\n\n"
+                     "Hey there! I'm your friendly neighborhood Telegram bot, and I'm here to help manage your team's "
+                     "attendance for games, trainings, and timekeeping events. But first, let's talk about privacy.\n\n"
+                     "You see, even though I'm a bot, I respect your privacy just like any good friend would. "
+                     "Here's what I keep in my digital notebook:\n"
+                     "- Your first and last name, as you've shared in your profile,\n"
+                     "- Your unique chatId that Telegram gave you,\n"
+                     "- Your attendance status (YES, NO, or UNSURE) for past and future trainings, games, "
+                     "and timekeeping events."
+                     "Don't worry, I only know what you tell me!\n\n"
+                     "Now, where do I keep this information? In a top-notch, secure-as-a-fortress database, "
+                     "protected by a password and 2FA. Your personal details (name and chatId) have their own VIP table,"
+                     " and all other information is linked via randomly generated IDs.\n\n"
+                     "I'm not a blabbermouth, so your data stays with me indefinitely and is only accessible by my "
+                     "creator, the sole maintainer of this bot. I promise, your data is never sold, traded, or given "
+                     "away to any other folks or legal entities.\n\n"
+                     "So, that's it! Now let's get back to managing your team's schedule, shall we?")
         case MessageType.REJECTED:
-            return ('Hi ' + Format.escape(first_name) + '! I don\'t know you yet - '
-                    'there are two ways in, pick one below.')
+            return t("Hi {name}! I don't know you yet - there are two ways in, pick one below.",
+                     name=Format.escape(first_name))
 
         case MessageType.ENROLLMENT_REMINDER:
-            return 'Hey ' + Format.escape(first_name) + (', please quickly take your time to update your attendance '
-                                                         'for the following upcoming event(s):')
+            return t('Hey {name}, please quickly take your time to update your attendance '
+                     'for the following upcoming event(s):', name=Format.escape(first_name))
 
         case MessageType.EVENT_TIMESTAMP_CHANGED:
-            return 'Hey ' + Format.escape(first_name) + (', the following event was moved by more than 2 hours. I reset '
-                                                         'your previous answer - please quickly fill out your attendance '
-                                                         'for the moved event - thanks \n(Old event: ') \
-                + Format.escape(extra_text) + ')'
+            return t('Hey {name}, the following event was moved by more than 2 hours. I reset '
+                     'your previous answer - please quickly fill out your attendance '
+                     'for the moved event - thanks \n(Old event: {old_event})',
+                     name=Format.escape(first_name), old_event=Format.escape(extra_text))
 
         case MessageType.EVENT_ADDED:
-            return 'Hey ' + Format.escape(first_name) + ', a new event was added - if you fill it out now, you don\'t have to think about it in the future...'
+            return t("Hey {name}, a new event was added - if you fill it out now, "
+                     "you don't have to think about it in the future...", name=Format.escape(first_name))
         case _:
             return message_type.name + ' ' + Format.escape(extra_text)
 
 
 def generate_keyboard(all_commands: [str]) -> [[str]]:
     # The one static main-menu keyboard: a fixed layout, filtered to the commands the
-    # user's role actually has. Buttons are Title-cased for display; Telegram echoes the
-    # label back and Node.handle lowercases it, so the round-trip still matches.
+    # user's role actually has. Buttons show the localized label; Telegram echoes the
+    # label back and Node.handle folds it to the canonical command via
+    # CommandLabels.canonical_command, so the round-trip still matches.
     layout = [
         ['events'],
         ['admin'],
@@ -80,11 +86,11 @@ def generate_keyboard(all_commands: [str]) -> [[str]]:
     ]
     placed = {command for row in layout for command in row}
 
-    result = [present for row in layout if (present := [c.title() for c in row if c in all_commands])]
+    result = [present for row in layout if (present := [display_label(c) for c in row if c in all_commands])]
     # Keep any command not covered by the fixed layout on its own row, so nothing silently
-    # disappears. Same Title-casing as the layout rows; slash commands stay verbatim
-    # (Telegram matches them literally).
-    result.extend([c if c.startswith('/') else c.title()] for c in all_commands if c not in placed)
+    # disappears. display_label keeps slash commands verbatim (Telegram matches them
+    # literally) and Title-cases anything without a localized label.
+    result.extend([display_label(c)] for c in all_commands if c not in placed)
     return result
 
 
@@ -212,6 +218,11 @@ class TelegramService(object):
         for message_to_send in messages_to_send:
             await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
                                         parse_mode=telegram.constants.ParseMode.HTML)
+
+    def team_language(self) -> str:
+        """The language of messages with no single recipient (group chat, trainer
+        summaries) - callers wrap COMPOSITION in it, the send itself is language-blind."""
+        return self.team_service.current_team().language
 
     async def send_group_message(self, message: str):
         # Caller builds the HTML via the Format helpers (dynamic parts already escaped).

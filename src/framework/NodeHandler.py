@@ -42,11 +42,17 @@ from features.adminpanel import AdminMenu
 from features.adminpanel.AdminMenuCallbackNode import AdminMenuCallbackNode
 from features.roles import RoleAssignment
 from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
+from features.language import LanguageMenu
+from features.language.LanguageCallbackNode import LanguageCallbackNode
 
 from domain.entities.UsersToState import UsersToState
 
 from data.DataAccess import DataAccess
 from data.TenantContext import set_current_team, reset_current_team
+
+from localization.LanguageContext import set_current_language, reset_current_language
+from localization.Languages import resolve_user_language, normalize as normalize_language
+from localization.Translator import t
 
 from Utils.CustomExceptions import NodesMissingException, ObjectNotFoundException, MissingCommandDescriptionException
 from framework import TeamStamp
@@ -117,6 +123,11 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.initialize_callback_nodes(telegram_service, data_access, trigger_service, ics_service,
                                        user_state_service)
         add_nodes_reference_to_all_nodes(self.nodes)
+        # /language works from every state, like /help - registered centrally so a new
+        # node can't forget it. Roles without a stored profile (INIT) can't persist a
+        # choice, so EVERYONE (the default) is the right gate.
+        for node in self.nodes.values():
+            node.add_transition('/language', self.language_callback_node.send_picker, in_keyboard=False)
 
         self.do_checks(api_config)
 
@@ -127,6 +138,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         context_token = None
+        language_token = None
         try:
             if update.effective_chat is None:
                 # Chat-less updates (e.g. poll answers) have no state to route; ignore them.
@@ -138,25 +150,29 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
             if update.my_chat_member:
                 # The bot's own membership changed (added to / removed from a chat) -
-                # the team-lifecycle trigger for guided onboarding.
+                # the team-lifecycle trigger for guided onboarding. No user state here;
+                # the acting user's client language decides.
+                language_token = self._set_language(None, update)
                 await self.team_registration.handle_my_chat_member(update)
                 return
 
             if chat_type in self.GROUP_TYPES:
                 # Groups are ignored except for the one command that claims a group as a team.
                 if team_registration_command.is_register_team_command(update):
+                    language_token = self._set_language(None, update)
                     await self.team_registration.handle(update)
                 return
 
             if update.callback_query:
+                users_to_state, context_token = self._resolve_tenant(update.effective_chat.id)
+                language_token = self._set_language(users_to_state, update)
                 callback_node = self.get_callback_node(update.callback_query.data)
                 if callback_node is None:
                     # A button from a retired menu (pre-redesign message): degrade
                     # gracefully instead of alerting the maintainer.
                     await update.callback_query.answer()
-                    await self.telegram_service.edit_callback_message(update.callback_query, EXPIRED_MENU_TEXT)
+                    await self.telegram_service.edit_callback_message(update.callback_query, t(EXPIRED_MENU_TEXT))
                     return
-                users_to_state, context_token = self._resolve_tenant(update.effective_chat.id)
                 if not self.is_caller_allowed(users_to_state, callback_node):
                     await update.callback_query.answer()
                     return
@@ -167,7 +183,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                     # pass - they lose nothing they had.
                     await update.callback_query.answer()
                     await self.telegram_service.edit_callback_message(
-                        update.callback_query, FOREIGN_TEAM_MENU_TEXT)
+                        update.callback_query, t(FOREIGN_TEAM_MENU_TEXT))
                     return
                 await callback_node.handle(update)
                 return
@@ -177,6 +193,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                 return
 
             users_to_state, context_token = self._resolve_tenant(update.effective_chat.id)
+            language_token = self._set_language(users_to_state, update)
             node = self.nodes[users_to_state.state] if users_to_state else self.nodes[UserState.INIT]
             await node.handle(update, users_to_state)
         except BadRequest as e:
@@ -189,6 +206,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         finally:
             if context_token is not None:
                 reset_current_team(context_token)
+            if language_token is not None:
+                reset_current_language(language_token)
 
     def _resolve_tenant(self, telegram_id) -> tuple[UsersToState | None, object]:
         """The one user-state read per update, plus the tenant-context switch derived
@@ -200,6 +219,22 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             users_to_state = None
         token = set_current_team(users_to_state.team_id if users_to_state else None)
         return users_to_state, token
+
+    def _set_language(self, users_to_state: UsersToState | None, update: Update):
+        """The ambient language for this update: the user's saved /language choice,
+        else their Telegram client language, else English (fail-open).
+
+        First contact snapshots the client language into the profile (one write per
+        user, ever): fan-out sends (reminders, announcements) run outside any update
+        and can only read the stored value. /language overrides it at any time."""
+        saved = users_to_state.language if users_to_state else None
+        # getattr: test doubles (and some update types) carry no language_code - fail open.
+        client_code = getattr(update.effective_user, 'language_code', None) if update.effective_user else None
+        if users_to_state is not None and saved is None:
+            derived = normalize_language(client_code)
+            if derived is not None:
+                self.user_state_service.set_language(users_to_state, derived)
+        return set_current_language(resolve_user_language(saved, client_code))
 
     def initialize_nodes(self, telegram_service: TelegramService, user_state_service: UserStateService,
                          data_access: DataAccess, api_config: ApiConfig):
@@ -265,6 +300,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             telegram_service, data_access, trigger_service, user_state_service, self, self.role_service)
         self.onboarding_callback_node = OnboardingCallbackNode(telegram_service, data_access, trigger_service,
                                                                 user_state_service)
+        self.language_callback_node = LanguageCallbackNode(telegram_service, data_access, trigger_service,
+                                                           user_state_service, self)
 
     def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)
@@ -286,6 +323,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             return self.admin_menu_callback_node
         if OnboardingMenu.is_onboarding_callback(callback_data):
             return self.onboarding_callback_node
+        if LanguageMenu.is_language_callback(callback_data):
+            return self.language_callback_node
         return None
 
     def get_node(self, user_state: UserState):

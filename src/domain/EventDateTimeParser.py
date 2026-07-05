@@ -7,6 +7,8 @@ import pandas as pd
 
 from Utils import DateTimeUtils
 
+from localization.Translator import t
+
 DATE_SEPARATORS = '.,-'
 TIME_SEPARATORS = '-:;.'
 INPUT_FORMAT_HINT = '20.03.2023 19:38'
@@ -46,15 +48,16 @@ def parse(datetime_string: str) -> ParsedDateTime:
     split = datetime_string.split()
     if len(split) != 2:
         return ParsedDateTime.failure(
-            'Tried to split into date and time by space in middle, this did not work - please try again')
+            t('Tried to split into date and time by space in middle, this did not work - please try again'))
 
     date, time = split[0].strip(), split[1].strip()
 
     date_split = _split_multiple(date, DATE_SEPARATORS)
     if len(date_split) != 3:
         return ParsedDateTime.failure(
-            f'Tried to split date ({date}) into 3 parts, using the following separators: ({DATE_SEPARATORS}) '
-            f'- that did not work - wrong length: {len(date_split)}')
+            t('Tried to split date ({date}) into 3 parts, using the following separators: ({separators}) '
+              '- that did not work - wrong length: {length}',
+              date=date, separators=DATE_SEPARATORS, length=len(date_split)))
     day_str, month_str, year_str = date_split
     if len(year_str) == 2:
         year_str = SHORT_YEAR_PREFIX + year_str
@@ -62,21 +65,22 @@ def parse(datetime_string: str) -> ParsedDateTime:
         day, month, year = int(day_str), int(month_str), int(year_str)
     except Exception as e:
         return ParsedDateTime.failure(
-            f'Tried to parse month / day / year into a number - that did not work, please try again (Exception for '
-            f'reference: : {e.args})')
+            t('Tried to parse month / day / year into a number - that did not work, please try again (Exception for '
+              'reference: : {exception})', exception=e.args))
 
     time_split = _split_multiple(time, TIME_SEPARATORS)
     if len(time_split) != 2:
         return ParsedDateTime.failure(
-            f'Tried to split time ({time}) into 2 parts (hour and minute), using the following separators: '
-            f'({TIME_SEPARATORS}) - that did not work - wrong length: {len(time_split)}')
+            t('Tried to split time ({time}) into 2 parts (hour and minute), using the following separators: '
+              '({separators}) - that did not work - wrong length: {length}',
+              time=time, separators=TIME_SEPARATORS, length=len(time_split)))
     hour_str, min_str = time_split
     try:
         hour, minute = int(hour_str), int(min_str)
     except Exception as e:
         return ParsedDateTime.failure(
-            f'Tried to parse hour / minute into a number - that did not work, please try again (Exception for '
-            f'reference: : {e.args})')
+            t('Tried to parse hour / minute into a number - that did not work, please try again (Exception for '
+              'reference: : {exception})', exception=e.args))
 
     # The numbers parsed but may not form a real instant: out-of-range fields (month 13,
     # day 32, hour 25), or a wall-clock time that does not exist in Europe/Zurich because of
@@ -87,7 +91,8 @@ def parse(datetime_string: str) -> ParsedDateTime:
         return ParsedDateTime.success(DateTimeUtils.add_zurich_timezone(date_time))
     except (ValueError, OverflowError) as e:
         return ParsedDateTime.failure(
-            f'That date/time does not exist, please try again (Exception for reference: {e.args})')
+            t('That date/time does not exist, please try again (Exception for reference: {exception})',
+              exception=e.args))
 
 
 def parse_future(datetime_string: str) -> ParsedDateTime:
@@ -96,5 +101,5 @@ def parse_future(datetime_string: str) -> ParsedDateTime:
     if not result.ok:
         return result
     if result.value <= DateTimeUtils.get_local_now():
-        return ParsedDateTime.failure('That date/time is in the past - please enter a date in the future')
+        return ParsedDateTime.failure(t('That date/time is in the past - please enter a date in the future'))
     return result

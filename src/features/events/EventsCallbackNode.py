@@ -28,6 +28,8 @@ from Utils import CallbackUtils
 from Utils import PrintUtils
 from Utils.CustomExceptions import ObjectNotFoundException
 
+from localization.Translator import t
+
 
 class EventsCallbackNode(CallbackNode):
     """Handles every press inside the events menu. The whole flow lives on one inline
@@ -144,7 +146,7 @@ class EventsCallbackNode(CallbackNode):
             return
         markup = EventsMenu.build_field_chooser_markup(event_type, doc_id, list(FIELD_ORDER[event_type]))
         await query.answer()
-        await self.telegram_service.edit_callback_message(query, text + '\n\n' + 'Which field do you want to change?',
+        await self.telegram_service.edit_callback_message(query, text + '\n\n' + t('Which field do you want to change?'),
                                                           markup)
 
     async def _prompt_field_value(self, update: Update, query, event_type: Event, doc_id: str,
@@ -176,14 +178,14 @@ class EventsCallbackNode(CallbackNode):
             return
         await query.answer()
         await self.telegram_service.edit_callback_message(
-            query, text + '\n\n' + 'Really delete this event? This cannot be undone.',
+            query, text + '\n\n' + t('Really delete this event? This cannot be undone.'),
             EventsMenu.build_delete_confirm_markup(event_type, doc_id))
 
     async def _delete(self, query, event_type: Event, doc_id: str):
         self.event_service.delete_event(event_type, doc_id)
         await query.answer()
         await self.telegram_service.edit_callback_message(
-            query, f'Deleted {PrintUtils.event_label(event_type)} 👍',
+            query, t('Deleted {event} 👍', event=PrintUtils.event_label(event_type)),
             EventsMenu.build_back_to_list_markup(event_type))
 
     async def _render_card(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str):
@@ -197,4 +199,4 @@ class EventsCallbackNode(CallbackNode):
     async def _show_event_gone(self, query, event_type: Event):
         await query.answer()
         await self.telegram_service.edit_callback_message(
-            query, 'This event no longer exists.', EventsMenu.build_back_to_list_markup(event_type))
+            query, t('This event no longer exists.'), EventsMenu.build_back_to_list_markup(event_type))

@@ -22,6 +22,8 @@ from framework.Services.UserStateService import UserStateService
 from features.eventmgmt import PlayerNotifications
 from features.events.EventsView import EventsView
 
+from localization.Translator import t
+
 
 class EditEventFieldNode(Node):
     """Applies a single-field edit to an existing event. Which event, which field, and
@@ -44,7 +46,7 @@ class EditEventFieldNode(Node):
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         self._clear_edit_context(user_to_state)
         await self.telegram_service.send_message(
-            update=update, all_buttons=None, message='Cancelled - the event was not changed.')
+            update=update, all_buttons=None, message=t('Cancelled - the event was not changed.'))
 
     async def handle_event_field(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         edit = CallbackUtils.try_parse_additional_information(user_to_state.additional_info)
@@ -71,13 +73,13 @@ class EditEventFieldNode(Node):
         # The prompt is consumed - drop it so the chat doesn't fill up.
         await self.telegram_service.delete_message(edit.prompt_message_id, edit.chat_id)
         await self.telegram_service.send_message(update=update, all_buttons=None,
-                                                 message='Updated event successfully!')
+                                                 message=t('Updated event successfully!'))
 
         if old_event is not None and AttendanceResetPolicy.requires_attendance_reset(old_event.timestamp,
                                                                                      updated_event.timestamp):
             await self.notify_all_players(edit.event_type, edit.doc_id, updated_event, old_event)
-            text = ('Since the event was moved by more than 2 hours, I invalidated all previous answers and let all '
-                    'players know...')
+            text = t('Since the event was moved by more than 2 hours, I invalidated all previous answers and let all '
+                     'players know...')
             await self.telegram_service.send_message(update=update, all_buttons=None, message=text)
 
         self._clear_edit_context(user_to_state)
@@ -90,11 +92,11 @@ class EditEventFieldNode(Node):
     async def notify_all_players(self, event_type: Event, doc_id: str, updated_event, old_event):
         self.event_service.reset_attendance(event_type, doc_id)
         await PlayerNotifications.push_event_to_players(
-            self.telegram_service, self.event_service.get_all_players(), updated_event, event_type,
+            self.telegram_service, self.data_access, self.event_service.get_all_players(), updated_event, event_type,
             intro_message_type=MessageType.EVENT_TIMESTAMP_CHANGED,
             intro_extra_text=PrintUtils.pretty_print_event_datetime(old_event))
 
     async def handle_parse_additional_info_failed(self, user_to_state: UsersToState, update: Update):
-        text = 'Error getting information from the database, please restart updating the event via the events menu :)'
+        text = t('Error getting information from the database, please restart updating the event via the events menu :)')
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
         await self.telegram_service.send_message(update=update, all_buttons=None, message=text)

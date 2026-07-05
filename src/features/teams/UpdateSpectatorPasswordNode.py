@@ -2,6 +2,8 @@ from framework.Nodes.TypedInputNode import TypedInputNode
 
 from features.adminpanel import AdminMenu
 
+from localization.Translator import t
+
 from Utils import Format
 
 
@@ -13,7 +15,7 @@ class UpdateSpectatorPasswordNode(TypedInputNode):
     cancelled_text = 'Cancelled - the spectator password was not changed.'
 
     def confirm_text(self, value: str) -> str:
-        return f'Set the spectator password to:\n{Format.escape(value)}\n\nSave it?'
+        return t('Set the spectator password to:\n{value}\n\nSave it?', value=Format.escape(value))
 
     def confirm_markup(self):
         return AdminMenu.build_spectator_password_confirm_markup()

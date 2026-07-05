@@ -14,7 +14,7 @@ def get_role(role: Role | str | int) -> Role:
 
 class UsersToState(DatabaseEntity):
     def __init__(self, user_id: str, state: UserState, additional_info: str = '', role: Role = Role.INIT,
-                 team_id: str | None = None, doc_id: str = None):
+                 team_id: str | None = None, language: str | None = None, doc_id: str = None):
         super().__init__(doc_id)
         self.user_id = user_id
         if type(state) is str or type(state) is int:
@@ -24,6 +24,8 @@ class UsersToState(DatabaseEntity):
 
         self.role = get_role(role)
         self.team_id = team_id
+        # None = never explicitly chosen; the client's language_code decides per update.
+        self.language = language
 
     @staticmethod
     def from_dict(doc_id: str, source: dict):
@@ -33,6 +35,7 @@ class UsersToState(DatabaseEntity):
             source['additionalInformation'],
             source['role'],
             source.get('teamId'),
+            source.get('language'),
             doc_id, )
 
     def add_role(self, role: Role):
@@ -44,7 +47,8 @@ class UsersToState(DatabaseEntity):
                 'state': self.state,
                 'additionalInformation': self.additional_info,
                 'role': self.role,
-                'teamId': self.team_id}
+                'teamId': self.team_id,
+                'language': self.language}
 
     def __repr__(self):
         return f"UserToState(userId={self.user_id}, state={UserState(self.state)}, additionalInfo={self.additional_info}, doc_id={self.doc_id}, role={self.role}, team_id={self.team_id})"

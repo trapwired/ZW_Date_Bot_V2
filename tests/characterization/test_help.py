@@ -7,6 +7,7 @@ entry, admin-only entries are hidden from players, and keyboard-invisible aliase
 from Enums.Role import Role
 from Enums.UserState import UserState
 from framework.CommandDescriptions import CommandDescriptions
+from localization.CommandLabels import display_label
 from tests.helpers import drive, seed_user, assert_no_error_reported
 
 PLAYER_ID = 1400
@@ -26,9 +27,10 @@ async def test_help_lists_active_commands_with_descriptions(node_handler, data_a
     await drive(node_handler, PLAYER_ID, 'help')
 
     help_text = bot.texts_to(PLAYER_ID)[-1]
+    # Non-slash commands are listed under their (localized) keyboard label.
     for command in ['/help', 'events', 'website', '/privacy']:
-        assert f'{command}: {CommandDescriptions.descriptions[command]}' in help_text
-    assert 'admin:' not in help_text                    # admin-only, hidden for players
+        assert f'{display_label(command)}: {CommandDescriptions.descriptions[command]}' in help_text
+    assert 'Admin:' not in help_text                    # admin-only, hidden for players
     assert_no_error_reported(bot)
 
 
@@ -78,7 +80,7 @@ async def test_every_keyboard_button_has_a_help_entry(node_handler, data_access,
 
     help_text = bot.texts_to(ADMIN_ID)[-1]
     for command in _keyboard_commands(bot, ADMIN_ID):
-        assert f'{command}: {CommandDescriptions.descriptions[command]}' in help_text
+        assert f'{display_label(command)}: {CommandDescriptions.descriptions[command]}' in help_text
     assert_no_error_reported(bot)
 
 

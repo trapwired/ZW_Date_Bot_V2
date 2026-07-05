@@ -14,6 +14,9 @@ from domain.GameRules import has_too_few_available_players
 
 from Utils import PrintUtils
 
+from localization.LanguageContext import language_context
+from localization.Translator import t
+
 
 class TriggerService:
     def __init__(self, data_access: DataAccess, telegram_service: TelegramService):
@@ -44,14 +47,18 @@ class TriggerService:
                              type(trigger).__name__, trigger_payload.doc_id)
                 await trigger.notify_action(trigger_payload)
 
-    async def send_low_availability_warning(self, trigger_payload: TriggerPayload):
-        available = self.data_access.get_num_of_available_players(trigger_payload.doc_id,
-                                                                  trigger_payload.event_type)
-        message = f'So many players said no that only {available} players are still available (yes or unsure)'
-        await self.send_event_message(trigger_payload, message)
-
     async def send_event_message(self, trigger_payload: TriggerPayload, msg: str):
         game = self.data_access.get_game(trigger_payload.doc_id)
         pretty_game = PrintUtils.pretty_print(game)
-        message = 'Trigger: For the following game:\n\n' + pretty_game + '\n\n' + msg
+        message = t('Trigger: For the following game:') + '\n\n' + pretty_game + '\n\n' + msg
         await self.telegram_service.send_info_message_to_trainers(message, Event.GAME)
+
+    async def send_low_availability_warning(self, trigger_payload: TriggerPayload):
+        # Trainer messages speak the TEAM's language, not the pressing player's -
+        # this trigger fires inside that player's update context.
+        with language_context(self.telegram_service.team_language()):
+            available = self.data_access.get_num_of_available_players(trigger_payload.doc_id,
+                                                                      trigger_payload.event_type)
+            message = t('So many players said no that only {available} players are still available (yes or unsure)',
+                        available=available)
+            await self.send_event_message(trigger_payload, message)
