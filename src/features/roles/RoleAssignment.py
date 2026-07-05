@@ -2,6 +2,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from Enums.Role import Role, ASSIGNABLE_ROLES
 
+from framework import TeamStamp
+
 # Dedicated callback channel for the /assign_roles slice, kept separate from the
 # event-attendance callback format (UserState#Event#CallbackOption#doc_id) so the
 # two domains don't have to share an encoding. NodeHandler routes on PREFIX.
@@ -16,19 +18,19 @@ HOME = 'H'         # back to the role overview
 
 
 def encode_list_users(role: Role) -> str:
-    return DELIMITER.join([PREFIX, LIST_USERS, str(int(role))])
+    return TeamStamp.stamp(DELIMITER.join([PREFIX, LIST_USERS, str(int(role))]))
 
 
 def encode_select_user(user_doc_id: str) -> str:
-    return DELIMITER.join([PREFIX, SELECT_USER, user_doc_id])
+    return TeamStamp.stamp(DELIMITER.join([PREFIX, SELECT_USER, user_doc_id]))
 
 
 def encode_assign(user_doc_id: str, new_role: Role) -> str:
-    return DELIMITER.join([PREFIX, ASSIGN, user_doc_id, str(int(new_role))])
+    return TeamStamp.stamp(DELIMITER.join([PREFIX, ASSIGN, user_doc_id, str(int(new_role))]))
 
 
 def encode_home() -> str:
-    return DELIMITER.join([PREFIX, HOME])
+    return TeamStamp.stamp(DELIMITER.join([PREFIX, HOME]))
 
 
 def is_role_callback(data: str) -> bool:
@@ -38,7 +40,7 @@ def is_role_callback(data: str) -> bool:
 def parse(data: str) -> tuple[str, list[str]] | None:
     if not is_role_callback(data):
         return None
-    parts = data.split(DELIMITER)
+    parts = TeamStamp.strip(data).split(DELIMITER)
     if len(parts) < 2:
         return None
     return parts[1], parts[2:]

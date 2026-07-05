@@ -7,6 +7,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from Enums.Event import Event
 
 from features.roles import RoleAssignment
+from framework import TeamStamp
 
 from Utils import Format
 
@@ -51,7 +52,7 @@ TRAINER_GROUP_LABELS = {Event.GAME: '🥅 Games & timekeeping', Event.TRAINING: 
 
 
 def encode(action: str, *args) -> str:
-    return DELIMITER.join([PREFIX, action, *[str(a) for a in args]])
+    return TeamStamp.stamp(DELIMITER.join([PREFIX, action, *[str(a) for a in args]]))
 
 
 def is_admin_menu_callback(data: str) -> bool:
@@ -61,7 +62,7 @@ def is_admin_menu_callback(data: str) -> bool:
 def parse(data: str) -> tuple[str, list[str]] | None:
     if not is_admin_menu_callback(data):
         return None
-    parts = data.split(DELIMITER)
+    parts = TeamStamp.strip(data).split(DELIMITER)
     if len(parts) < 2:
         return None
     return parts[1], parts[2:]
