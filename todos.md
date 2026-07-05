@@ -23,26 +23,7 @@ start and a rough effort (S / M / L). Pick top-down within a group.
   - Admins assign it via a flow analogous to `/assign_roles` (reuse that slice's
     pattern in `features/roles/`).
 
-## Bigger bets (L)
-
-- [ ] **Multi-team tenancy** — the flagship feature. Approach decided in
-  [ADR 0001](docs/adr/0001-multi-team-tenancy.md): scope at the data boundary off an
-  ambient tenant context; one Telegram user ↔ one team.
-  - Onboarding: add admins on start, edit admins, set team name.
-  - Data layer is the heavy lift (team-partitioned collections / a `teamId` filter on
-    every read+write); `SchedulingService`'s global loops become per-team.
-
 ## Optional / nice-to-have
-
-- [ ] **Extract the typed-input flow skeleton (rule of three hit).** UpdateWebsiteNode,
-  UpdateSpectatorPasswordNode and AnnounceNode are near-verbatim copies of the same
-  dance (parse staging -> strip -> restage -> edit menu message -> delete loose
-  message), and AdminMenuCallbackNode holds three copies each of the prompt tail and
-  the finish tail (clear staging + state -> confirmation). Extract a shared
-  TypedInputNode base (hooks: confirm text, confirm markup, cancel sentence) plus
-  `_start_typed_input`/`_finish_typed_input` helpers in the callback node, so a fix
-  to the mechanics can't drift across the three flows. Pure refactor, own PR.
-
 
 - [ ] **Guard forwarded admin buttons against cross-team writes.** Callback
   authorization gates only on the presser's role; the ambient tenant is the

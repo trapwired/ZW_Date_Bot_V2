@@ -87,3 +87,16 @@ async def test_malformed_trainer_callbacks_are_ignored(node_handler, data_access
 
     assert TeamService(data_access).get_team(default_team.doc_id).trainers_games == before
     assert_no_error_reported(bot)
+
+
+async def test_toggle_list_is_sorted_by_first_name_with_strays_last(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT, first_name='Zoe')
+    seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT, first_name='Anna')
+
+    update = await drive_callback(node_handler, ADMIN_ID,
+                                  AdminMenu.encode(AdminMenu.TRAINERS_LIST, int(Event.GAME)))
+
+    buttons = [b.text for row in update.callback_query.edits[-1].reply_markup.inline_keyboard for b in row]
+    names = [b for b in buttons if 'Back' not in b]
+    assert 'Anna' in names[0] and 'Zoe' in names[1]
+    assert all('not in the roster' in b for b in names[2:])       # seeded stray ids come last, labeled

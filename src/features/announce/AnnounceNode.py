@@ -1,58 +1,28 @@
-from telegram import Update
-
-from framework.Nodes.Node import Node
-
-from Enums.UserState import UserState
-
-from domain.entities.UsersToState import UsersToState
+from framework.Nodes.TypedInputNode import TypedInputNode
 
 from features.adminpanel import AdminMenu
 from features.announce.AnnounceService import render_announcement, TELEGRAM_MESSAGE_LIMIT
 
 from Utils import Format
-from Utils import InlineInputStaging
 
 
-class AnnounceNode(Node):
+class AnnounceNode(TypedInputNode):
     """Captures the announcement text an admin types after pressing 'Announce' in the
-    admin menu. Each typed value re-renders the admin-menu message with the delivery
-    choice (every player privately / group chat); nothing is sent until they choose
-    (handled by AdminMenuCallbackNode)."""
+    admin menu; nothing is sent until they pick a delivery channel (handled by
+    AdminMenuCallbackNode)."""
 
-    def __init__(self, state, telegram_service, user_state_service, data_access):
-        super().__init__(state, telegram_service, user_state_service, data_access)
-        self.add_transition('/cancel', self.handle_cancel, new_state=UserState.DEFAULT)
-        self.enable_main_menu_escapes(self._clear_pending_announcement)
-        self.fallback_action = self.handle_announcement_input
+    cancelled_text = 'Cancelled - nothing was announced.'
 
-    def _clear_pending_announcement(self, user_to_state: UsersToState) -> None:
-        user_to_state.additional_info = ''
+    def confirm_text(self, value: str) -> str:
+        return f'Send this announcement?\n\n{Format.escape(value)}'
 
-    async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        self._clear_pending_announcement(user_to_state)
-        await self.telegram_service.send_message(
-            update=update, all_buttons=None, message='Cancelled - nothing was announced.')
+    def confirm_markup(self):
+        return AdminMenu.build_announce_confirm_markup()
 
-    async def handle_announcement_input(self, update: Update, user_to_state: UsersToState,
-                                        new_state: UserState) -> None:
-        # Any free text typed in this state is the announcement. Stage it next to the
-        # menu-message ids and re-render that message with the delivery choice;
-        # retyping just replaces the staged value.
-        message_id, chat_id, _ = InlineInputStaging.parse(user_to_state.additional_info)
-        announcement = update.message.text.strip()
-
-        overlength = len(render_announcement(announcement)) - TELEGRAM_MESSAGE_LIMIT
+    def review_value(self, value: str) -> tuple[str, object] | None:
+        overlength = len(render_announcement(value)) - TELEGRAM_MESSAGE_LIMIT
         if overlength > 0:
-            # Not staged: an over-long text must never sit behind the send buttons.
-            message = (f'⚠️ That announcement is about {overlength} characters too long for one '
-                       'Telegram message - please shorten it and send it again.')
-            markup = AdminMenu.build_typed_input_prompt_markup()
-        else:
-            user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, announcement)
-            self.user_state_service.update_user_state(user_to_state, self.state)
-            message = f'Send this announcement?\n\n{Format.escape(announcement)}'
-            markup = AdminMenu.build_announce_confirm_markup()
-
-        await self.telegram_service.edit_inline_message_text(message, message_id, chat_id, markup)
-        # The typed text now lives in the menu message - drop the loose chat message.
-        await self.telegram_service.delete_message(update.message.message_id, update.effective_chat.id)
+            return (f'⚠️ That announcement is about {overlength} characters too long for one '
+                    'Telegram message - please shorten it and send it again.',
+                    AdminMenu.build_typed_input_prompt_markup())
+        return None

@@ -207,12 +207,11 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                                    user_state_service, data_access, self.event_service,
                                                    self.events_view)
 
-        update_website_node = UpdateWebsiteNode(UserState.ADMIN_UPDATE_WEBSITE, telegram_service, user_state_service,
-                                                data_access, self.website_service)
+        update_website_node = UpdateWebsiteNode(UserState.ADMIN_UPDATE_WEBSITE, telegram_service,
+                                                user_state_service, data_access)
 
         update_spectator_password_node = UpdateSpectatorPasswordNode(
-            UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, telegram_service, user_state_service, data_access,
-            self.team_service)
+            UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, telegram_service, user_state_service, data_access)
 
         announce_node = AnnounceNode(UserState.ADMIN_ANNOUNCE, telegram_service, user_state_service, data_access)
 

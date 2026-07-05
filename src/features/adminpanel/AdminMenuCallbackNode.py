@@ -132,6 +132,24 @@ class AdminMenuCallbackNode(CallbackNode):
                    f'players ({deleted_count} entries removed).')
         await self._edit(query, message, AdminMenu.build_back_to_stats_markup())
 
+    ###############
+    # TYPED INPUT #
+    ###############
+
+    async def _start_typed_input(self, update: Update, query, target_state: UserState, prompt: str):
+        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        # Remember which menu message to keep re-rendering while the admin types;
+        # nothing is persisted or sent until they confirm.
+        user_to_state.additional_info = InlineInputStaging.build(
+            query.message.message_id, query.message.chat.id, '')
+        self.user_state_service.update_user_state(user_to_state, target_state)
+        await self._edit(query, prompt, AdminMenu.build_typed_input_prompt_markup())
+
+    async def _finish_typed_input(self, query, user_to_state, confirmation: str):
+        user_to_state.additional_info = ''
+        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+        await self._edit(query, confirmation, AdminMenu.build_back_to_panel_markup())
+
     ###########
     # WEBSITE #
     ###########
@@ -141,14 +159,7 @@ class AdminMenuCallbackNode(CallbackNode):
         current_text = Format.escape(current) if current else 'not set'
         message = (f'The website link shown to players is currently:\n{current_text}\n\n'
                    'Send me the new URL.')
-
-        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
-        # Remember which menu message to keep re-rendering while the admin types URLs;
-        # nothing hits Firestore until they press Save.
-        user_to_state.additional_info = InlineInputStaging.build(
-            query.message.message_id, query.message.chat_id, '')
-        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_WEBSITE)
-        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_WEBSITE, message)
 
     async def _finish_website(self, update: Update, query, action: str):
         telegram_id = update.effective_chat.id
@@ -164,8 +175,7 @@ class AdminMenuCallbackNode(CallbackNode):
                        'The website link was not changed.')
         else:
             message = f'✅ The website link was updated to:\n{new_url}'
-        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-        await self._edit(query, message, AdminMenu.build_back_to_panel_markup())
+        await self._finish_typed_input(query, user_to_state, message)
 
     ######################
     # SPECTATOR PASSWORD #
@@ -176,14 +186,7 @@ class AdminMenuCallbackNode(CallbackNode):
         current_text = Format.escape(current) if current else 'not set'
         message = (f'The spectator password for this team is currently:\n{current_text}\n\n'
                    'Send me the new password.')
-
-        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
-        # Remember which menu message to keep re-rendering while the admin types passwords;
-        # nothing hits Firestore until they press Save.
-        user_to_state.additional_info = InlineInputStaging.build(
-            query.message.message_id, query.message.chat_id, '')
-        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD)
-        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, message)
 
     async def _finish_spectator_password(self, update: Update, query, action: str):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
@@ -207,9 +210,7 @@ class AdminMenuCallbackNode(CallbackNode):
                                           '⚠️ Another team already uses that password - send me a different one.')
             return
 
-        user_to_state.additional_info = ''
-        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-        await self._edit(query, '✅ The spectator password was updated.', AdminMenu.build_back_to_panel_markup())
+        await self._finish_typed_input(query, user_to_state, '✅ The spectator password was updated.')
 
     async def _reprompt_password(self, query, user_to_state, message_id, chat_id, message: str):
         # A rejected password shouldn't cost the admin the whole flow: stay in the
@@ -225,14 +226,7 @@ class AdminMenuCallbackNode(CallbackNode):
     async def _prompt_announcement(self, update: Update, query):
         message = ('Send me the announcement text. You will choose afterwards whether it goes '
                    'to every player privately or into the team group chat.')
-
-        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
-        # Remember which menu message to keep re-rendering while the admin types;
-        # nothing is sent until they pick a delivery channel.
-        user_to_state.additional_info = InlineInputStaging.build(
-            query.message.message_id, query.message.chat.id, '')
-        self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_ANNOUNCE)
-        await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+        await self._start_typed_input(update, query, UserState.ADMIN_ANNOUNCE, message)
 
     async def _finish_announcement(self, update: Update, query, action: str):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
@@ -264,9 +258,7 @@ class AdminMenuCallbackNode(CallbackNode):
             reached = await self.announce_service.send_to_players(announcement)
             confirmation = f'✅ The announcement was sent to {reached} players.'
 
-        user_to_state.additional_info = ''
-        self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-        await self._edit(query, confirmation, AdminMenu.build_back_to_panel_markup())
+        await self._finish_typed_input(query, user_to_state, confirmation)
 
     ############
     # TRAINERS #
@@ -302,13 +294,15 @@ class AdminMenuCallbackNode(CallbackNode):
     def _trainer_candidates(self, current_trainer_ids: list[int]) -> list[tuple[int, str]]:
         members = self._roster_members()
         known_ids = {chat_id for chat_id, _ in members}
-        # Config-seeded or hand-edited trainer ids outside the roster stay visible/removable.
-        strays = [(chat_id, str(chat_id)) for chat_id in current_trainer_ids if chat_id not in known_ids]
+        # Config-seeded or hand-edited trainer ids without a matching ACTIVE roster
+        # member (never /start-ed, retired, ...) stay visible/removable, listed last.
+        strays = [(chat_id, f'{chat_id} (not in the roster)')
+                  for chat_id in current_trainer_ids if chat_id not in known_ids]
         return members + strays
 
     def _roster_members(self) -> list[tuple[int, str]]:
         return [(user.telegramId, PrintUtils.get_player_display_name(user))
-                for user in self.data_access.get_all_players()]
+                for user in PrintUtils.sorted_by_display_name(self.data_access.get_all_players())]
 
     ####################
     # ADD-EVENT WIZARD #
