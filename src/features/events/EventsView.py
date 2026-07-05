@@ -12,6 +12,7 @@ from Utils import Format
 from Utils import PrintUtils
 
 from features.events import EventsMenu
+from features.language import LanguageMenu
 
 from localization.Translator import t
 
@@ -30,7 +31,10 @@ class EventsView:
                    page: int = 0) -> tuple[str, InlineKeyboardMarkup | None]:
         events_by_type = self._upcoming_by_type(role)
         if len(events_by_type) == 0:
-            return t('There are no upcoming events at the moment.'), None
+            # Even the empty list keeps the language entry - a new member's first
+            # screen is often this one.
+            return (t('There are no upcoming events at the moment.'),
+                    InlineKeyboardMarkup([LanguageMenu.build_entry_row()]))
         available_types = list(events_by_type.keys())
         if selected_type not in events_by_type:
             selected_type = available_types[0]
@@ -53,6 +57,8 @@ class EventsView:
                 callback_data=EventsMenu.encode_card(selected_type, event.doc_id))])
         if last_page > 0:
             rows.append(EventsMenu.build_page_row(selected_type, page, last_page))
+        # The per-member language switch lives on the menu every member opens.
+        rows.append(LanguageMenu.build_entry_row())
 
         header = t('<b>Upcoming {event_type}</b>',
                    event_type=Format.escape(t(EventsMenu.FILTER_LABELS[selected_type])))

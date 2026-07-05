@@ -67,6 +67,29 @@ async def test_client_language_seeds_profile_on_first_contact(node_handler, data
     assert_no_error_reported(bot)
 
 
+async def test_events_menu_offers_the_language_button_even_when_empty(node_handler, data_access, bot):
+    seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive(node_handler, PLAYER_ID, 'events')
+
+    menu = [m for m in bot.sent if m.chat_id == PLAYER_ID][-1]
+    labels = [button.text for row in menu.reply_markup.inline_keyboard for button in row]
+    assert '🗣 Language' in labels
+
+
+async def test_language_button_opens_the_picker(node_handler, data_access, bot):
+    seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
+
+    update = await drive_callback(node_handler, PLAYER_ID, 'LANG#P')
+
+    edit = update.callback_query.edits[-1]
+    assert 'Which language should I talk to you in?' in edit.text
+    labels = [button.text for row in edit.reply_markup.inline_keyboard for button in row]
+    assert labels == ['✅ English', 'Deutsch', 'Züridütsch', 'Français', 'Italiano']
+    assert data_access.get_user_state(PLAYER_ID).language is None  # browsing sets nothing
+    assert_no_error_reported(bot)
+
+
 async def test_group_summary_speaks_the_team_language(services, data_access, default_team, bot):
     from domain.entities.Game import Game
     default_team.language = 'de'

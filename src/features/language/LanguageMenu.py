@@ -11,13 +11,16 @@ a user stuck in the wrong language must still recognize their own entry.
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from localization.Languages import SUPPORTED_LANGUAGES, NATIVE_NAMES
+from localization.Translator import t
 
 PREFIX = 'LANG'
 DELIMITER = '#'
 
+PICKER = 'P'  # show the picker (the entry button on member menus); a language code sets it
 
-def encode(language: str) -> str:
-    return DELIMITER.join([PREFIX, language])
+
+def encode(action: str) -> str:
+    return DELIMITER.join([PREFIX, action])
 
 
 def is_language_callback(data: str) -> bool:
@@ -25,10 +28,15 @@ def is_language_callback(data: str) -> bool:
 
 
 def parse(data: str) -> str | None:
+    """The action part (PICKER or a language code); the node validates codes."""
     if not is_language_callback(data):
         return None
-    language = data.split(DELIMITER)[1]
-    return language if language in SUPPORTED_LANGUAGES else None
+    return data.split(DELIMITER)[1]
+
+
+def build_entry_row() -> list[InlineKeyboardButton]:
+    """The one row any member menu can append to offer the language picker."""
+    return [InlineKeyboardButton(t('🗣 Language'), callback_data=encode(PICKER))]
 
 
 def build_picker_markup(current_language: str | None) -> InlineKeyboardMarkup:

@@ -1,5 +1,5 @@
 {
- "\n\n🛠 <b>Admin</b> - tap <code>admin</code> for the admin panel: add events, statistics, roles, trainers, the website link and the spectator password.": "\n\n🛠 <b>Admin</b> - tipp uf <code>Admin</code> fürs Admin-Menü: Events erfasse, Statistike, Rolle, Trainer, de Website-Link und s Zueschauer-Passwort.",
+ "\n\n🛠 <b>Admin</b> - tap <code>admin</code> for the admin panel: add events, statistics, roles, trainers, the website link and the spectator password.": "\n\n🛠 <b>Admin</b> - tipp uf <code>Admin</code> fürs Admin-Menü: Events erfasse, Statistike, Rolle, Trainer, de Website-Link und sZueschauer-Passwort.",
  "\nCould not notify them - they may have removed Telegram.": "\nHa d Person nöd chöne benachrichtige - villicht hät si Telegram glöscht.",
  "<b>Admin menu</b>\nAdd events, look at statistics, manage roles, send an announcement - or open the spectator and setup sections.": "<b>Admin-Menü</b>\nEvents erfasse, Statistike aaluege, Rolle verwalte, e Aakündigung schicke - oder d Bereich Zueschauer und Setup uufmache.",
  "<b>Select a role to manage:</b>": "<b>Wähl e Rolle zum Verwalte:</b>",
@@ -72,7 +72,7 @@
  "Save": "Spichere",
  "Saved": "Gspicheret",
  "Saved 👍": "Gspicheret 👍",
- "Send me the announcement text. You will choose afterwards whether it goes to every player privately or into the team group chat.": "Schick mer de Aakündigungstext. Derna wählsch, öb er a alli Spiler privat oder in Team-Gruppechat gaht.",
+ "Send me the announcement text. You will choose afterwards whether it goes to every player privately or into the team group chat.": "Schick mer de Aakündigungstext. Nochher wählsch, öb er a alli Spiler privat oder in Team-Gruppechat gaht.",
  "Send me the new {field} in the following form:\n": "Schick mer s neue {field} im folgende Format:\n",
  "Send me your team's spectator password. You get it from the team (an admin sets it in the bot) - just type it here.": "Schick mer s Zueschauer-Passwort vo dim Team. Du überchunsch es vom Team (en Admin leits im Bot fest) - tipp s eifach da ii.",
  "Send this announcement?\n\n{content}": "Die Aakündigung schicke?\n\n{content}",
@@ -188,6 +188,7 @@
  "🔑 Set password": "🔑 Passwort setze",
  "🔗 One-time invite link": "🔗 Einmalige Iiladigslink",
  "🗑 Delete event": "🗑 Event lösche",
+ "🗣 Language": "🗣 Sprach",
  "🗣 Team language": "🗣 Teamsprach",
  "🥅 Games & timekeeping": "🥅 Match & Ziitmässig",
  "🧑‍🏫 Trainers": "🧑‍🏫 Trainer"
