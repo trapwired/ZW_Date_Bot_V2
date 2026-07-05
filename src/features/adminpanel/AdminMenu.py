@@ -15,7 +15,7 @@ DELIMITER = '#'
 
 PANEL_TEXT = (Format.bold('Admin menu')
               + '\nAdd events, look at statistics, manage roles and trainers, '
-                'or set the website link and spectator password.')
+                'send an announcement, or set the website link and spectator password.')
 
 # Actions (kept short to stay well under Telegram's 64-byte callback_data limit).
 PANEL = 'P'             # (re-)show the admin menu home
@@ -32,6 +32,9 @@ SPECTATOR_PASSWORD_CANCEL = 'KN'  # discard the typed spectator password
 TRAINERS_MENU = 'T'     # show the trainer-routing overview
 TRAINERS_LIST = 'TL'    # arg: event group (Event int) - show the toggle list for it
 TRAINERS_TOGGLE = 'TX'  # args: event group + telegram id - flip that person's trainer flag
+ANNOUNCE_PROMPT = 'N'         # start typing an announcement
+ANNOUNCE_TO_PLAYERS = 'NP'    # send the staged announcement to every player privately
+ANNOUNCE_TO_GROUP = 'NG'      # post the staged announcement in the team group chat
 WIZARD_CANCEL = 'ZC'    # add-event wizard: discard the draft
 WIZARD_RESTART = 'ZR'   # add-event wizard: discard and start over
 WIZARD_SAVE = 'ZS'      # add-event wizard: persist the finished draft
@@ -74,6 +77,15 @@ def build_panel_markup() -> InlineKeyboardMarkup:
          InlineKeyboardButton('🌐 Set website', callback_data=encode(WEBSITE_PROMPT))],
         [InlineKeyboardButton('🧑‍🏫 Trainers', callback_data=encode(TRAINERS_MENU)),
          InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
+        [InlineKeyboardButton('📣 Announce', callback_data=encode(ANNOUNCE_PROMPT))],
+    ])
+
+
+def build_announce_confirm_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton('📨 To every player privately', callback_data=encode(ANNOUNCE_TO_PLAYERS))],
+        [InlineKeyboardButton('👥 To the group chat', callback_data=encode(ANNOUNCE_TO_GROUP))],
+        [InlineKeyboardButton('Cancel', callback_data=encode(PANEL))],
     ])
 
 

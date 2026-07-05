@@ -11,6 +11,8 @@ from Enums.UserState import UserState
 from domain.entities.TelegramUser import TelegramUser
 from domain.entities.UsersToState import UsersToState
 
+from Utils import PrintUtils
+
 
 class RoleService:
     def __init__(self, data_access: DataAccess):
@@ -22,7 +24,8 @@ class RoleService:
     def users_with_role(self, role: Role) -> list[tuple[str, TelegramUser]]:
         users_to_state = self.data_access.get_users_to_state_by_role(role)
         users = self.data_access.add_names([uts.user_id for uts in users_to_state])
-        return [(uts.user_id, user) for uts, user in zip(users_to_state, users)]
+        pairs = [(uts.user_id, user) for uts, user in zip(users_to_state, users)]
+        return sorted(pairs, key=lambda pair: PrintUtils.get_player_display_name(pair[1]).lower())
 
     def get_user_and_state(self, user_doc_id: str) -> tuple[TelegramUser, UsersToState]:
         user = self.data_access.get_user_by_doc_id(user_doc_id)

@@ -158,6 +158,11 @@ def _maps_link(location_string: str) -> str:
     return f'https://www.google.com/maps/search/{maps_search_part}'
 
 
+def sorted_by_display_name(players: [TelegramUser]) -> [TelegramUser]:
+    # THE list order for people everywhere in the bot: alphabetical by first name.
+    return sorted(players, key=lambda player: get_player_display_name(player).lower())
+
+
 def get_player_display_name(player: TelegramUser) -> str:
     # Raw (unescaped) name - safe for reply-keyboard buttons. Escape at the call site
     # when embedding into an HTML message.

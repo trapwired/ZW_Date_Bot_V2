@@ -22,6 +22,7 @@ from domain.entities.PlayerMetric import PlayerMetric
 from domain.entities.TempData import TempData
 from domain.entities.Settings import Settings
 
+from Utils import PrintUtils
 from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException
 from Utils.ApiConfig import ApiConfig
 
@@ -301,9 +302,9 @@ class DataAccess(object):
 
     def get_names(self, stats: (list, list, list)):
         yes, no, unsure = stats
-        yes_with_names = self.add_names(yes)
-        no_with_names = self.add_names(no)
-        unsure_with_names = self.add_names(unsure)
+        yes_with_names = PrintUtils.sorted_by_display_name(self.add_names(yes))
+        no_with_names = PrintUtils.sorted_by_display_name(self.add_names(no))
+        unsure_with_names = PrintUtils.sorted_by_display_name(self.add_names(unsure))
         return yes_with_names, no_with_names, unsure_with_names
 
     def get_temp_data(self, user_id: str) -> TempData:

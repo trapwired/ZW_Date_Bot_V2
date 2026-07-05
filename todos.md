@@ -6,12 +6,6 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Features (M)
 
-- [ ] **Admin `/announce` broadcast** ("what's new" to admins/players).
-  - Reuse the existing fan-out (`notify_all_players` / `TelegramService`); add a
-    shared `NotificationService.broadcast(role_set, message)` the scheduling loops
-    can use too.
-  - Its own vertical slice; prefer an admin `/announce` command over a hardcoded
-    deploy-time changelog script.
 - [ ] **Per-user language switch (i18n).**
   - A `language` field on the user (`UsersToState` / `TelegramUser`); resolve it once
     per update (like the planned tenant context), don't thread it through every call.
@@ -28,15 +22,6 @@ start and a rough effort (S / M / L). Pick top-down within a group.
     (e.g. `position` field on `TelegramUser`), not a new `Role` value.
   - Admins assign it via a flow analogous to `/assign_roles` (reuse that slice's
     pattern in `features/roles/`).
-
-## Bigger bets (L)
-
-- [ ] **Multi-team tenancy** — the flagship feature. Approach decided in
-  [ADR 0001](docs/adr/0001-multi-team-tenancy.md): scope at the data boundary off an
-  ambient tenant context; one Telegram user ↔ one team.
-  - Onboarding: add admins on start, edit admins, set team name.
-  - Data layer is the heavy lift (team-partitioned collections / a `teamId` filter on
-    every read+write); `SchedulingService`'s global loops become per-team.
 
 ## Optional / nice-to-have
 
