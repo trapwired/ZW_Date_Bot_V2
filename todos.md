@@ -34,12 +34,15 @@ start and a rough effort (S / M / L). Pick top-down within a group.
   and retiring the password flow + its throttle (`domain/SpectatorPasswordPolicy`)
   once links prove themselves.
 
-- [ ] **Live-test more group chats / teams.** Register additional real Telegram
-  groups as teams (beyond Züri West + the scratch test group) and walk the full
-  flow per team: `/register_team` → membership gate on `/start` → spectator
-  password → events + attendance → scheduled reminders/summaries routing to the
-  right group and trainers. Goal: confidence that team isolation and per-team
-  routing hold with real chat ids, not just the fake-Firestore tests.
+- [ ] **Live-test the full multi-team flow (THE gate before advertising).** With a
+  second account and the scratch test group, walk everything end-to-end with real
+  chat ids: add bot to group (setup DM to the adder, group fallback link) → members
+  `/start` → spectator password AND one-time invite link (second use rejected) →
+  admin panel sections (password lands on Spectators overview, name/website on
+  Setup) → trainer toggles → announce (both channels) → scheduled reminders/
+  summaries routing → forwarded admin button pressed cross-team (refused) → remove
+  bot from a fresh team (full rollback). Goal: team isolation + the new onboarding
+  hold outside the fake-Firestore tests.
 
 - [ ] **Onboarding screenshots / video.** The guided flows exist (teamless choice
   screen, add-bot-to-group setup trigger, admin setup DM); once the UI is stable,
@@ -57,8 +60,8 @@ start and a rough effort (S / M / L). Pick top-down within a group.
     - Online: Telegram bot directories, team-sport subreddits/forums, a simple
       landing page (the website link the bot already serves) with a "get started"
       section.
-    - Prerequisites before advertising: onboarding guide (PR4), invite deep-links or
-      a polished password flow, and a support/contact path for new team admins.
+    - Prerequisites before advertising: the live-test above and a support/contact
+      path for new team admins (onboarding guide + invite links are done).
 
 ## Maybe
 
