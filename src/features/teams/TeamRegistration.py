@@ -1,6 +1,6 @@
 from telegram import Update, ChatMemberAdministrator, ChatMemberOwner
 from telegram.constants import ChatMemberStatus, ChatType
-from telegram.error import TelegramError
+from telegram.error import Forbidden, TelegramError
 
 from Enums.Role import Role
 from Enums.Table import Table
@@ -152,8 +152,10 @@ class TeamRegistration:
             Role.ADMIN, UserState.DEFAULT)
         try:
             await self.telegram_service.send_onboarding_message(adder.id, guide, buttons)
-        except TelegramError:
-            # Telegram forbids messaging a user who never opened a chat with the bot.
+        except Forbidden:
+            # Telegram forbids messaging a user who never opened a chat with the bot;
+            # transient errors (timeouts, rate limits) re-raise into the normal
+            # exception funnel instead of masquerading as 'unreachable'.
             username = await self.telegram_service.get_bot_username()
             await self._reply(update, f'🎉 Team "{Format.escape(team.name)}" is registered! '
                                       f'{Format.escape(adder.first_name)}, I cannot message you first - '

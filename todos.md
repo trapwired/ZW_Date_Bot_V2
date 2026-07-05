@@ -22,8 +22,9 @@ start and a rough effort (S / M / L). Pick top-down within a group.
       (e.g. `position` field on `TelegramUser`), not a new `Role` value.
     - Admins assign it via a flow analogous to `/assign_roles` (reuse that slice's
       pattern in `features/roles/`).
-    - the roles also need a Setable which sports does this team play, entry. would guard it in the admin flow, or a
-      separeate SETUP flow that normally runs when the bot is setup, once at the start
+    - Also needs a settable "which sport does this team play" entry per team (keeper
+      only makes sense for some sports). Home: the admin flow, or a separate one-time
+      SETUP flow that runs when the bot is first set up for a team.
 
 ## Optional / nice-to-have
 

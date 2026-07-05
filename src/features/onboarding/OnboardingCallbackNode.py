@@ -47,8 +47,9 @@ class OnboardingCallbackNode(CallbackNode):
                 await self.telegram_service.edit_callback_message(query, SPECTATOR_TEXT, _back_markup())
             case OnboardingMenu.NEW_TEAM:
                 await self.telegram_service.edit_callback_message(query, NEW_TEAM_TEXT, _back_markup())
-            case OnboardingMenu.HOME:
-                # Same copy as the initial rejection screen - one source, no drift.
+            case _:
+                # HOME and any unknown/retired ONB action land on the choice screen -
+                # same copy as the initial rejection message, one source, no drift.
                 message = get_text(MessageType.REJECTED, first_name=update.effective_user.first_name)
                 await self.telegram_service.edit_callback_message(
                     query, message, OnboardingMenu.build_choice_markup())
