@@ -7,7 +7,10 @@ from telegram.ext import ApplicationBuilder, ContextTypes
 
 from Utils.ApiConfig import ApiConfig
 
+from framework.CommandDescriptions import CommandDescriptions
 from framework.NodeHandler import NodeHandler
+from localization.Languages import SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
+from localization.Translator import translate
 from data.DataAccess import DataAccess
 
 from features.attendance.IcsService import IcsService
@@ -52,14 +55,22 @@ async def send_hi(context: ContextTypes.DEFAULT_TYPE):
     await telegram_service.send_maintainer_hi('Bot was restarted')
 
 
+MENU_COMMANDS = ['start', 'help', 'privacy', 'language']
+
+
 async def register_bot_commands(context: ContextTypes.DEFAULT_TYPE):
-    # Telegram's global command menu (the '/' button). Everything else is reachable
-    # via the reply keyboard and inline menus.
-    await context.bot.set_my_commands([
-        BotCommand('start', 'Start chatting with me :)'),
-        BotCommand('help', 'Show all available commands'),
-        BotCommand('privacy', 'Show the privacy policy of the bot'),
-    ])
+    # Telegram's global command menu (the '/' button), one list per supported client
+    # language. Everything else is reachable via the reply keyboard and inline menus.
+    # 'gsw' is not a valid Telegram language_code (two-letter codes only), so Züridütsch
+    # clients see the default menu; the /language picker itself is unaffected.
+    def commands_for(language: str):
+        return [BotCommand(name, translate(CommandDescriptions.descriptions['/' + name], language))
+                for name in MENU_COMMANDS]
+
+    await context.bot.set_my_commands(commands_for(DEFAULT_LANGUAGE))
+    for language in SUPPORTED_LANGUAGES:
+        if language != DEFAULT_LANGUAGE and len(language) == 2:
+            await context.bot.set_my_commands(commands_for(language), language_code=language)
 
 
 def run_job_queue():

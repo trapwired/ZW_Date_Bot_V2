@@ -6,13 +6,14 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Features (M)
 
-- [ ] **Per-user language switch (i18n).**
-    - A `language` field on the user (`UsersToState` / `TelegramUser`); resolve it once
-      per update (like the planned tenant context), don't thread it through every call.
-    - The message/label strings live in `Format` / `PrintUtils` / `CommandDescriptions`
-      — that layer becomes the single translation seam (keys → localized text).
-    - Decide the string-catalog format + fallback language; `MessageType` is the
-      natural key set.
+- [x] **Per-user language switch (i18n).** DONE (ADR 0004): en/de/gsw/fr/it,
+      `/language` picker + team language in ⚙️ Setup, English-string-as-key catalogs
+      under `src/localization/locales/`, drift-guard tests. Follow-ups if wanted:
+    - Verify the generated de/gsw/fr/it translations (machine-drafted, owner review).
+    - Fan-out sends read one user state per recipient (small rosters, fine today) —
+      a bulk `get_user_states_for_team` would drop that to one query.
+    - The `{event_type}` param in summary/statistics texts stays an English lowercase
+      enum word inside translated sentences (minor mixed-language cosmetics).
 - [ ] **Trigger: warn trainers when both keepers said no on a game.**
     - The stub comment already sits in `TriggerService.initialize_triggers`; the trigger
       itself is the easy part (pre_condition NO + GAME, condition via a domain predicate

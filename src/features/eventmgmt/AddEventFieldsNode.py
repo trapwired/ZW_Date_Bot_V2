@@ -23,6 +23,9 @@ from features.eventmgmt import PlayerNotifications
 
 from domain import EventDateTimeParser
 
+from localization.CommandLabels import canonical_command
+from localization.Translator import t
+
 
 # The typed-input half of the add-event wizard (the buttons on the draft message are
 # handled by AdminMenuCallbackNode). One node covers all event types: the draft
@@ -52,10 +55,11 @@ class AddEventFieldsNode(Node):
     async def handle_cancel(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.abort_draft(user_to_state)
         await self.telegram_service.send_message(
-            update=update, all_buttons=None, message='Cancelled - the event was not saved.')
+            update=update, all_buttons=None, message=t('Cancelled - the event was not saved.'))
 
     async def handle_user_input(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
-        message = update.message.text.lower()
+        # canonical_command folds a localized 'save' (speichern, ...) to the canonical word.
+        message = canonical_command(update.message.text)
         try:
             temp_data = self.event_service.get_draft(user_to_state.user_id)
         except NoTempDataFoundException:
@@ -63,7 +67,7 @@ class AddEventFieldsNode(Node):
             self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
             await self.telegram_service.send_message(
                 update=update, all_buttons=None,
-                message='I lost track of that draft - please start again via the admin menu.')
+                message=t('I lost track of that draft - please start again via the admin menu.'))
             return
 
         # On the finish step, 'save' commits; anything else just re-prompts to save.
@@ -94,7 +98,7 @@ class AddEventFieldsNode(Node):
         next_step = steps[index + 1] if index + 1 < len(steps) else EventField.SAVE
         temp_data.step = next_step
 
-        await self.update_inline_message(temp_data, 'Adding new', can_save=(next_step == EventField.SAVE))
+        await self.update_inline_message(temp_data, t('Adding new'), can_save=(next_step == EventField.SAVE))
         await self.replace_prompt(update, temp_data, next_step)
         self.event_service.save_draft(temp_data)
 
@@ -109,12 +113,12 @@ class AddEventFieldsNode(Node):
     async def handle_save(self, update: Update, user_to_state: UsersToState, temp_data: TempData):
         await self.telegram_service.delete_message(temp_data.prompt_message_id, temp_data.chat_id)
         new_event = self.event_service.finalize_draft(temp_data)
-        await self.update_inline_message(temp_data, 'Saved', can_save=None)
+        await self.update_inline_message(temp_data, t('Saved'), can_save=None)
         await PlayerNotifications.push_event_to_players(
-            self.telegram_service, self.event_service.get_all_players(), new_event, temp_data.event_type,
+            self.telegram_service, self.data_access, self.event_service.get_all_players(), new_event, temp_data.event_type,
             intro_message_type=MessageType.EVENT_ADDED)
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
-        await self.telegram_service.send_message(update=update, all_buttons=None, message='Saved 👍')
+        await self.telegram_service.send_message(update=update, all_buttons=None, message=t('Saved 👍'))
 
     async def update_inline_message(self, temp_data: TempData, prefix: str, can_save: bool | None):
         """Re-render the draft message; can_save=None drops the buttons (draft finished)."""

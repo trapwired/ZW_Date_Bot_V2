@@ -20,6 +20,8 @@ from framework.CommandDescriptions import CommandDescriptions
 
 from framework.Transitions.Transition import Transition
 
+from localization.CommandLabels import canonical_command
+
 
 class Node(ABC):
 
@@ -48,7 +50,9 @@ class Node(ABC):
 
     async def handle(self, update: Update, user_to_state: UsersToState) -> None:
         try:
-            command = update.message.text.lower()
+            # Reply-keyboard labels are localized; the reverse map folds any language's
+            # label back to the canonical command before transition matching.
+            command = canonical_command(update.message.text)
             transition = self.get_transition(command, user_to_state.role)
             if transition is None:
                 await self.fallback_action(update, user_to_state, None)

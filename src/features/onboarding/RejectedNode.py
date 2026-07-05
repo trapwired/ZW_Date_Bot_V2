@@ -11,6 +11,8 @@ from domain.entities.UsersToState import UsersToState
 from features.onboarding import OnboardingMenu
 from features.onboarding import SpectatorOnboarding
 
+from localization.Translator import t
+
 from Utils import DateTimeUtils
 
 LOCKED_OUT_TEXT = 'Too many attempts - please try again tomorrow.'
@@ -43,7 +45,7 @@ class RejectedNode(Node):
         now = DateTimeUtils.get_local_now()
         attempts = SpectatorPasswordPolicy.decode(user_to_state.additional_info)
         if SpectatorPasswordPolicy.is_locked(attempts, now):
-            await self.telegram_service.send_message(update=update, all_buttons=None, message=LOCKED_OUT_TEXT)
+            await self.telegram_service.send_message(update=update, all_buttons=None, message=t(LOCKED_OUT_TEXT))
             return
 
         # The password identifies the team (unique across teams); matching is exact and

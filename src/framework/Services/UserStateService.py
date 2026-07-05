@@ -37,6 +37,10 @@ class UserStateService(object):
         user_to_state.state = UserState.INIT
         self.data_access.update(user_to_state)
 
+    def set_language(self, user_to_state: UsersToState, language: str) -> None:
+        user_to_state.language = language
+        self.data_access.update(user_to_state)
+
     def set_user_inactive(self, chat_id: int):
         user_to_state = self.data_access.get_user_state(chat_id)
         user_to_state.add_role(Role.INACTIVE)

@@ -2,6 +2,8 @@ from framework.Nodes.TypedInputNode import TypedInputNode
 
 from features.adminpanel import AdminMenu
 
+from localization.Translator import t
+
 from Utils import Format
 
 
@@ -12,7 +14,7 @@ class UpdateTeamNameNode(TypedInputNode):
     cancelled_text = 'Cancelled - the team name was not changed.'
 
     def confirm_text(self, value: str) -> str:
-        return f'Rename the team to:\n{Format.escape(value)}\n\nSave it?'
+        return t('Rename the team to:\n{value}\n\nSave it?', value=Format.escape(value))
 
     def confirm_markup(self):
         return AdminMenu.build_team_name_confirm_markup()

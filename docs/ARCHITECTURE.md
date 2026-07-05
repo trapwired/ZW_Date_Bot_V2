@@ -69,6 +69,16 @@ the services, not the view nodes.
 - **Startup invariants.** `NodeHandler.do_checks` runs at construction and asserts every
   `UserState` has a node and every described command has a description, so a wiring
   mistake fails the whole test suite immediately.
+- **Ambient language, translation at the composition site (ADR 0004).** Every
+  user-facing literal goes through `localization.Translator.t()` (English string =
+  catalog key, `locales/<lang>.json`); the language is a contextvar mirroring the
+  tenant context — `NodeHandler` resolves it once per update (saved `/language` choice
+  → client `language_code` → English), fan-out sends set it per recipient
+  (`framework/RecipientLanguage.py`), group/trainer sends use `Team.language`. Reply
+  keyboard labels are localized but routing stays canonical:
+  `localization/CommandLabels.py` folds any language's label back to the command.
+  AST-based drift guards (`localization/KeyExtraction.py` + catalog parity tests) fail
+  the suite when code and catalogs diverge.
 
 ## Persistence & backward compatibility
 

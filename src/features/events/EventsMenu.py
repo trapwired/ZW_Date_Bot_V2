@@ -9,6 +9,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 
+from localization.Translator import t
+
 PREFIX = 'EV'
 DELIMITER = '#'
 
@@ -116,24 +118,26 @@ def try_parse_legacy_attendance(data: str) -> tuple[str, Event, list[str]] | Non
 ###########
 
 def build_filter_row(available_types: list[Event]) -> list[InlineKeyboardButton]:
-    return [InlineKeyboardButton(FILTER_LABELS[t], callback_data=encode_list(t)) for t in available_types]
+    return [InlineKeyboardButton(t(FILTER_LABELS[event_type]), callback_data=encode_list(event_type))
+            for event_type in available_types]
 
 
 def build_page_row(event_type: Event, page: int, last_page: int) -> list[InlineKeyboardButton]:
     row = []
     if page > 0:
-        row.append(InlineKeyboardButton('« previous', callback_data=encode_list(event_type, page - 1)))
-    row.append(InlineKeyboardButton(f'{page + 1}/{last_page + 1}', callback_data=encode_list(event_type, page)))
+        row.append(InlineKeyboardButton(t('« previous'), callback_data=encode_list(event_type, page - 1)))
+    row.append(InlineKeyboardButton(t('{current}/{total}', current=page + 1, total=last_page + 1),
+                                    callback_data=encode_list(event_type, page)))
     if page < last_page:
-        row.append(InlineKeyboardButton('more »', callback_data=encode_list(event_type, page + 1)))
+        row.append(InlineKeyboardButton(t('more »'), callback_data=encode_list(event_type, page + 1)))
     return row
 
 
 def build_attendance_row(event_type: Event, doc_id: str) -> list[InlineKeyboardButton]:
     return [
-        InlineKeyboardButton('✅ Yes', callback_data=encode_attend(event_type, doc_id, AttendanceState.YES)),
-        InlineKeyboardButton('❌ No', callback_data=encode_attend(event_type, doc_id, AttendanceState.NO)),
-        InlineKeyboardButton('❓ Unsure', callback_data=encode_attend(event_type, doc_id, AttendanceState.UNSURE)),
+        InlineKeyboardButton(t('✅ Yes'), callback_data=encode_attend(event_type, doc_id, AttendanceState.YES)),
+        InlineKeyboardButton(t('❌ No'), callback_data=encode_attend(event_type, doc_id, AttendanceState.NO)),
+        InlineKeyboardButton(t('❓ Unsure'), callback_data=encode_attend(event_type, doc_id, AttendanceState.UNSURE)),
     ]
 
 
@@ -141,7 +145,7 @@ def build_attendance_markup(event_type: Event, doc_id: str) -> InlineKeyboardMar
     """Buttons for event messages pushed to players (new event, reminder, moved event)."""
     return InlineKeyboardMarkup([
         build_attendance_row(event_type, doc_id),
-        [InlineKeyboardButton('📅 Export to calendar', callback_data=encode_calendar(event_type, doc_id))],
+        [InlineKeyboardButton(t('📅 Export to calendar'), callback_data=encode_calendar(event_type, doc_id))],
     ])
 
 
@@ -149,27 +153,27 @@ def build_card_markup(event_type: Event, doc_id: str, can_attend: bool, is_admin
     rows = []
     if can_attend:
         rows.append(build_attendance_row(event_type, doc_id))
-    rows.append([InlineKeyboardButton('📅 Export to calendar', callback_data=encode_calendar(event_type, doc_id))])
+    rows.append([InlineKeyboardButton(t('📅 Export to calendar'), callback_data=encode_calendar(event_type, doc_id))])
     if is_admin:
-        rows.append([InlineKeyboardButton('✏️ Edit event', callback_data=encode_edit_fields(event_type, doc_id)),
-                     InlineKeyboardButton('🗑 Delete event', callback_data=encode_delete(event_type, doc_id))])
-    rows.append([InlineKeyboardButton('« Back to list', callback_data=encode_list(event_type))])
+        rows.append([InlineKeyboardButton(t('✏️ Edit event'), callback_data=encode_edit_fields(event_type, doc_id)),
+                     InlineKeyboardButton(t('🗑 Delete event'), callback_data=encode_delete(event_type, doc_id))])
+    rows.append([InlineKeyboardButton(t('« Back to list'), callback_data=encode_list(event_type))])
     return InlineKeyboardMarkup(rows)
 
 
 def build_field_chooser_markup(event_type: Event, doc_id: str, editable_fields: list) -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(field.name.title(), callback_data=encode_edit_field(event_type, doc_id, field))
              for field in editable_fields]]
-    rows.append([InlineKeyboardButton('« Back', callback_data=encode_card(event_type, doc_id))])
+    rows.append([InlineKeyboardButton(t('« Back'), callback_data=encode_card(event_type, doc_id))])
     return InlineKeyboardMarkup(rows)
 
 
 def build_delete_confirm_markup(event_type: Event, doc_id: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton('Yes, delete it', callback_data=encode_delete_confirmed(event_type, doc_id))],
+        [InlineKeyboardButton(t('Yes, delete it'), callback_data=encode_delete_confirmed(event_type, doc_id))],
         [InlineKeyboardButton('« Back', callback_data=encode_card(event_type, doc_id))],
     ])
 
 
 def build_back_to_list_markup(event_type: Event) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton('« Back to list', callback_data=encode_list(event_type))]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton(t('« Back to list'), callback_data=encode_list(event_type))]])

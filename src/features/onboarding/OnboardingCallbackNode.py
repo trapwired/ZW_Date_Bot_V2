@@ -7,6 +7,8 @@ from Enums.UserState import UserState
 from framework.Nodes.CallbackNode import CallbackNode
 from framework.Services.TelegramService import get_text
 
+from localization.Translator import t
+
 from features.onboarding import OnboardingMenu
 
 SPECTATOR_TEXT = ("Send me your team's spectator password. You get it from the team "
@@ -17,7 +19,7 @@ NEW_TEAM_TEXT = ("Add me to your team's Telegram group chat - you need to be an 
 
 
 def _back_markup() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton('« Back', callback_data=OnboardingMenu.encode(
+    return InlineKeyboardMarkup([[InlineKeyboardButton(t('« Back'), callback_data=OnboardingMenu.encode(
         OnboardingMenu.HOME))]])
 
 
@@ -44,9 +46,9 @@ class OnboardingCallbackNode(CallbackNode):
                 user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
                 if user_to_state.state is not UserState.REJECTED:
                     self.user_state_service.update_user_state(user_to_state, UserState.REJECTED)
-                await self.telegram_service.edit_callback_message(query, SPECTATOR_TEXT, _back_markup())
+                await self.telegram_service.edit_callback_message(query, t(SPECTATOR_TEXT), _back_markup())
             case OnboardingMenu.NEW_TEAM:
-                await self.telegram_service.edit_callback_message(query, NEW_TEAM_TEXT, _back_markup())
+                await self.telegram_service.edit_callback_message(query, t(NEW_TEAM_TEXT), _back_markup())
             case _:
                 # HOME and any unknown/retired ONB action land on the choice screen -
                 # same copy as the initial rejection message, one source, no drift.

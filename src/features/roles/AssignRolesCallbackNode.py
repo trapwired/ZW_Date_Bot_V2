@@ -10,6 +10,7 @@ from Enums.RoleSet import RoleSet
 from Enums.UserState import UserState
 
 from framework.Nodes.CallbackNode import CallbackNode
+from framework.RecipientLanguage import recipient_language_context
 
 from framework.Services.TelegramService import TelegramService
 from framework.Services.TriggerService import TriggerService
@@ -19,6 +20,8 @@ from Utils import PrintUtils
 from features.adminpanel import AdminMenu
 from features.roles import RoleAssignment
 from Utils import Format
+
+from localization.Translator import t
 
 
 class AssignRolesCallbackNode(CallbackNode):
@@ -53,7 +56,7 @@ class AssignRolesCallbackNode(CallbackNode):
     async def _show_overview(self, query):
         counts = self.role_service.role_counts()
         await self.telegram_service.edit_callback_message(
-            query, Format.bold('Select a role to manage:'),
+            query, t('<b>Select a role to manage:</b>'),
             reply_markup=RoleAssignment.build_overview_markup(
                 counts, back_callback_data=AdminMenu.encode(AdminMenu.PANEL)))
 
@@ -61,21 +64,22 @@ class AssignRolesCallbackNode(CallbackNode):
         users = self.role_service.users_with_role(role)
         if len(users) == 0:
             await self.telegram_service.edit_callback_message(
-                query, f'No users currently have the role {Format.bold(role.name)}.',
+                query, t('No users currently have the role {role}.', role=Format.bold(role.name)),
                 reply_markup=RoleAssignment.build_home_markup())
             return
 
         entries = [(user_doc_id, PrintUtils.get_player_display_name(user), role)
                    for user_doc_id, user in users]
         await self.telegram_service.edit_callback_message(
-            query, f'Users with role {Format.bold(role.name)} - tap one to change it:',
+            query, t('Users with role {role} - tap one to change it:', role=Format.bold(role.name)),
             reply_markup=RoleAssignment.build_user_list_markup(entries))
 
     async def _show_assign_options(self, query, user_doc_id: str):
         user, user_to_state = self.role_service.get_user_and_state(user_doc_id)
         name = Format.bold(PrintUtils.get_player_display_name(user))
         await self.telegram_service.edit_callback_message(
-            query, f'{name} is currently {Format.bold(user_to_state.role.name)}. Assign a new role:',
+            query, t('{name} is currently {role}. Assign a new role:',
+                     name=name, role=Format.bold(user_to_state.role.name)),
             reply_markup=RoleAssignment.build_assign_markup(user_doc_id, user_to_state.role))
 
     async def _assign_role(self, query, user_doc_id: str, new_role: Role):
@@ -84,9 +88,9 @@ class AssignRolesCallbackNode(CallbackNode):
         notified = await self._notify_user(user, new_role)
 
         name = Format.bold(PrintUtils.get_player_display_name(user))
-        text = f'✅ {name} is now {Format.bold(new_role.name)}.'
+        text = t('✅ {name} is now {role}.', name=name, role=Format.bold(new_role.name))
         if not notified:
-            text += '\nCould not notify them - they may have removed Telegram.'
+            text += t('\nCould not notify them - they may have removed Telegram.')
         await self.telegram_service.edit_callback_message(query, text, reply_markup=RoleAssignment.build_home_markup())
 
     async def _notify_user(self, user, new_role: Role) -> bool:
@@ -95,10 +99,13 @@ class AssignRolesCallbackNode(CallbackNode):
         default_node = self.node_handler.get_node(UserState.DEFAULT)
         buttons = default_node.get_commands_for_buttons(new_role, UserState.DEFAULT)
         try:
-            await self.telegram_service.send_message(
-                update=user,
-                all_buttons=buttons,
-                message=f'An admin set your role to {Format.bold(new_role.name)}.')
+            # The notice (and refreshed keyboard) speak the AFFECTED user's language,
+            # not the acting admin's.
+            with recipient_language_context(self.data_access, user.telegramId):
+                await self.telegram_service.send_message(
+                    update=user,
+                    all_buttons=buttons,
+                    message=t('An admin set your role to {role}.', role=Format.bold(new_role.name)))
             return True
         except TelegramError as e:
             logging.info(f'Could not notify user {user.telegramId} of role change: {e}')

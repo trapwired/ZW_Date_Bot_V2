@@ -16,6 +16,8 @@ from Enums.EventField import EventField
 from Utils import UpdateEventUtils
 from Utils import Format
 
+from localization.Translator import t
+
 from domain import EventDateTimeParser
 
 from domain.entities.PlayerMetric import PlayerMetric
@@ -27,7 +29,7 @@ DATETIME_FORMAT = '%d.%m.%Y %H:%M'
 
 
 def event_label(event_type: Event) -> str:
-    return f'{EVENT_EMOJI[event_type]} {event_type.name.title()}'
+    return f'{EVENT_EMOJI[event_type]} {t(event_type.name.title())}'
 
 
 def _datetime(event) -> str:
@@ -36,19 +38,19 @@ def _datetime(event) -> str:
 
 def get_update_attribute_message(attribute: EventField) -> str:
     if attribute == EventField.SAVE:
-        message = (f'Review your changes in the message above - if all data is correct, use the button {Format.bold("SAVE")}'
-                   f' or type \'save\' to store the event. Use the other buttons to {Format.bold("RESTART")} or '
-                   f'{Format.bold("CANCEL")}...')
+        message = t('Review your changes in the message above - if all data is correct, use the button <b>SAVE</b>'
+                    ' or type \'save\' to store the event. Use the other buttons to <b>RESTART</b> or '
+                    '<b>CANCEL</b>...')
     else:
-        message = f'Send me the new {Format.bold(attribute.name.title())} in the following form:\n'
+        message = t('Send me the new {field} in the following form:\n', field=Format.bold(t(attribute.name.title())))
         message += f'{Format.escape(UpdateEventUtils.get_input_format_string(attribute))}\n'
-        message += 'To cancel updating, just send me /cancel'
+        message += t('To cancel updating, just send me /cancel')
     return message
 
 
 def pretty_print_event_datetime(event: Game | Training | TimekeepingEvent):
     # Plain text: the only caller passes this as message_extra_text, which get_text escapes.
-    return f'{event.__class__.__name__.title()} - {_datetime(event)}'
+    return f'{t(event.__class__.__name__.title())} - {_datetime(event)}'
 
 
 def pretty_print_event_command(event) -> str:
@@ -81,7 +83,7 @@ def pretty_print(event, attendance: AttendanceState) -> str:
 
 
 def pretty_print_attendance(state: AttendanceState) -> str:
-    return f'{ATTENDANCE_EMOJI[state]} {state.name.title()}'
+    return f'{ATTENDANCE_EMOJI[state]} {t(state.name.title())}'
 
 
 @dispatch(TempData, Event)
@@ -105,15 +107,15 @@ def pretty_print_event_summary(stats: (list, list, list), game_string: str, even
     if game_string:
         result = game_string + '\n\n'
 
-    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.YES], 'Yes', yes, total_players)
+    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.YES], t('Yes'), yes, total_players)
 
     if event_type is Event.TIMEKEEPING:
         if len(yes) == 0:
-            result += '\t\tNoone indicated yes until now :('
+            result += '\t\t' + t('Noone indicated yes until now :(')
         return result
 
-    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.NO], 'No', no, total_players)
-    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.UNSURE], 'Unsure', unsure, total_players)
+    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.NO], t('No'), no, total_players)
+    result += _attendance_block(ATTENDANCE_EMOJI[AttendanceState.UNSURE], t('Unsure'), unsure, total_players)
     return result
 
 
@@ -133,12 +135,17 @@ def create_game_summary(game: Game) -> str:
     location_string = game.location.title().replace('(H)', '').replace('(A)', '').strip()
     maps_link = _maps_link(location_string)
 
-    return (f'{EVENT_EMOJI[Event.GAME]} {Format.bold("Game today!")}\n\n'
-            f'{Format.bold("When:")} {Format.escape(when_str)} o\'clock\n'
-            f'{Format.bold("Meeting:")} {Format.escape(meeting_time_str)}, ready in the changing room\n'
-            f'{Format.bold("Where:")} {Format.link(location_string, maps_link)}\n'
-            f'{Format.bold("Opponent:")} {Format.escape(game.opponent.title())}\n'
-            f'{Format.italic("Jerseys: do not forget to bring them (whoever has them...)")}')
+    return t('{emoji} <b>Game today!</b>\n\n'
+             '<b>When:</b> {when} o\'clock\n'
+             '<b>Meeting:</b> {meeting}, ready in the changing room\n'
+             '<b>Where:</b> {where}\n'
+             '<b>Opponent:</b> {opponent}\n'
+             '<i>Jerseys: do not forget to bring them (whoever has them...)</i>',
+             emoji=EVENT_EMOJI[Event.GAME],
+             when=Format.escape(when_str),
+             meeting=Format.escape(meeting_time_str),
+             where=Format.link(location_string, maps_link),
+             opponent=Format.escape(game.opponent.title()))
 
 
 def create_training_summary(training: Training, player_overview: str) -> str:
@@ -146,11 +153,15 @@ def create_training_summary(training: Training, player_overview: str) -> str:
     location_string = training.location.title().replace('(H)', '').replace('(A)', '').strip()
     maps_link = _maps_link(location_string)
 
-    return (f'{EVENT_EMOJI[Event.TRAINING]} {Format.bold("Training tomorrow!")}\n\n'
-            f'{Format.bold("When:")} {Format.escape(when_str)} o\'clock\n'
-            f'{Format.bold("Where:")} {Format.link(location_string, maps_link)}\n'
-            f'{Format.bold("Who:")}\n{player_overview}\n'
-            f'Please be there on time, so we can use the full 90min to train...')
+    return t('{emoji} <b>Training tomorrow!</b>\n\n'
+             '<b>When:</b> {when} o\'clock\n'
+             '<b>Where:</b> {where}\n'
+             '<b>Who:</b>\n{players}\n'
+             'Please be there on time, so we can use the full 90min to train...',
+             emoji=EVENT_EMOJI[Event.TRAINING],
+             when=Format.escape(when_str),
+             where=Format.link(location_string, maps_link),
+             players=player_overview)
 
 
 def _maps_link(location_string: str) -> str:
@@ -200,8 +211,8 @@ def create_sorted_event_attendance_dict(user_to_event_attendances_dict) -> []:
 
 
 def pretty_print_statistics(user_to_player_metrics_dict: dict):
-    result = Format.bold('Statistics') + '\n\n'
-    result += Format.italic('Reminders sent (Game, Training, Timekeeping-Event):') + '\n'
+    result = t('<b>Statistics</b>') + '\n\n'
+    result += t('<i>Reminders sent (Game, Training, Timekeeping-Event):</i>') + '\n'
     sorted_list = create_sorted_dict(user_to_player_metrics_dict)
     for element in sorted_list:
         total_reminders, key, value = element
@@ -213,8 +224,9 @@ def pretty_print_statistics(user_to_player_metrics_dict: dict):
 
 def pretty_print_event_statistics(game_statistics: dict, event_type: Event):
     event_type_string = event_type.name.lower()
-    result = Format.bold(f'{event_type_string.title()}-Statistics') + '\n\n'
-    result += Format.italic(f'Player attendance for all {event_type_string}s this season (so far):') + '\n'
+    result = t('<b>{event_type}-Statistics</b>', event_type=t(event_type_string.title())) + '\n\n'
+    result += t('<i>Player attendance for all {event_type}s this season (so far):</i>',
+                event_type=event_type_string) + '\n'
     sorted_list = create_sorted_event_attendance_dict(game_statistics)
 
     for element in sorted_list:
