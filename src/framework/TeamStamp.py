@@ -41,7 +41,7 @@ def stamped_team(data: str) -> str | None:
 
 
 def _split(data: str) -> tuple[str, str | None]:
-    head, _, tail = data.rpartition(DELIMITER)
-    if tail.startswith(MARKER):
+    head, sep, tail = data.rpartition(DELIMITER)
+    if sep and tail.startswith(MARKER):
         return head, tail[len(MARKER):]
     return data, None

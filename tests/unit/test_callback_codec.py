@@ -106,3 +106,9 @@ def test_role_callback_detection_and_parse():
     assert RoleAssignment.parse("ROLES#A#u1#42") == ("A", ["u1", "42"])   # pre-stamp buttons
     assert RoleAssignment.parse("ROLES#A#u1#42#t:team1") == ("A", ["u1", "42"])
     assert RoleAssignment.parse("EDIT#GAME#YES#x") is None
+
+
+def test_team_stamp_leaves_undelimited_data_alone():
+    from framework import TeamStamp
+    assert TeamStamp.strip('t:123') == 't:123'          # no '#' -> unstamped by definition
+    assert TeamStamp.stamped_team('t:123') is None
