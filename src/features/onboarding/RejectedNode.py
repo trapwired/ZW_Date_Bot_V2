@@ -1,7 +1,6 @@
 from telegram import Update
 
 from Enums.MessageType import MessageType
-from Enums.Role import Role
 from Enums.UserState import UserState
 
 from framework.Nodes.Node import Node
@@ -30,6 +29,10 @@ class RejectedNode(Node):
         # not a password guess, so it neither burns throttle attempts nor records one.
         token = SpectatorOnboarding.extract_start_token(update.message.text)
         if token is not None:
+            if user_to_state.team_id:
+                # Already in a team: never re-role them, and don't burn the token.
+                await self.handle_help(update, user_to_state, new_state)
+                return
             team = self.team_service.redeem_spectator_invite(token)
             if team is None:
                 await self.handle_help(update, user_to_state, new_state)

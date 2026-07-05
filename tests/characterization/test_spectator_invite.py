@@ -96,3 +96,27 @@ async def test_token_identifies_its_own_team(node_handler, data_access, bot, def
     guest = data_access.get_user_state(GUEST_ID)
     assert guest.team_id == team_b.doc_id and guest.role == Role.SPECTATOR
     assert_no_error_reported(bot)
+
+
+async def test_healed_admin_testing_their_own_link_is_not_demoted(node_handler, data_access, bot, default_team):
+    # State healed back to INIT but team + ADMIN role intact - tapping their own
+    # invite link must not re-role them, and the token must survive.
+    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.INIT)
+    token = _mint_token(data_access, default_team)
+
+    await drive(node_handler, ADMIN_ID, f'/start {token}')
+
+    admin = data_access.get_user_state(ADMIN_ID)
+    assert admin.role == Role.ADMIN
+    assert token in TeamService(data_access).get_team(default_team.doc_id).invite_tokens
+    assert_no_error_reported(bot)
+
+
+def test_minting_past_the_cap_retires_the_oldest_link(data_access, default_team):
+    service = TeamService(data_access)
+    tokens = [service.create_spectator_invite(default_team)
+              for _ in range(service.MAX_OUTSTANDING_INVITES + 1)]
+
+    outstanding = service.get_team(default_team.doc_id).invite_tokens
+    assert len(outstanding) == service.MAX_OUTSTANDING_INVITES
+    assert tokens[0] not in outstanding and tokens[-1] in outstanding

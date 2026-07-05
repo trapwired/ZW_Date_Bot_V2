@@ -23,9 +23,16 @@ def extract_start_token(text: str) -> str | None:
 
 async def join_as_spectator(node, update, user_to_state, team) -> None:
     """THE spectator entry: stamp the team (join_team seam), then welcome + guide -
-    identical for the password and the invite-link path."""
+    identical for the password and the invite-link path. Callers guarantee the user
+    is teamless (a team member redeeming a link would be re-roled)."""
     user_to_state.additional_info = ''   # a successful entry clears any attempt record
     node.user_state_service.join_team(user_to_state, team.doc_id, Role.SPECTATOR)
+    await send_welcome_and_guide(node, update, user_to_state, team)
+
+
+async def send_welcome_and_guide(node, update, user_to_state, team) -> None:
+    """The two-message onboarding tail (WELCOME + getting-started guide) - one
+    sequence for players, admins and spectators so the paths can't drift."""
     await node.telegram_service.send_message(
         update=update,
         all_buttons=node.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),

@@ -80,12 +80,16 @@ class TeamService:
             # next read to refetch the persisted truth instead of a phantom password.
             self._all_teams = None
 
+    MAX_OUTSTANDING_INVITES = 10
+
     def create_spectator_invite(self, team: Team) -> str:
         """An unguessable one-time token, carried to the bot as the /start deep-link
         payload. It identifies the team at entry (like the spectator password), so
         it lives on the team doc and dies on redemption."""
         token = secrets.token_urlsafe(12)
-        team.invite_tokens.append(token)
+        # Cap outstanding invites: minting past the cap silently retires the oldest
+        # unused link, so lost links age out instead of staying live forever.
+        team.invite_tokens = team.invite_tokens[-(self.MAX_OUTSTANDING_INVITES - 1):] + [token]
         self.update_team(team)
         return token
 

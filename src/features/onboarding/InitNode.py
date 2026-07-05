@@ -23,7 +23,6 @@ from domain.entities.UsersToState import UsersToState
 
 from features.onboarding import OnboardingMenu
 from features.onboarding import SpectatorOnboarding
-from features.onboarding import WelcomeGuide
 
 from Utils.CustomExceptions import ObjectNotFoundException
 
@@ -60,15 +59,7 @@ class InitNode(Node):
             # demoted - everyone else joins as PLAYER.
             role = Role.ADMIN if user_to_state.role is Role.ADMIN else Role.PLAYER
             self.user_state_service.join_team(user_to_state, team.doc_id, role)
-            await self.telegram_service.send_message(
-                update=update,
-                all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
-                message_type=MessageType.WELCOME,
-                message_extra_text=team.name)
-            await self.telegram_service.send_message(
-                update=update,
-                all_buttons=None,
-                message=WelcomeGuide.build_guide(user_to_state.role, team.name))
+            await SpectatorOnboarding.send_welcome_and_guide(self, update, user_to_state, team)
         else:
             new_state = UserState.REJECTED
             user_to_state = user_to_state.add_role(Role.REJECTED)
@@ -100,6 +91,12 @@ class InitNode(Node):
         token = SpectatorOnboarding.extract_start_token(update.message.text)
         if token is None:
             await self.handle_help(update, user_to_state, new_state)
+            return
+        if user_to_state.team_id:
+            # Already in a team (e.g. an admin whose state healed back to INIT tests
+            # their own link): never re-role them, and don't burn the token - route
+            # them through the normal /start instead.
+            await self.handle_start(update, user_to_state, new_state)
             return
         team = self.team_service.redeem_spectator_invite(token)
         if team is None:
