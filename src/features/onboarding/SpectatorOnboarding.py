@@ -16,7 +16,9 @@ def extract_start_token(text: str) -> str | None:
     """The deep-link payload of a '/start <token>' message, None for a bare /start
     or any other text."""
     parts = text.split(maxsplit=1)
-    if len(parts) == 2 and parts[0].split('@')[0] == '/start':
+    # Command matching is case-insensitive (like the transition router); the token
+    # itself stays case-sensitive.
+    if len(parts) == 2 and parts[0].split('@')[0].lower() == '/start':
         return parts[1].strip()
     return None
 
