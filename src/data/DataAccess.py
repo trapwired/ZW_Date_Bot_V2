@@ -245,6 +245,13 @@ class DataAccess(object):
     def get_role_user_count(self, role: Role) -> int:
         return len(self.firebase_repository.get_users_to_state_by_role(role))
 
+    def delete_team(self, team: Team) -> None:
+        self.firebase_repository.delete_team(team.doc_id)
+
+    def get_users_to_state_by_team(self, team_id: str) -> [UsersToState]:
+        rows = self.firebase_repository.get_users_to_state_by_team(team_id)
+        return [UsersToState.from_dict(row.id, row.to_dict()) for row in rows]
+
     def get_user_by_doc_id(self, user_doc_id: str) -> TelegramUser:
         return self.firebase_repository.get_user(user_doc_id)
 

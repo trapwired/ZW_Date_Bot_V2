@@ -78,6 +78,18 @@ class TeamService:
             # next read to refetch the persisted truth instead of a phantom password.
             self._all_teams = None
 
+    def rename_team(self, team: Team, name: str) -> None:
+        if not name.strip():
+            raise ValueError('Team name must not be empty')
+        team.name = name.strip()
+        self.update_team(team)
+
+    def delete_team(self, team: Team) -> None:
+        """Only for aborted setups (bot removed before the team saw any use) - an
+        established team's data is never auto-deleted (ADR 0001: manual cleanup)."""
+        self.data_access.delete_team(team)
+        self._all_teams = None
+
     def toggle_trainer(self, event_type, chat_id: int) -> None:
         """Mutate + persist + cache-invalidate in one step so no caller can flip a
         trainer flag on the cached Team and forget the write."""

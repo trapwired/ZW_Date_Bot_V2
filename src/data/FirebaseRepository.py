@@ -272,6 +272,16 @@ class FirebaseRepository(object):
             .where(filter=FieldFilter("teamId", "==", current_team_id()))
         return query_ref.get()
 
+    def get_users_to_state_by_team(self, team_id: str):
+        # Membership view over the global identity table, keyed explicitly (used by
+        # team-lifecycle code that runs OUTSIDE the ambient tenant context).
+        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
+            .where(filter=FieldFilter("teamId", "==", team_id))
+        return query_ref.get()
+
+    def delete_team(self, doc_id: str):
+        self._collection(Table.TEAMS_TABLE).document(doc_id).delete()
+
     def get_all_active_players_to_state(self):
         # Roster view over the global identity table - team-filtered like
         # get_users_to_state_by_role above.

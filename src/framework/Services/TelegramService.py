@@ -97,6 +97,20 @@ class TelegramService(object):
         # The maintainer is the only config-global chat id; group + trainer routing is
         # per team (read from the ambient tenant context's Team doc).
         self.maintainer_chat_id = api_config.get_key('Chat_Ids', 'MAINTAINER')
+        self._bot_username = None
+
+    async def get_bot_username(self) -> str:
+        if self._bot_username is None:
+            self._bot_username = (await self.bot.get_me()).username
+        return self._bot_username
+
+    async def send_onboarding_message(self, chat_id: int, message: str, all_buttons: [str] = None):
+        """Direct send that RAISES on failure (unlike _send_message, which swallows
+        Forbidden and deactivates the user) - team-setup callers handle an unreachable
+        person with a group fallback instead."""
+        reply_markup = ReplyKeyboardMarkup(generate_keyboard(all_buttons)) if all_buttons else None
+        return await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup,
+                                           parse_mode=telegram.constants.ParseMode.HTML)
 
     async def _send_message(self, chat_id: int, message: str, reply_markup=None):
         try:

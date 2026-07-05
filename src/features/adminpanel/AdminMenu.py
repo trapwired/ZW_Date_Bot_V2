@@ -32,6 +32,9 @@ SPECTATOR_PASSWORD_CANCEL = 'KN'  # discard the typed spectator password
 TRAINERS_MENU = 'T'     # show the trainer-routing overview
 TRAINERS_LIST = 'TL'    # arg: event group (Event int) - show the toggle list for it
 TRAINERS_TOGGLE = 'TX'  # args: event group + telegram id - flip that person's trainer flag
+TEAM_NAME_PROMPT = 'M'   # M as in Mannschaft - start typing a new team name
+TEAM_NAME_SAVE = 'MY'    # commit the typed team name
+TEAM_NAME_CANCEL = 'MN'  # discard the typed team name
 ANNOUNCE_PROMPT = 'N'         # start typing an announcement
 ANNOUNCE_TO_PLAYERS = 'NP'    # send the staged announcement to every player privately
 ANNOUNCE_TO_GROUP = 'NG'      # post the staged announcement in the team group chat
@@ -77,7 +80,15 @@ def build_panel_markup() -> InlineKeyboardMarkup:
          InlineKeyboardButton('🌐 Set website', callback_data=encode(WEBSITE_PROMPT))],
         [InlineKeyboardButton('🧑‍🏫 Trainers', callback_data=encode(TRAINERS_MENU)),
          InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
-        [InlineKeyboardButton('📣 Announce', callback_data=encode(ANNOUNCE_PROMPT))],
+        [InlineKeyboardButton('📣 Announce', callback_data=encode(ANNOUNCE_PROMPT)),
+         InlineKeyboardButton('✏️ Team name', callback_data=encode(TEAM_NAME_PROMPT))],
+    ])
+
+
+def build_team_name_confirm_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton('💾 Save', callback_data=encode(TEAM_NAME_SAVE)),
+         InlineKeyboardButton('Cancel', callback_data=encode(TEAM_NAME_CANCEL))],
     ])
 
 

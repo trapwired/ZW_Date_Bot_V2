@@ -39,6 +39,27 @@ async def drive_group(node_handler, group_chat_id: int, from_user_id: int, text:
     await node_handler.handle_message(make_group_update(group_chat_id, from_user_id, text), context=None)
 
 
+def make_my_chat_member_update(group_chat_id: int, title: str, user_id: int, first_name: str,
+                               old_status: str, new_status: str):
+    """The bot's own membership changed in a group. SimpleNamespace like
+    make_callback_update; telegramId/firstname feed TelegramService's non-Update
+    send path (group replies)."""
+    from telegram.constants import ChatType
+    member = SimpleNamespace(id=user_id, first_name=first_name, last_name='User')
+    return SimpleNamespace(
+        effective_chat=SimpleNamespace(id=group_chat_id, type=ChatType.SUPERGROUP, title=title),
+        effective_user=member,
+        message=None,
+        callback_query=None,
+        my_chat_member=SimpleNamespace(
+            from_user=member,
+            old_chat_member=SimpleNamespace(status=old_status),
+            new_chat_member=SimpleNamespace(status=new_status)),
+        telegramId=group_chat_id,
+        firstname=first_name,
+    )
+
+
 def group_admin_member(user_id: int) -> ChatMemberAdministrator:
     """A real ChatMemberAdministrator (TeamRegistration checks `type(member) in (...)`, so
     a SimpleNamespace won't do). All the granular permission flags are irrelevant to the
@@ -102,7 +123,7 @@ def make_callback_update(chat_id: int, data: str, message_text: str = "", messag
     return SimpleNamespace(
         effective_chat=SimpleNamespace(id=chat_id, type=ChatType.PRIVATE),
         effective_user=SimpleNamespace(id=chat_id, first_name=first_name, last_name="User"),
-        message=None,
+        message=None, my_chat_member=None,
         callback_query=FakeCallbackQuery(data, chat_id, message_text, message_id),
         telegramId=chat_id,
         firstname=first_name,

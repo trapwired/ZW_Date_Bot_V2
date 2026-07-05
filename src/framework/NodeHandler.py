@@ -28,6 +28,9 @@ from features.eventmgmt.EditEventFieldNode import EditEventFieldNode
 from features.teams import TeamRegistration as team_registration_command
 from features.teams.TeamRegistration import TeamRegistration
 from features.teams.UpdateSpectatorPasswordNode import UpdateSpectatorPasswordNode
+from features.teams.UpdateTeamNameNode import UpdateTeamNameNode
+from features.onboarding import OnboardingMenu
+from features.onboarding.OnboardingCallbackNode import OnboardingCallbackNode
 from features.website.UpdateWebsiteNode import UpdateWebsiteNode
 from features.announce.AnnounceNode import AnnounceNode
 from features.announce.AnnounceService import AnnounceService
@@ -103,7 +106,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.website_service = website_service
         self.statistics_service = statistics_service
         self.team_service = team_service
-        self.team_registration = TeamRegistration(bot, telegram_service, user_state_service, team_service)
+        self.team_registration = TeamRegistration(bot, telegram_service, user_state_service, team_service,
+                                                  data_access, self)
 
         self.events_view = EventsView(event_service, attendance_service, statistics_service)
 
@@ -129,6 +133,12 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             logging.info('Update: chat_type=%s, callback=%s',
                          update.effective_chat.type, update.callback_query is not None)
             chat_type = update.effective_chat.type
+
+            if update.my_chat_member:
+                # The bot's own membership changed (added to / removed from a chat) -
+                # the team-lifecycle trigger for guided onboarding.
+                await self.team_registration.handle_my_chat_member(update)
+                return
 
             if chat_type in self.GROUP_TYPES:
                 # Groups are ignored except for the one command that claims a group as a team.
@@ -215,6 +225,9 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
         announce_node = AnnounceNode(UserState.ADMIN_ANNOUNCE, telegram_service, user_state_service, data_access)
 
+        update_team_name_node = UpdateTeamNameNode(UserState.ADMIN_UPDATE_TEAM_NAME, telegram_service,
+                                                   user_state_service, data_access)
+
         return {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
@@ -224,6 +237,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_UPDATE_WEBSITE: update_website_node,
             UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD: update_spectator_password_node,
             UserState.ADMIN_ANNOUNCE: announce_node,
+            UserState.ADMIN_UPDATE_TEAM_NAME: update_team_name_node,
         }
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
@@ -238,6 +252,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             AnnounceService(data_access, telegram_service))
         self.assign_roles_callback_node = AssignRolesCallbackNode(
             telegram_service, data_access, trigger_service, user_state_service, self, self.role_service)
+        self.onboarding_callback_node = OnboardingCallbackNode(telegram_service, data_access, trigger_service)
 
     def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)
@@ -257,6 +272,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             return self.events_callback_node
         if AdminMenu.is_admin_menu_callback(callback_data):
             return self.admin_menu_callback_node
+        if OnboardingMenu.is_onboarding_callback(callback_data):
+            return self.onboarding_callback_node
         return None
 
     def get_node(self, user_state: UserState):

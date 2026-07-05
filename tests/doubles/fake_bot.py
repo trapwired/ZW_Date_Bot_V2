@@ -22,6 +22,9 @@ class FakeBot:
         # Default: every queried user is a group member. Tests override to exercise rejection.
         self.default_chat_member = ChatMemberMember(user=User(id=1, first_name="member", is_bot=False))
 
+    async def get_me(self):
+        return SimpleNamespace(username='TestBot')
+
     def _next_message_id(self) -> int:
         self._message_id += 1
         return self._message_id
