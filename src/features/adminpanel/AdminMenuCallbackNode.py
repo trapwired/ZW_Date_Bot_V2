@@ -234,6 +234,13 @@ class AdminMenuCallbackNode(CallbackNode):
 
     async def _finish_team_name(self, update: Update, query, action: str):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        if user_to_state.state is not UserState.ADMIN_UPDATE_TEAM_NAME:
+            # Stale button from an abandoned flow: additional_info may hold ANOTHER
+            # flow's staged value (a password!) - never commit it as the team name,
+            # and never touch that flow's state.
+            await self._edit(query, 'This rename is no longer active - start again via the admin menu.',
+                             AdminMenu.build_back_to_panel_markup())
+            return
         if action == AdminMenu.TEAM_NAME_CANCEL:
             user_to_state.additional_info = ''
             self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)

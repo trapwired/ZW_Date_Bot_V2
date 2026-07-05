@@ -96,10 +96,18 @@ async def test_added_to_already_registered_group_registers_no_second_team(node_h
 
 
 async def test_removal_from_fresh_team_rolls_the_setup_back(node_handler, data_access, bot, api_config):
+    from data.TenantContext import team_context
+    from Enums.Table import Table
     _make_adder_group_admin(bot)
     await node_handler.handle_message(_added_update(), context=None)
+    team = TeamService(data_access).find_team_by_group_chat(GROUP)
+    with team_context(team.doc_id):
+        data_access.set_website('https://example.org')         # a fresh team may have touched settings
 
     await node_handler.handle_message(_removed_update(), context=None)
+
+    with team_context(team.doc_id):
+        assert not data_access.has_any_docs(Table.SETTINGS_TABLE)   # no orphaned subcollection docs
 
     assert TeamService(data_access).find_team_by_group_chat(GROUP) is None
     adder_state = data_access.get_user_state(ADDER_ID)
@@ -160,4 +168,38 @@ async def test_admin_renames_team_from_the_panel(node_handler, data_access, bot,
 
     assert TeamService(data_access).get_team(default_team.doc_id).name == 'ZW Legends'
     assert current_state(data_access, ADDER_ID) == UserState.DEFAULT
+    assert_no_error_reported(bot)
+
+
+async def test_removal_keeps_team_whose_only_event_is_in_the_past(node_handler, data_access, bot, api_config):
+    import datetime
+    from data.TenantContext import team_context
+    from domain.entities.Training import Training
+    from domain.EventDateTimeParser import parse
+    _make_adder_group_admin(bot)
+    await node_handler.handle_message(_added_update(), context=None)
+    team = TeamService(data_access).find_team_by_group_chat(GROUP)
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)
+    with team_context(team.doc_id):
+        data_access.add(Training(parse(f"{yesterday.strftime('%d.%m.%Y')} 19:00").value, 'old hall'))
+
+    await node_handler.handle_message(_removed_update(), context=None)
+
+    assert TeamService(data_access).find_team_by_group_chat(GROUP) is not None
+    maintainer = int(api_config.get_key('Chat_Ids', 'MAINTAINER'))
+    assert any('Data kept' in t for t in bot.texts_to(maintainer))
+
+
+async def test_stale_team_name_save_never_commits_another_flows_staged_value(node_handler, data_access, bot,
+                                                                             default_team):
+    seed_user(data_access, ADDER_ID, Role.ADMIN, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
+              additional_info='88#1900#SuperSecret99')
+
+    update = await drive_callback(node_handler, ADDER_ID, AdminMenu.encode(AdminMenu.TEAM_NAME_SAVE))
+
+    assert TeamService(data_access).get_team(default_team.doc_id).name == default_team.name
+    assert 'no longer active' in update.callback_query.edits[-1].text
+    staged = data_access.get_user_state(ADDER_ID)
+    assert staged.state == UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD      # other flow untouched
+    assert 'SuperSecret99' in staged.additional_info
     assert_no_error_reported(bot)

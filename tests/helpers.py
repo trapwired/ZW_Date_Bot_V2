@@ -44,7 +44,6 @@ def make_my_chat_member_update(group_chat_id: int, title: str, user_id: int, fir
     """The bot's own membership changed in a group. SimpleNamespace like
     make_callback_update; telegramId/firstname feed TelegramService's non-Update
     send path (group replies)."""
-    from telegram.constants import ChatType
     member = SimpleNamespace(id=user_id, first_name=first_name, last_name='User')
     return SimpleNamespace(
         effective_chat=SimpleNamespace(id=group_chat_id, type=ChatType.SUPERGROUP, title=title),

@@ -332,6 +332,9 @@ class DataAccess(object):
             result.append(user)
         return result
 
+    def has_any_docs(self, table: Table) -> bool:
+        return self.firebase_repository.has_any_docs(table)
+
     def any_events_in_future(self, event_table: Table):
         events = self.firebase_repository.get_future_events(event_table)
         return len(events) > 0

@@ -35,7 +35,7 @@ async def test_start_as_non_member_is_rejected(node_handler, data_access, bot):
 
     assert current_state(data_access, NEW_USER_ID) == UserState.REJECTED
     assert data_access.get_user_state(NEW_USER_ID).role == Role.REJECTED
-    assert any("not allowed" in m.text for m in bot.sent)
+    assert any("two ways in" in m.text for m in bot.sent)
     assert_no_error_reported(bot)
 
 

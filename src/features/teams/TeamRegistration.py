@@ -25,8 +25,12 @@ COMMAND = '/register_team'
 USAGE_TEXT = ('To register this group as a team, send:\n'
               '/register_team followed by your team name')
 
-# Statuses that mean the bot is (still) inside the group.
-_IN_GROUP_STATUSES = {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.RESTRICTED}
+def _is_in_group(chat_member) -> bool:
+    """RESTRICTED alone is ambiguous: Telegram keeps the status for former members
+    whose restrictions outlive the membership - is_member disambiguates."""
+    if chat_member.status == ChatMemberStatus.RESTRICTED:
+        return chat_member.is_member
+    return chat_member.status in (ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR)
 
 
 def is_register_team_command(update: Update) -> bool:
@@ -110,8 +114,8 @@ class TeamRegistration:
         if update.effective_chat.type not in (ChatType.GROUP, ChatType.SUPERGROUP):
             return  # private-chat block/unblock events carry no team meaning
         change = update.my_chat_member
-        was_in = change.old_chat_member.status in _IN_GROUP_STATUSES
-        is_in = change.new_chat_member.status in _IN_GROUP_STATUSES
+        was_in = _is_in_group(change.old_chat_member)
+        is_in = _is_in_group(change.new_chat_member)
         if not was_in and is_in:
             await self._handle_added_to_group(update)
         elif was_in and not is_in:
@@ -129,14 +133,13 @@ class TeamRegistration:
             return
         if not await self._issuer_may_register(group_chat_id, adder.id):
             await self._reply(update, 'Thanks for adding me! A group admin or the owner can set this '
-                                      'group up as a team: remove and re-add me, or send\n'
-                                      '/register_team followed by your team name')
+                                      f'group up as a team: remove and re-add me, or use the command.\n{USAGE_TEXT}')
             return
         adder_state = self._lookup_user_state(adder.id)
         if adder_state is not None and adder_state.team_id:
             await self._reply(update, f'{Format.escape(adder.first_name)} already belongs to a team, so they '
                                       'cannot register another one - a different group admin can remove and '
-                                      're-add me, or send /register_team followed by the team name.')
+                                      f're-add me, or use the command.\n{USAGE_TEXT}')
             return
 
         team_name = (update.effective_chat.title or '').strip() or f'Team {group_chat_id}'
@@ -164,14 +167,14 @@ class TeamRegistration:
         team = self.team_service.find_team_by_group_chat(update.effective_chat.id)
         if team is None:
             return
-        if self._team_saw_use(team):
+        members = self.data_access.get_users_to_state_by_team(team.doc_id)
+        if self._team_saw_use(team, members):
             # Established team: never auto-delete data (ADR 0001 - manual cleanup).
             await self.telegram_service.send_maintainer_message(
                 f'Bot was removed from the group of team "{team.name}" ({team.doc_id}). '
                 'Data kept - clean up manually if the team is really gone.')
             return
 
-        members = self.data_access.get_users_to_state_by_team(team.doc_id)
         self.team_service.delete_team(team)
         for member in members:
             self.user_state_service.leave_team(member)
@@ -179,22 +182,21 @@ class TeamRegistration:
             f'Setup of team "{team.name}" was cancelled (bot removed from its group); '
             'the team was rolled back.')
         for member in members:
-            user = self.data_access.get_user_by_doc_id(member.user_id)
             try:
+                user = self.data_access.get_user_by_doc_id(member.user_id)
                 await self.telegram_service.send_onboarding_message(
                     user.telegramId, f'Setup cancelled - the team "{Format.escape(team.name)}" was rolled '
                                      'back. Add me to a group chat again anytime to start over.')
-            except TelegramError:
-                pass  # best-effort: rollback already happened
+            except (TelegramError, ObjectNotFoundException):
+                pass  # best-effort: rollback already happened, the next member still gets told
 
-    def _team_saw_use(self, team: Team) -> bool:
+    def _team_saw_use(self, team: Team, members: list) -> bool:
         """Fresh = still deletable: nobody but the registering admin joined and no
-        event was created yet."""
-        members = self.data_access.get_users_to_state_by_team(team.doc_id)
+        event (past or future) was ever created."""
         if len(members) > 1:
             return True
         with team_context(team.doc_id):
-            return any(self.data_access.any_events_in_future(table)
+            return any(self.data_access.has_any_docs(table)
                        for table in (Table.GAMES_TABLE, Table.TRAININGS_TABLE, Table.TIMEKEEPING_TABLE))
 
     async def _issuer_may_register(self, group_chat_id: int, issuer_id: int) -> bool:

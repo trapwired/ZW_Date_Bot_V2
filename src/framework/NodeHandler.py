@@ -252,7 +252,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             AnnounceService(data_access, telegram_service))
         self.assign_roles_callback_node = AssignRolesCallbackNode(
             telegram_service, data_access, trigger_service, user_state_service, self, self.role_service)
-        self.onboarding_callback_node = OnboardingCallbackNode(telegram_service, data_access, trigger_service)
+        self.onboarding_callback_node = OnboardingCallbackNode(telegram_service, data_access, trigger_service,
+                                                                user_state_service)
 
     def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)
