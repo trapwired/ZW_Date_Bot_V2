@@ -53,8 +53,8 @@ bot cannot message them first, it posts a t.me link in the group instead.
 > Your setup steps — everything lives behind the admin menu (tap `admin` in the
 > keyboard below):
 >
-> 1️⃣ **Spectator password** (🔑) — fans and supporters enter it to follow the team;
-> until it is set, nobody can join as spectator.
+> 1️⃣ **Spectators** — set a password (🔑) fans enter to follow the team, or hand out
+> one-time invite links (🔗).
 > 2️⃣ **First event** (➕) — add a game or training so there is something to answer to.
 > 3️⃣ **Invite the team** — tell everyone in the group chat to open a private chat
 > with me and press Start; group members join as players automatically.

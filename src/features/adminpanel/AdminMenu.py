@@ -36,6 +36,7 @@ TRAINERS_TOGGLE = 'TX'  # args: event group + telegram id - flip that person's t
 TEAM_NAME_PROMPT = 'M'   # M as in Mannschaft - start typing a new team name
 TEAM_NAME_SAVE = 'MY'    # commit the typed team name
 TEAM_NAME_CANCEL = 'MN'  # discard the typed team name
+SPECTATOR_INVITE = 'I'   # mint a one-time spectator invite link
 ANNOUNCE_PROMPT = 'N'         # start typing an announcement
 ANNOUNCE_TO_PLAYERS = 'NP'    # send the staged announcement to every player privately
 ANNOUNCE_TO_GROUP = 'NG'      # post the staged announcement in the team group chat
@@ -83,6 +84,7 @@ def build_panel_markup() -> InlineKeyboardMarkup:
          InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
         [InlineKeyboardButton('📣 Announce', callback_data=encode(ANNOUNCE_PROMPT)),
          InlineKeyboardButton('✏️ Team name', callback_data=encode(TEAM_NAME_PROMPT))],
+        [InlineKeyboardButton('🔗 Spectator invite link', callback_data=encode(SPECTATOR_INVITE))],
     ])
 
 

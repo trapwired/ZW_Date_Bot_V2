@@ -45,7 +45,7 @@ async def test_added_by_group_admin_registers_team_and_dms_setup_guide(node_hand
     adder_state = data_access.get_user_state(ADDER_ID)
     assert adder_state.role == Role.ADMIN and adder_state.team_id == team.doc_id
     dm = bot.texts_to(ADDER_ID)
-    assert len(dm) == 1 and 'SG Fluffy' in dm[0] and 'Spectator password' in dm[0]
+    assert len(dm) == 1 and 'SG Fluffy' in dm[0] and 'Spectators' in dm[0]
     group_texts = bot.texts_to(GROUP)
     assert len(group_texts) == 1 and '/start to join' in group_texts[0]
     assert_no_error_reported(bot)

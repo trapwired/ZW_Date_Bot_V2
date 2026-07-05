@@ -6,13 +6,16 @@ from domain.entities.DatabaseEntity import DatabaseEntity
 class Team(DatabaseEntity):
 
     def __init__(self, name: str, group_chat_id: int, spectator_password: str = None,
-                 trainers_games: list[int] = None, trainers_training: list[int] = None, doc_id: str = None):
+                 trainers_games: list[int] = None, trainers_training: list[int] = None,
+                 invite_tokens: list[str] = None, doc_id: str = None):
         super().__init__(doc_id)
         self.name = name
         self.group_chat_id = int(group_chat_id)
         self.spectator_password = spectator_password
         self.trainers_games = self._clean_trainer_ids(trainers_games)
         self.trainers_training = self._clean_trainer_ids(trainers_training)
+        # Outstanding one-time spectator invites; a token is deleted when redeemed.
+        self.invite_tokens = list(invite_tokens) if invite_tokens is not None else []
 
     def trainer_chat_ids(self, event_type: Event) -> list[int]:
         """Where this team's trainer-facing messages (summaries, trigger warnings) go.
@@ -53,14 +56,16 @@ class Team(DatabaseEntity):
     @staticmethod
     def from_dict(doc_id: str, source: dict):
         return Team(source.get('name'), source.get('groupChatId'), source.get('spectatorPassword'),
-                    source.get('trainersGames', []), source.get('trainersTraining', []), doc_id)
+                    source.get('trainersGames', []), source.get('trainersTraining', []),
+                    source.get('inviteTokens', []), doc_id)
 
     def to_dict(self):
         return {'name': self.name,
                 'groupChatId': self.group_chat_id,
                 'spectatorPassword': self.spectator_password,
                 'trainersGames': list(self.trainers_games),
-                'trainersTraining': list(self.trainers_training)}
+                'trainersTraining': list(self.trainers_training),
+                'inviteTokens': list(self.invite_tokens)}
 
     def __repr__(self):
         return f"Team(name={self.name}, group_chat_id={self.group_chat_id}, spectator_password={self.spectator_password}, trainers_games={self.trainers_games}, trainers_training={self.trainers_training}, doc_id={self.doc_id})"

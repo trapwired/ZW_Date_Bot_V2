@@ -80,6 +80,8 @@ class AdminMenuCallbackNode(CallbackNode):
                 await self._prompt_team_name(update, query)
             case AdminMenu.TEAM_NAME_SAVE | AdminMenu.TEAM_NAME_CANCEL:
                 await self._finish_team_name(update, query, action)
+            case AdminMenu.SPECTATOR_INVITE:
+                await self._create_spectator_invite(query)
             case AdminMenu.ANNOUNCE_PROMPT:
                 await self._prompt_announcement(update, query)
             case AdminMenu.ANNOUNCE_TO_PLAYERS | AdminMenu.ANNOUNCE_TO_GROUP:
@@ -256,6 +258,20 @@ class AdminMenuCallbackNode(CallbackNode):
             return
         await self._finish_typed_input(query, user_to_state,
                                        f'✅ The team is now named "{Format.escape(new_name.strip())}".')
+
+    ####################
+    # SPECTATOR INVITE #
+    ####################
+
+    async def _create_spectator_invite(self, query):
+        token = self.team_service.create_spectator_invite(self.team_service.current_team())
+        username = await self.telegram_service.get_bot_username()
+        message = ('Here is a one-time spectator invite - send it to ONE person, it dies '
+                   'on first use:\n\n'
+                   f'https://t.me/{username}?start={token}\n\n'
+                   'Generate a new link for each spectator. The spectator password keeps '
+                   'working as before.')
+        await self._edit(query, message, AdminMenu.build_back_to_panel_markup())
 
     ################
     # ANNOUNCEMENT #

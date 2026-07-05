@@ -1,7 +1,6 @@
 from telegram import Update
 
 from Enums.MessageType import MessageType
-from Enums.Role import Role
 from Enums.UserState import UserState
 
 from framework.Nodes.Node import Node
@@ -10,7 +9,7 @@ from domain import SpectatorPasswordPolicy
 from domain.entities.UsersToState import UsersToState
 
 from features.onboarding import OnboardingMenu
-from features.onboarding import WelcomeGuide
+from features.onboarding import SpectatorOnboarding
 
 from Utils import DateTimeUtils
 
@@ -26,6 +25,21 @@ class RejectedNode(Node):
         self.fallback_action = self.handle_password_attempt
 
     async def handle_password_attempt(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        # A '/start <token>' here is an invite deep link pressed while REJECTED - it is
+        # not a password guess, so it neither burns throttle attempts nor records one.
+        token = SpectatorOnboarding.extract_start_token(update.message.text)
+        if token is not None:
+            if user_to_state.team_id:
+                # Already in a team: never re-role them, and don't burn the token.
+                await self.handle_help(update, user_to_state, new_state)
+                return
+            team = self.team_service.redeem_spectator_invite(token)
+            if team is None:
+                await self.handle_help(update, user_to_state, new_state)
+                return
+            await SpectatorOnboarding.join_as_spectator(self, update, user_to_state, team)
+            return
+
         now = DateTimeUtils.get_local_now()
         attempts = SpectatorPasswordPolicy.decode(user_to_state.additional_info)
         if SpectatorPasswordPolicy.is_locked(attempts, now):
@@ -42,17 +56,7 @@ class RejectedNode(Node):
             await self.handle_help(update, user_to_state, new_state)
             return
 
-        user_to_state.additional_info = ''   # a successful entry clears the attempt record
-        self.user_state_service.join_team(user_to_state, team.doc_id, Role.SPECTATOR)
-        await self.telegram_service.send_message(
-            update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
-            message_type=MessageType.WELCOME,
-            message_extra_text=team.name)
-        await self.telegram_service.send_message(
-            update=update,
-            all_buttons=None,
-            message=WelcomeGuide.build_guide(user_to_state.role, team.name))
+        await SpectatorOnboarding.join_as_spectator(self, update, user_to_state, team)
 
     async def _register_failed_attempt(self, update: Update, user_to_state: UsersToState, attempts, now):
         record = SpectatorPasswordPolicy.register_failure(attempts, now)
