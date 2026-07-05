@@ -15,8 +15,8 @@ PREFIX = 'AP'
 DELIMITER = '#'
 
 PANEL_TEXT = (Format.bold('Admin menu')
-              + '\nAdd events, look at statistics, manage roles and trainers, '
-                'send an announcement, or set the website link and spectator password.')
+              + '\nAdd events, look at statistics, manage roles, send an announcement - '
+                'or open the spectator and setup sections.')
 
 # Actions (kept short to stay well under Telegram's 64-byte callback_data limit).
 PANEL = 'P'             # (re-)show the admin menu home
@@ -37,6 +37,8 @@ TEAM_NAME_PROMPT = 'M'   # M as in Mannschaft - start typing a new team name
 TEAM_NAME_SAVE = 'MY'    # commit the typed team name
 TEAM_NAME_CANCEL = 'MN'  # discard the typed team name
 SPECTATOR_INVITE = 'I'   # mint a one-time spectator invite link
+SPECTATORS_MENU = 'V'    # V as in viewers - the spectator section (password + invites)
+SETUP_MENU = 'U'         # rarely-touched team configuration (name, website, trainers)
 ANNOUNCE_PROMPT = 'N'         # start typing an announcement
 ANNOUNCE_TO_PLAYERS = 'NP'    # send the staged announcement to every player privately
 ANNOUNCE_TO_GROUP = 'NG'      # post the staged announcement in the team group chat
@@ -74,17 +76,32 @@ def parse(data: str) -> tuple[str, list[str]] | None:
 ###########
 
 def build_panel_markup() -> InlineKeyboardMarkup:
+    # Frequent actions stay top-level; rare configuration nests in the two sections.
     # Max 2 buttons per row: 3-way rows truncate the longer labels on phones.
     return InlineKeyboardMarkup([
         [InlineKeyboardButton('➕ Add event', callback_data=encode(ADD_CHOOSER)),
          InlineKeyboardButton('📊 Statistics', callback_data=encode(STATS_MENU))],
         [InlineKeyboardButton('👥 Roles', callback_data=RoleAssignment.encode_home()),
-         InlineKeyboardButton('🌐 Set website', callback_data=encode(WEBSITE_PROMPT))],
-        [InlineKeyboardButton('🧑‍🏫 Trainers', callback_data=encode(TRAINERS_MENU)),
-         InlineKeyboardButton('🔑 Spectator password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
-        [InlineKeyboardButton('📣 Announce', callback_data=encode(ANNOUNCE_PROMPT)),
-         InlineKeyboardButton('✏️ Team name', callback_data=encode(TEAM_NAME_PROMPT))],
-        [InlineKeyboardButton('🔗 Spectator invite link', callback_data=encode(SPECTATOR_INVITE))],
+         InlineKeyboardButton('📣 Announce', callback_data=encode(ANNOUNCE_PROMPT))],
+        [InlineKeyboardButton('👁 Spectators', callback_data=encode(SPECTATORS_MENU)),
+         InlineKeyboardButton('⚙️ Setup', callback_data=encode(SETUP_MENU))],
+    ])
+
+
+def build_spectators_menu_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton('🔑 Set password', callback_data=encode(SPECTATOR_PASSWORD_PROMPT))],
+        [InlineKeyboardButton('🔗 One-time invite link', callback_data=encode(SPECTATOR_INVITE))],
+        [InlineKeyboardButton('« Back', callback_data=encode(PANEL))],
+    ])
+
+
+def build_setup_menu_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton('✏️ Team name', callback_data=encode(TEAM_NAME_PROMPT))],
+        [InlineKeyboardButton('🌐 Website', callback_data=encode(WEBSITE_PROMPT))],
+        [InlineKeyboardButton('🧑‍🏫 Trainers', callback_data=encode(TRAINERS_MENU))],
+        [InlineKeyboardButton('« Back', callback_data=encode(PANEL))],
     ])
 
 
@@ -106,7 +123,7 @@ def build_announce_confirm_markup() -> InlineKeyboardMarkup:
 def build_trainers_menu_markup() -> InlineKeyboardMarkup:
     rows = [[InlineKeyboardButton(label, callback_data=encode(TRAINERS_LIST, int(event_type)))]
             for event_type, label in TRAINER_GROUP_LABELS.items()]
-    rows.append([InlineKeyboardButton('« Back', callback_data=encode(PANEL))])
+    rows.append([InlineKeyboardButton('« Back', callback_data=encode(SETUP_MENU))])
     return InlineKeyboardMarkup(rows)
 
 
@@ -171,8 +188,13 @@ def build_spectator_password_confirm_markup() -> InlineKeyboardMarkup:
     ])
 
 
-def build_typed_input_prompt_markup() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data=encode(PANEL))]])
+def build_typed_input_prompt_markup(back_action: str = None) -> InlineKeyboardMarkup:
+    # Cancel returns to the section the flow was launched from (default: panel root).
+    return InlineKeyboardMarkup([[InlineKeyboardButton('Cancel', callback_data=encode(back_action or PANEL))]])
+
+
+def build_back_markup(back_action: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton('« Back', callback_data=encode(back_action))]])
 
 
 def build_back_to_panel_markup() -> InlineKeyboardMarkup:

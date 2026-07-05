@@ -87,7 +87,7 @@ async def test_confirm_no_keeps_existing_url(node_handler, data_access, bot):
     staged = data_access.get_user_state(ADMIN_ID)
     assert staged.additional_info == ''                 # staging field still cleared
     assert staged.state == UserState.DEFAULT
-    assert any("Admin menu" in e.text for e in update.callback_query.edits)  # back on the panel
+    assert any("Team setup" in e.text for e in update.callback_query.edits)  # back on the setup overview
     assert_no_error_reported(bot)
 
 

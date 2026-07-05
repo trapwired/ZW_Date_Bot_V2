@@ -69,7 +69,8 @@ async def test_save_commits_the_password(node_handler, data_access, bot, default
     staged = data_access.get_user_state(ADMIN_ID)
     assert staged.additional_info == ''
     assert staged.state == UserState.DEFAULT
-    assert any("updated" in e.text for e in update.callback_query.edits)
+    # Landing on the spectators overview with the new password IS the confirmation.
+    assert any(NEW_PASSWORD in e.text and 'Spectators' in e.text for e in update.callback_query.edits)
     assert_no_error_reported(bot)
 
 
@@ -100,13 +101,13 @@ async def test_save_rejects_empty_password(node_handler, data_access, bot, defau
     assert_no_error_reported(bot)
 
 
-async def test_cancel_returns_to_panel_unchanged(node_handler, data_access, bot, default_team):
+async def test_cancel_returns_to_spectators_overview_unchanged(node_handler, data_access, bot, default_team):
     seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
               additional_info=NEW_PASSWORD)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATOR_PASSWORD_CANCEL))
 
-    assert any("Admin menu" in e.text for e in update.callback_query.edits)
+    assert any("Spectators" in e.text for e in update.callback_query.edits)
     staged = data_access.get_user_state(ADMIN_ID)
     assert staged.additional_info == ''
     assert staged.state == UserState.DEFAULT
