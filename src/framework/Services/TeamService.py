@@ -1,3 +1,5 @@
+import secrets
+
 from data.DataAccess import DataAccess
 from data.TenantContext import current_team_id
 from domain.entities.Team import Team
@@ -77,6 +79,27 @@ class TeamService:
             # Also on failure: the cached Team was already mutated above, so force the
             # next read to refetch the persisted truth instead of a phantom password.
             self._all_teams = None
+
+    def create_spectator_invite(self, team: Team) -> str:
+        """An unguessable one-time token, carried to the bot as the /start deep-link
+        payload. It identifies the team at entry (like the spectator password), so
+        it lives on the team doc and dies on redemption."""
+        token = secrets.token_urlsafe(12)
+        team.invite_tokens.append(token)
+        self.update_team(team)
+        return token
+
+    def redeem_spectator_invite(self, token: str) -> Team | None:
+        """Consume a one-time invite: returns the team and deletes the token, or
+        None for unknown/already-used tokens."""
+        if not token:
+            return None
+        for team in self.get_all_teams():
+            if token in team.invite_tokens:
+                team.invite_tokens.remove(token)
+                self.update_team(team)
+                return team
+        return None
 
     def rename_team(self, team: Team, name: str) -> None:
         if not name.strip():

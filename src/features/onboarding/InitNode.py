@@ -22,6 +22,7 @@ from domain.entities.TelegramUser import TelegramUser
 from domain.entities.UsersToState import UsersToState
 
 from features.onboarding import OnboardingMenu
+from features.onboarding import SpectatorOnboarding
 from features.onboarding import WelcomeGuide
 
 from Utils.CustomExceptions import ObjectNotFoundException
@@ -38,6 +39,9 @@ class InitNode(Node):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.bot = bot
         self.team_service = team_service
+        # '/start <token>' (an invite deep link) doesn't exact-match the /start
+        # transition, so it arrives here as unmatched text.
+        self.fallback_action = self.handle_unmatched_text
 
     async def handle(self, update: Update, user_to_state: UsersToState):
         telegram_id = update.effective_chat.id
@@ -91,6 +95,18 @@ class InitNode(Node):
             if isinstance(member, (ChatMemberOwner, ChatMemberAdministrator, ChatMemberMember, ChatMemberRestricted)):
                 return team
         return None
+
+    async def handle_unmatched_text(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        token = SpectatorOnboarding.extract_start_token(update.message.text)
+        if token is None:
+            await self.handle_help(update, user_to_state, new_state)
+            return
+        team = self.team_service.redeem_spectator_invite(token)
+        if team is None:
+            # Unknown or already-used token: same gate as a plain /start miss.
+            await self.handle_start(update, user_to_state, UserState.REJECTED)
+            return
+        await SpectatorOnboarding.join_as_spectator(self, update, user_to_state, team)
 
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(
