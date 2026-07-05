@@ -50,8 +50,8 @@ def get_text(message_type: MessageType, extra_text: str = '', first_name: str = 
                     "away to any other folks or legal entities.\n\n"
                     "So, that's it! Now let's get back to managing your team's schedule, shall we?")
         case MessageType.REJECTED:
-            return 'I am sorry, you are not allowed to use this bot. If you think this is wrong, contact the person ' \
-                   'you got the bot recommended from... :)'
+            return ('Hi ' + Format.escape(first_name) + '! I don\'t know you yet - '
+                    'there are two ways in, pick one below.')
 
         case MessageType.ENROLLMENT_REMINDER:
             return 'Hey ' + Format.escape(first_name) + (', please quickly take your time to update your attendance '
@@ -97,11 +97,28 @@ class TelegramService(object):
         # The maintainer is the only config-global chat id; group + trainer routing is
         # per team (read from the ambient tenant context's Team doc).
         self.maintainer_chat_id = api_config.get_key('Chat_Ids', 'MAINTAINER')
+        self._bot_username = None
+
+    async def get_bot_username(self) -> str:
+        if self._bot_username is None:
+            self._bot_username = (await self.bot.get_me()).username
+        return self._bot_username
+
+    async def send_onboarding_message(self, chat_id: int, message: str, all_buttons: [str] = None):
+        """Direct send that RAISES on failure (unlike _send_message, which swallows
+        Forbidden and deactivates the user) - team-setup callers handle an unreachable
+        person with a group fallback instead."""
+        reply_markup = ReplyKeyboardMarkup(generate_keyboard(all_buttons)) if all_buttons else None
+        return await self._send_raw(chat_id, message, reply_markup)
+
+    async def _send_raw(self, chat_id: int, message: str, reply_markup=None):
+        # THE outbound primitive - every send shares parse mode and options through here.
+        return await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup,
+                                           parse_mode=telegram.constants.ParseMode.HTML)
 
     async def _send_message(self, chat_id: int, message: str, reply_markup=None):
         try:
-            return await self.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_markup,
-                                               parse_mode=telegram.constants.ParseMode.HTML)
+            return await self._send_raw(chat_id, message, reply_markup)
         except Forbidden as e:
             # Group ids are negative and have no user state - e.g. the trainer-fallback
             # group chat of a team the bot got removed from.

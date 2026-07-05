@@ -76,6 +76,10 @@ class AdminMenuCallbackNode(CallbackNode):
                 await self._prompt_spectator_password(update, query)
             case AdminMenu.SPECTATOR_PASSWORD_SAVE | AdminMenu.SPECTATOR_PASSWORD_CANCEL:
                 await self._finish_spectator_password(update, query, action)
+            case AdminMenu.TEAM_NAME_PROMPT:
+                await self._prompt_team_name(update, query)
+            case AdminMenu.TEAM_NAME_SAVE | AdminMenu.TEAM_NAME_CANCEL:
+                await self._finish_team_name(update, query, action)
             case AdminMenu.ANNOUNCE_PROMPT:
                 await self._prompt_announcement(update, query)
             case AdminMenu.ANNOUNCE_TO_PLAYERS | AdminMenu.ANNOUNCE_TO_GROUP:
@@ -218,6 +222,40 @@ class AdminMenuCallbackNode(CallbackNode):
         user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, '')
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD)
         await self._edit(query, message, AdminMenu.build_typed_input_prompt_markup())
+
+    #############
+    # TEAM NAME #
+    #############
+
+    async def _prompt_team_name(self, update: Update, query):
+        current = Format.escape(self.team_service.current_team().name)
+        message = f'The team is currently named:\n{current}\n\nSend me the new name.'
+        await self._start_typed_input(update, query, UserState.ADMIN_UPDATE_TEAM_NAME, message)
+
+    async def _finish_team_name(self, update: Update, query, action: str):
+        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
+        if user_to_state.state is not UserState.ADMIN_UPDATE_TEAM_NAME:
+            # Stale button from an abandoned flow: additional_info may hold ANOTHER
+            # flow's staged value (a password!) - never commit it as the team name,
+            # and never touch that flow's state.
+            await self._edit(query, 'This rename is no longer active - start again via the admin menu.',
+                             AdminMenu.build_back_to_panel_markup())
+            return
+        if action == AdminMenu.TEAM_NAME_CANCEL:
+            user_to_state.additional_info = ''
+            self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
+            await self._show_panel(update, query)
+            return
+
+        _, _, new_name = InlineInputStaging.parse(user_to_state.additional_info)
+        try:
+            self.team_service.rename_team(self.team_service.current_team(), new_name)
+        except ValueError:
+            await self._edit(query, '⚠️ The team name cannot be empty - send me a different one.',
+                             AdminMenu.build_typed_input_prompt_markup())
+            return
+        await self._finish_typed_input(query, user_to_state,
+                                       f'✅ The team is now named "{Format.escape(new_name.strip())}".')
 
     ################
     # ANNOUNCEMENT #

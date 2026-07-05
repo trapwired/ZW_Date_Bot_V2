@@ -41,3 +41,24 @@ Admins additionally get:
 > 🌐 **Website** — tap `website` for the team's page.
 >
 > ❓ /help shows everything you can do; /privacy explains what data the bot keeps.
+
+## New team admins (setup guide)
+
+Sent automatically as a private message to the group admin who adds the bot to a
+group chat (the add itself registers the team, named after the group title). If the
+bot cannot message them first, it posts a t.me link in the group instead.
+
+> 🎉 **`<team>`** is registered, and you are its first admin!
+>
+> Your setup steps — everything lives behind the admin menu (tap `admin` in the
+> keyboard below):
+>
+> 1️⃣ **Spectator password** (🔑) — fans and supporters enter it to follow the team;
+> until it is set, nobody can join as spectator.
+> 2️⃣ **First event** (➕) — add a game or training so there is something to answer to.
+> 3️⃣ **Invite the team** — tell everyone in the group chat to open a private chat
+> with me and press Start; group members join as players automatically.
+> 4️⃣ Optional: **trainers** (🧑‍🏫) for summaries and warnings, the **website** (🌐)
+> link, and a different **team name** (✏️) — I took it from your group title.
+>
+> Changed your mind? Just remove me from the group chat and everything is rolled back.

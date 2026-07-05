@@ -21,6 +21,7 @@ from domain.entities.Team import Team
 from domain.entities.TelegramUser import TelegramUser
 from domain.entities.UsersToState import UsersToState
 
+from features.onboarding import OnboardingMenu
 from features.onboarding import WelcomeGuide
 
 from Utils.CustomExceptions import ObjectNotFoundException
@@ -71,7 +72,8 @@ class InitNode(Node):
             await self.telegram_service.send_message(
                 update=update,
                 all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
-                message_type=MessageType.REJECTED)
+                message_type=MessageType.REJECTED,
+                reply_markup=OnboardingMenu.build_choice_markup())
 
     async def find_membership_team(self, telegram_id) -> Team | None:
         """A team whose group chat the user is a member of. Iteration order is arbitrary

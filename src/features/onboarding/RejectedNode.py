@@ -9,6 +9,7 @@ from framework.Nodes.Node import Node
 from domain import SpectatorPasswordPolicy
 from domain.entities.UsersToState import UsersToState
 
+from features.onboarding import OnboardingMenu
 from features.onboarding import WelcomeGuide
 
 from Utils import DateTimeUtils
@@ -66,4 +67,5 @@ class RejectedNode(Node):
         await self.telegram_service.send_message(
             update=update,
             all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
-            message_type=MessageType.REJECTED)
+            message_type=MessageType.REJECTED,
+            reply_markup=OnboardingMenu.build_choice_markup())

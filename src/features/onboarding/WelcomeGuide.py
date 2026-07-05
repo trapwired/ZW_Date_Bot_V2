@@ -40,6 +40,23 @@ def _spectator_guide(team_name: str) -> str:
             f'❓ /help shows everything you can do; /privacy explains what data the bot keeps.')
 
 
+def build_admin_setup_guide(team_name: str) -> str:
+    """Sent to the group admin right after adding the bot registered their team."""
+    return (f'🎉 {Format.bold(Format.escape(team_name))} is registered, and you are its first admin!\n\n'
+            'Your setup steps - everything lives behind the admin menu '
+            f'(tap {Format.code("admin")} in the keyboard below):\n\n'
+            f'1️⃣ {Format.bold("Spectator password")} (🔑) - fans and supporters enter it to follow '
+            'the team; until it is set, nobody can join as spectator.\n'
+            f'2️⃣ {Format.bold("First event")} (➕) - add a game or training so there is something '
+            'to answer to.\n'
+            f'3️⃣ {Format.bold("Invite the team")} - tell everyone in the group chat to open a '
+            'private chat with me and press Start; group members join as players automatically.\n'
+            f'4️⃣ Optional: {Format.bold("trainers")} (🧑‍🏫) for summaries and warnings, the '
+            f'{Format.bold("website")} (🌐) link, and a different {Format.bold("team name")} (✏️) - '
+            'I took it from your group title.\n\n'
+            'Changed your mind? Just remove me from the group chat and everything is rolled back.')
+
+
 def _admin_addendum() -> str:
     return (f'\n\n🛠 {Format.bold("Admin")} - tap {Format.code("admin")} for the admin panel: '
             'add events, statistics, roles, trainers, the website link and the spectator password.')

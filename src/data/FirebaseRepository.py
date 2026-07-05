@@ -5,7 +5,7 @@ from firebase_admin import firestore
 from google.cloud.firestore_v1 import FieldFilter
 
 from data.Tables import Tables, EVENT_TABLES, EVENT_ATTENDANCE_TABLES
-from data.TenantContext import current_team_id
+from data.TenantContext import current_team_id, team_context
 
 from Enums.Table import Table
 from Enums.Role import Role
@@ -271,6 +271,27 @@ class FirebaseRepository(object):
             .where(filter=FieldFilter("role", "==", role)) \
             .where(filter=FieldFilter("teamId", "==", current_team_id()))
         return query_ref.get()
+
+    def get_users_to_state_by_team(self, team_id: str):
+        # Membership view over the global identity table, keyed explicitly (used by
+        # team-lifecycle code that runs OUTSIDE the ambient tenant context).
+        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
+            .where(filter=FieldFilter("teamId", "==", team_id))
+        return query_ref.get()
+
+    def has_any_docs(self, table: Table) -> bool:
+        return len(self._collection(table).limit(1).get()) > 0
+
+    def delete_team(self, doc_id: str):
+        # Firestore does NOT cascade a document delete into its subcollections, so a
+        # rolled-back team must purge its team-scoped docs first (a fresh team holds at
+        # most a settings doc or an abandoned wizard draft) or they orphan forever.
+        with team_context(doc_id):
+            for table in TEAM_SCOPED_TABLES:
+                collection = self._collection(table)
+                for doc in collection.get():
+                    collection.document(doc.id).delete()
+        self._collection(Table.TEAMS_TABLE).document(doc_id).delete()
 
     def get_all_active_players_to_state(self):
         # Roster view over the global identity table - team-filtered like

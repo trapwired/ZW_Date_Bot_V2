@@ -39,6 +39,31 @@ async def drive_group(node_handler, group_chat_id: int, from_user_id: int, text:
     await node_handler.handle_message(make_group_update(group_chat_id, from_user_id, text), context=None)
 
 
+def make_my_chat_member_update(group_chat_id: int, title: str, user_id: int, first_name: str,
+                               old_status: str, new_status: str):
+    """The bot's own membership changed in a group. A REAL Update (like
+    make_group_update): the error-report funnel dispatches on the Update type, so a
+    SimpleNamespace here would silently disable assert_no_error_reported."""
+    import datetime
+    from telegram import ChatMemberUpdated, ChatMemberMember, ChatMemberLeft
+    bot_user = User(id=999999, first_name='Bot', is_bot=True)
+    members = {
+        'member': ChatMemberMember(user=bot_user),
+        'left': ChatMemberLeft(user=bot_user),
+        'administrator': group_admin_member(999999),
+    }
+    return Update(
+        update_id=1,
+        my_chat_member=ChatMemberUpdated(
+            chat=Chat(id=group_chat_id, type=ChatType.SUPERGROUP, title=title),
+            from_user=User(id=user_id, first_name=first_name, is_bot=False),
+            date=datetime.datetime.now(),
+            old_chat_member=members[str(old_status)],
+            new_chat_member=members[str(new_status)],
+        ),
+    )
+
+
 def group_admin_member(user_id: int) -> ChatMemberAdministrator:
     """A real ChatMemberAdministrator (TeamRegistration checks `type(member) in (...)`, so
     a SimpleNamespace won't do). All the granular permission flags are irrelevant to the
@@ -102,7 +127,7 @@ def make_callback_update(chat_id: int, data: str, message_text: str = "", messag
     return SimpleNamespace(
         effective_chat=SimpleNamespace(id=chat_id, type=ChatType.PRIVATE),
         effective_user=SimpleNamespace(id=chat_id, first_name=first_name, last_name="User"),
-        message=None,
+        message=None, my_chat_member=None,
         callback_query=FakeCallbackQuery(data, chat_id, message_text, message_id),
         telegramId=chat_id,
         firstname=first_name,

@@ -133,6 +133,18 @@ class FakeCollection:
     def get(self):
         return list(self.stream())
 
+    def limit(self, count: int):
+        return _FakeLimitedCollection(self, count)
+
+
+class _FakeLimitedCollection:
+    def __init__(self, collection: FakeCollection, count: int):
+        self._collection = collection
+        self._count = count
+
+    def get(self):
+        return self._collection.get()[:self._count]
+
 
 class FakeFirestoreClient:
     def __init__(self):
