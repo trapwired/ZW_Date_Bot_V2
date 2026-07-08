@@ -27,7 +27,7 @@ def _buttons(reply_markup):
 
 
 async def test_admin_card_has_edit_and_delete_row(node_handler, data_access, bot, game):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, EventsMenu.encode_card(Event.GAME, game.doc_id))
 
@@ -48,7 +48,7 @@ async def test_player_card_has_no_admin_row(node_handler, data_access, bot, game
 
 
 async def test_delete_asks_for_confirmation_then_deletes(node_handler, data_access, bot, game):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, EventsMenu.encode_delete(Event.GAME, game.doc_id))
     edit = update.callback_query.edits[-1]
@@ -77,7 +77,7 @@ async def test_player_pressing_forwarded_delete_button_changes_nothing(node_hand
 
 
 async def test_edit_shows_field_chooser_per_event_type(node_handler, data_access, bot, game):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     training = data_access.add(Training(parse(FUTURE).value, "sporthalle"))
 
     update = await drive_callback(node_handler, ADMIN_ID, EventsMenu.encode_edit_fields(Event.GAME, game.doc_id))
@@ -96,7 +96,7 @@ async def test_forged_opponent_edit_on_a_training_fails_loudly(node_handler, dat
     # OPPONENT is only a game field; the chooser never offers it for a training, so this
     # can only be a forged/stale callback. Driven at the node so the assertion isn't the
     # harness's maintainer path.
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     training = data_access.add(Training(parse(FUTURE).value, "sporthalle"))
 
     from tests.helpers import make_callback_update
@@ -110,7 +110,7 @@ async def test_forged_opponent_edit_on_a_training_fails_loudly(node_handler, dat
 
 
 async def test_picking_a_field_hands_over_to_typed_input(node_handler, data_access, bot, game):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID,
                          EventsMenu.encode_edit_field(Event.GAME, game.doc_id, EventField.LOCATION),

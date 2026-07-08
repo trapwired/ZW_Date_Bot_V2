@@ -5,7 +5,7 @@ from framework.Nodes.CallbackNode import CallbackNode
 
 from Enums.EventField import EventField
 from Enums.Event import Event
-from Enums.RoleSet import RoleSet
+from Enums import Audience
 from Enums.UserState import UserState
 
 from data.DataAccess import DataAccess
@@ -34,7 +34,7 @@ class AdminMenuCallbackNode(CallbackNode):
     menu message in place; only the add-event wizard and the website update hand over
     to a typed-input state."""
 
-    required_roles = RoleSet.ADMINS
+    audience = Audience.ADMINS
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  user_state_service: UserStateService, statistics_service, website_service, event_service,

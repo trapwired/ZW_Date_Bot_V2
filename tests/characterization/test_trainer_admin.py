@@ -19,7 +19,7 @@ PLAYER_ID = 1501
 
 
 async def test_menu_shows_current_trainers_and_group_chat_fallback(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     default_team.trainers_training.clear()
     data_access.update(default_team)
 
@@ -32,7 +32,7 @@ async def test_menu_shows_current_trainers_and_group_chat_fallback(node_handler,
 
 
 async def test_toggle_list_offers_roster_members_and_stray_trainer_ids(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT, first_name='Coach')
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, first_name='Coach', is_admin=True)
     seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT, first_name='Pia')
 
     update = await drive_callback(node_handler, ADMIN_ID,
@@ -46,7 +46,7 @@ async def test_toggle_list_offers_roster_members_and_stray_trainer_ids(node_hand
 
 
 async def test_toggle_persists_and_second_toggle_removes(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID,
                          AdminMenu.encode(AdminMenu.TRAINERS_TOGGLE, int(Event.GAME), ADMIN_ID))
@@ -62,7 +62,7 @@ async def test_toggle_persists_and_second_toggle_removes(node_handler, data_acce
 async def test_routing_follows_toggles_without_restart(node_handler, services, data_access, bot, default_team):
     # Remove both seeded stray ids, make the admin the only game trainer - the very next
     # trainer message must go to them (same TeamService instance the router reads).
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     for stray in DEFAULT_TEAM_TRAINERS:
         await drive_callback(node_handler, ADMIN_ID,
                              AdminMenu.encode(AdminMenu.TRAINERS_TOGGLE, int(Event.GAME), stray))
@@ -78,7 +78,7 @@ async def test_routing_follows_toggles_without_restart(node_handler, services, d
 
 
 async def test_malformed_trainer_callbacks_are_ignored(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     before = TeamService(data_access).get_team(default_team.doc_id).trainers_games
 
     for data in [AdminMenu.encode(AdminMenu.TRAINERS_LIST),                       # missing event arg
@@ -90,7 +90,7 @@ async def test_malformed_trainer_callbacks_are_ignored(node_handler, data_access
 
 
 async def test_toggle_list_is_sorted_by_first_name_with_strays_last(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT, first_name='Zoe')
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, first_name='Zoe', is_admin=True)
     seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT, first_name='Anna')
 
     update = await drive_callback(node_handler, ADMIN_ID,

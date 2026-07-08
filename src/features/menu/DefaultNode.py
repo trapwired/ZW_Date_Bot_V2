@@ -29,7 +29,7 @@ class DefaultNode(Node):
         self.team_service = team_service
 
     async def handle_events(self, update: Update, user_to_state: UsersToState, new_state: UserState):
-        text, markup = self.events_view.build_list(user_to_state.role, update.effective_chat.id, None)
+        text, markup = self.events_view.build_list(user_to_state, update.effective_chat.id, None)
         await self.telegram_service.send_message(
             update=update,
             all_buttons=None,

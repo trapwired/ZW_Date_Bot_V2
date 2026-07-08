@@ -21,10 +21,13 @@ class UserStateService(object):
         self.data_access.update(user_to_state)
 
     def join_team(self, user_to_state: UsersToState, team_id: str, role: Role,
-                  new_state: UserState = UserState.DEFAULT) -> None:
-        """THE seam that attaches a user to a team (ADR 0001): team, role and state land
-        in one persisted write, so no onboarding path can stamp one without the others."""
+                  new_state: UserState = UserState.DEFAULT, is_admin: bool = False) -> None:
+        """THE seam that attaches a user to a team (ADR 0001): team, role, admin flag and
+        state land in one persisted write, so no onboarding path can stamp one without the
+        others. An existing admin bit survives a re-join (a healed admin re-/starting must
+        not be demoted); it is only ever cleared by leave_team or the roles menu."""
         user_to_state.add_role(role)
+        user_to_state.is_admin = is_admin or user_to_state.is_admin
         user_to_state.team_id = team_id
         user_to_state.state = new_state
         self.data_access.update(user_to_state)
@@ -33,6 +36,7 @@ class UserStateService(object):
         """Undo join_team in one persisted write: back to the teamless INIT stance
         (used when an aborted team setup is rolled back)."""
         user_to_state.add_role(Role.INIT)
+        user_to_state.is_admin = False
         user_to_state.team_id = None
         user_to_state.state = UserState.INIT
         self.data_access.update(user_to_state)

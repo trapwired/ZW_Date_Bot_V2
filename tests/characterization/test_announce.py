@@ -19,7 +19,7 @@ ANNOUNCEMENT = 'Season opener moved to <Saturday>!'
 
 
 def _seed_team(data_access):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     seed_user(data_access, PLAYER_ID, Role.PLAYER, UserState.DEFAULT)
     seed_user(data_access, SPECTATOR_ID, Role.SPECTATOR, UserState.DEFAULT)
 
@@ -102,8 +102,8 @@ async def test_stale_delivery_button_never_broadcasts_another_flows_staged_value
     # Admin abandoned the announce flow and is now typing a new spectator password;
     # a stale delivery button must not broadcast that staged secret nor kill the flow.
     _seed_team(data_access)
-    seed_user(data_access, 1799, Role.ADMIN, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
-              additional_info='77#1799#SuperSecret99')
+    seed_user(data_access, 1799, Role.PLAYER, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
+              additional_info='77#1799#SuperSecret99', is_admin=True)
 
     update = await drive_callback(node_handler, 1799, AdminMenu.encode(AdminMenu.ANNOUNCE_TO_GROUP))
 

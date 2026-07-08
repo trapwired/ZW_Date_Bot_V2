@@ -25,9 +25,9 @@ ORIGINAL = "24.12.2030 18:30"
 def _seed_game_with_yes_attendance(data_access):
     game = data_access.add(Game(parse(ORIGINAL).value, "home arena", "rivals fc"))
     uts = seed_user(
-        data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_EVENT_FIELD,
+        data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_EVENT_FIELD,
         additional_info=CallbackUtils.build_additional_information(1, ADMIN_ID, game.doc_id, Event.GAME,
-                                                                   EventField.DATETIME))
+                                                                   EventField.DATETIME), is_admin=True)
     data_access.update_attendance(Attendance(uts.user_id, game.doc_id, AttendanceState.YES), Event.GAME)
     return game
 

@@ -24,7 +24,7 @@ def _mint_token(data_access, default_team) -> str:
 
 
 async def test_admin_mints_link_and_token_lands_on_team_doc(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATOR_INVITE))
 
@@ -99,15 +99,15 @@ async def test_token_identifies_its_own_team(node_handler, data_access, bot, def
 
 
 async def test_healed_admin_testing_their_own_link_is_not_demoted(node_handler, data_access, bot, default_team):
-    # State healed back to INIT but team + ADMIN role intact - tapping their own
+    # State healed back to INIT but team + admin flag intact - tapping their own
     # invite link must not re-role them, and the token must survive.
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.INIT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.INIT, is_admin=True)
     token = _mint_token(data_access, default_team)
 
     await drive(node_handler, ADMIN_ID, f'/start {token}')
 
     admin = data_access.get_user_state(ADMIN_ID)
-    assert admin.role == Role.ADMIN
+    assert admin.role == Role.PLAYER and admin.is_admin
     assert token in TeamService(data_access).get_team(default_team.doc_id).invite_tokens
     assert_no_error_reported(bot)
 

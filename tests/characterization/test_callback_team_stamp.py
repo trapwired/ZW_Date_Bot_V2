@@ -21,7 +21,7 @@ TEAM_B_GROUP = -200888111
 
 def _foreign_admin(data_access):
     team_b = data_access.add(Team('Berg', group_chat_id=TEAM_B_GROUP))
-    return seed_user(data_access, FOREIGN_ADMIN_ID, Role.ADMIN, UserState.DEFAULT, team_id=team_b.doc_id)
+    return seed_user(data_access, FOREIGN_ADMIN_ID, Role.PLAYER, UserState.DEFAULT, team_id=team_b.doc_id, is_admin=True)
 
 
 async def test_foreign_admin_pressing_forwarded_trainer_toggle_writes_nothing(node_handler, data_access, bot,
@@ -51,7 +51,7 @@ async def test_foreign_admin_pressing_forwarded_role_button_changes_nothing(node
 
 
 async def test_pre_stamp_buttons_keep_working(node_handler, data_access, bot):
-    seed_user(data_access, FOREIGN_ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, FOREIGN_ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     legacy_button = TeamStamp.strip(AdminMenu.encode(AdminMenu.TRAINERS_TOGGLE, int(Event.GAME),
                                                      FOREIGN_ADMIN_ID))
 

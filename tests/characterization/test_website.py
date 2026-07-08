@@ -19,7 +19,7 @@ NEW_URL = "https://new.example/club"
 
 async def test_set_website_prompts_and_moves_to_typed_input(node_handler, data_access, bot):
     data_access.set_website(OLD_URL)
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WEBSITE_PROMPT))
 
@@ -29,7 +29,7 @@ async def test_set_website_prompts_and_moves_to_typed_input(node_handler, data_a
 
 
 async def test_typed_url_is_staged_and_confirmation_asked(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE, is_admin=True)
 
     await drive(node_handler, ADMIN_ID, NEW_URL)
 
@@ -47,7 +47,7 @@ async def test_typed_url_is_staged_and_confirmation_asked(node_handler, data_acc
 async def test_typed_url_updates_the_menu_message_in_place(node_handler, data_access, bot):
     # Entering via the admin menu tracks that message: every typed URL re-renders it
     # with Save/Cancel and the loose typed message is removed from the chat.
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WEBSITE_PROMPT), message_id=33)
 
     await drive(node_handler, ADMIN_ID, NEW_URL)
@@ -65,7 +65,7 @@ async def test_typed_url_updates_the_menu_message_in_place(node_handler, data_ac
 
 
 async def test_confirm_yes_commits_staged_url(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info=NEW_URL)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE, additional_info=NEW_URL, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WEBSITE_YES))
 
@@ -79,7 +79,7 @@ async def test_confirm_yes_commits_staged_url(node_handler, data_access, bot):
 
 async def test_confirm_no_keeps_existing_url(node_handler, data_access, bot):
     data_access.set_website(OLD_URL)
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info=NEW_URL)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE, additional_info=NEW_URL, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WEBSITE_NO))
 
@@ -92,7 +92,7 @@ async def test_confirm_no_keeps_existing_url(node_handler, data_access, bot):
 
 
 async def test_confirm_yes_normalizes_schemeless_host(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="www.google.com")
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE, additional_info="www.google.com", is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WEBSITE_YES))
 
@@ -104,7 +104,7 @@ async def test_confirm_yes_normalizes_schemeless_host(node_handler, data_access,
 
 async def test_confirm_yes_rejects_invalid_url(node_handler, data_access, bot):
     data_access.set_website(OLD_URL)
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="not a url")
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE, additional_info="not a url", is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WEBSITE_YES))
 
@@ -116,7 +116,7 @@ async def test_confirm_yes_rejects_invalid_url(node_handler, data_access, bot):
 
 
 async def test_confirm_yes_rejects_whitespace_url(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="   ")
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE, additional_info="   ", is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WEBSITE_YES))
 

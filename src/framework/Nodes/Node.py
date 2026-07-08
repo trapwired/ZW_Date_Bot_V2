@@ -11,8 +11,7 @@ from data.DataAccess import DataAccess
 
 from Enums.MessageType import MessageType
 from Enums.UserState import UserState
-from Enums.RoleSet import RoleSet
-from Enums.Role import Role
+from Enums import Audience
 
 from domain.entities.UsersToState import UsersToState
 
@@ -40,8 +39,8 @@ class Node(ABC):
         self.main_menu_escape_cleanup = None
         # /help lives in Telegram's command menu (set_my_commands), not on the reply
         # keyboard; the bare word stays typeable as a hidden alias.
-        self.add_transition('/help', self.handle_help, allowed_roles=RoleSet.EVERYONE, in_keyboard=False)
-        self.add_transition('help', self.handle_help, allowed_roles=RoleSet.EVERYONE,
+        self.add_transition('/help', self.handle_help, audience=Audience.EVERYONE, in_keyboard=False)
+        self.add_transition('help', self.handle_help, audience=Audience.EVERYONE,
                             needs_description=False, in_keyboard=False)
         self.nodes = dict()
 
@@ -53,7 +52,7 @@ class Node(ABC):
             # Reply-keyboard labels are localized; the reverse map folds any language's
             # label back to the canonical command before transition matching.
             command = canonical_command(update.message.text)
-            transition = self.get_transition(command, user_to_state.role)
+            transition = self.get_transition(command, user_to_state)
             if transition is None:
                 await self.fallback_action(update, user_to_state, None)
                 return
@@ -70,7 +69,7 @@ class Node(ABC):
             # maintainer is alerted (unexpected) or the miss is only logged (expected).
             await self.telegram_service.send_message(
                 update=update,
-                all_buttons=self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
+                all_buttons=self.get_commands_for_buttons(user_to_state, UserState.DEFAULT),
                 message_type=MessageType.ERROR)
             await self.telegram_service.report_exception('Exception in Node.handle', e, update)
 
@@ -78,23 +77,23 @@ class Node(ABC):
     # TRANSITIONS #
     ###############
 
-    def get_transition(self, command: str, role: Role) -> Transition | None:
+    def get_transition(self, command: str, user_to_state: UsersToState) -> Transition | None:
         """The matching transition, a main-menu escape if the node allows one, or None
         (the caller runs fallback_action)."""
-        transitions = list(filter(lambda t: t.can_be_taken(command, role), self.transitions))
+        transitions = list(filter(lambda t: t.can_be_taken(command, user_to_state), self.transitions))
         if len(transitions) > 0:
             return transitions[0]
-        if self.main_menu_escape_cleanup is not None and self._is_main_menu_command(command, role):
+        if self.main_menu_escape_cleanup is not None and self._is_main_menu_command(command, user_to_state):
             return Transition(command, self._handle_main_menu_escape, needs_description=False, in_keyboard=False)
         return None
 
-    def add_transition(self, command: str, action: Callable = None, allowed_roles: RoleSet = RoleSet.EVERYONE,
+    def add_transition(self, command: str, action: Callable = None, audience: Audience.Audience = Audience.EVERYONE,
                        new_state: UserState = None, needs_description: bool = True, is_active_function: Callable = None,
                        message_type: MessageType = None, in_keyboard: bool = True) -> Transition:
         if action is None:
             action = partial(self.handle_default, message_type=message_type)
 
-        new_transition = Transition(command, action, allowed_roles, new_state=new_state,
+        new_transition = Transition(command, action, audience, new_state=new_state,
                                     needs_description=needs_description, is_active_function=is_active_function,
                                     in_keyboard=in_keyboard)
         self.transitions.append(new_transition)
@@ -107,8 +106,8 @@ class Node(ABC):
         DEFAULT node's transitions, so new main-menu entries can't go stale here."""
         self.main_menu_escape_cleanup = cleanup
 
-    def _is_main_menu_command(self, command: str, role: Role) -> bool:
-        return any(t.can_be_taken(command, role) for t in self.nodes[UserState.DEFAULT].transitions)
+    def _is_main_menu_command(self, command: str, user_to_state: UsersToState) -> bool:
+        return any(t.can_be_taken(command, user_to_state) for t in self.nodes[UserState.DEFAULT].transitions)
 
     async def _handle_main_menu_escape(self, update: Update, user_to_state: UsersToState,
                                        new_state: UserState) -> None:
@@ -125,8 +124,8 @@ class Node(ABC):
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState) -> None:
         # Help text lists THIS screen's commands; the reply keyboard is always the
         # static main-menu one, so asking for help mid-flow can't swap it out.
-        commands_for_buttons = self.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT)
-        commands_for_text = self.get_commands_for_help(user_to_state.role, new_state)
+        commands_for_buttons = self.get_commands_for_buttons(user_to_state, UserState.DEFAULT)
+        commands_for_text = self.get_commands_for_help(user_to_state, new_state)
         message = CommandDescriptions.get_descriptions(commands_for_text)
         await self.telegram_service.send_message(
             update=update,
@@ -137,23 +136,23 @@ class Node(ABC):
                              message_type: MessageType):
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            all_buttons=self.get_commands_for_buttons(user_to_state, new_state),
             message_type=message_type)
 
     #############
     # UTILITIES #
     #############
 
-    def get_active_transitions(self, role: Role, new_state: UserState) -> [Transition]:
+    def get_active_transitions(self, user_to_state: UsersToState, new_state: UserState) -> [Transition]:
         if new_state is None:
             new_node = self
         else:
             new_node = self.nodes[new_state]
 
-        return [t for t in new_node.transitions if t.is_for_role(role) and t.is_active()]
+        return [t for t in new_node.transitions if t.is_for_user(user_to_state) and t.is_active()]
 
-    def get_commands_for_help(self, role: Role, new_state: UserState) -> [str]:
-        return [t.command for t in self.get_active_transitions(role, new_state) if t.needs_description]
+    def get_commands_for_help(self, user_to_state: UsersToState, new_state: UserState) -> [str]:
+        return [t.command for t in self.get_active_transitions(user_to_state, new_state) if t.needs_description]
 
-    def get_commands_for_buttons(self, role: Role, new_state: UserState) -> [str]:
-        return [t.command for t in self.get_active_transitions(role, new_state) if t.in_keyboard]
+    def get_commands_for_buttons(self, user_to_state: UsersToState, new_state: UserState) -> [str]:
+        return [t.command for t in self.get_active_transitions(user_to_state, new_state) if t.in_keyboard]

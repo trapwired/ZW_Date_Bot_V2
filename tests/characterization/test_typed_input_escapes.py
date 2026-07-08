@@ -19,7 +19,7 @@ ADMIN_ID = 1500
 
 
 async def test_events_escapes_the_add_wizard_and_discards_the_draft(node_handler, data_access, bot, game):
-    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    uts = seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)))
     assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_ADD_EVENT
 
@@ -34,9 +34,9 @@ async def test_events_escapes_the_add_wizard_and_discards_the_draft(node_handler
 
 
 async def test_admin_escapes_the_field_edit_and_clears_context(node_handler, data_access, bot, game):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_EVENT_FIELD,
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_EVENT_FIELD,
               additional_info=CallbackUtils.build_additional_information(
-                  1, ADMIN_ID, game.doc_id, Event.GAME, EventField.LOCATION))
+                  1, ADMIN_ID, game.doc_id, Event.GAME, EventField.LOCATION), is_admin=True)
 
     await drive(node_handler, ADMIN_ID, "Admin")
 
@@ -51,7 +51,7 @@ async def test_any_main_menu_command_escapes_including_privacy(node_handler, dat
     # Escapes are derived from the DEFAULT node's transitions, so even the
     # keyboard-invisible /privacy command must break out instead of being stored
     # as the event's field value.
-    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    uts = seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)))
 
     await drive(node_handler, ADMIN_ID, "/privacy")
@@ -64,7 +64,7 @@ async def test_any_main_menu_command_escapes_including_privacy(node_handler, dat
 
 
 async def test_help_during_wizard_keeps_the_static_keyboard(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)))
 
     await drive(node_handler, ADMIN_ID, "help")
@@ -77,7 +77,7 @@ async def test_help_during_wizard_keeps_the_static_keyboard(node_handler, data_a
 
 
 async def test_website_escapes_the_url_input(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="staged")
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE, additional_info="staged", is_admin=True)
 
     await drive(node_handler, ADMIN_ID, "events")
 
@@ -88,7 +88,7 @@ async def test_website_escapes_the_url_input(node_handler, data_access, bot):
 
 
 async def test_admin_menu_back_button_discards_an_in_flight_draft(node_handler, data_access, bot):
-    uts = seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    uts = seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.ADD_CHOOSER, int(Event.GAME)))
     assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_ADD_EVENT
 
@@ -103,7 +103,7 @@ async def test_admin_menu_back_button_discards_an_in_flight_draft(node_handler, 
 async def test_admin_menu_back_button_resets_a_typed_input_state(node_handler, data_access, bot):
     # Pressing 'Back' on the admin menu message while a typed input is pending is the
     # inline escape hatch: staged input is dropped, state returns to the main menu.
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_WEBSITE, additional_info="staged")
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_WEBSITE, additional_info="staged", is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.PANEL))
 

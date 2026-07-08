@@ -25,7 +25,7 @@ def _start(event_type: Event) -> str:
 
 async def test_two_teams_are_isolated_end_to_end(node_handler, data_access, bot, default_team):
     team_a = default_team
-    seed_user(data_access, TEAM_A_ADMIN, Role.ADMIN, UserState.DEFAULT)     # team A's admin
+    seed_user(data_access, TEAM_A_ADMIN, Role.PLAYER, UserState.DEFAULT, is_admin=True)     # team A's admin
 
     # Team B is created for real: its group admin claims the group as a team and becomes
     # its first admin.

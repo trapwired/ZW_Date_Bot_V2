@@ -57,5 +57,5 @@ class LanguageCallbackNode(CallbackNode):
             query, t(PICKER_TEXT), LanguageMenu.build_picker_markup(language))
         default_node = self.node_handler.get_node(UserState.DEFAULT)
         await self.telegram_service.send_message(
-            update=update, all_buttons=default_node.get_commands_for_buttons(user_to_state.role, None),
+            update=update, all_buttons=default_node.get_commands_for_buttons(user_to_state, None),
             message=t(CONFIRMATION_TEXT))
