@@ -6,7 +6,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 from Enums.Role import Role
-from Enums.RoleSet import RoleSet
+from Enums import Audience
 
 from Utils import Format
 from Utils import PrintUtils
@@ -27,8 +27,9 @@ class EventsView:
         self.attendance_service = attendance_service
         self.statistics_service = statistics_service
 
-    def build_list(self, role: Role, telegram_id: int, selected_type: Event | None,
+    def build_list(self, user_to_state, telegram_id: int, selected_type: Event | None,
                    page: int = 0) -> tuple[str, InlineKeyboardMarkup | None]:
+        role = user_to_state.role
         events_by_type = self._upcoming_by_type(role)
         if len(events_by_type) == 0:
             # Even the empty list keeps the language entry - a new member's first
@@ -67,7 +68,8 @@ class EventsView:
         text = header + '\n' + instruction
         return text, InlineKeyboardMarkup(rows)
 
-    def build_card(self, role: Role, telegram_id: int, event_type: Event, doc_id: str) -> tuple[str, InlineKeyboardMarkup]:
+    def build_card(self, user_to_state, telegram_id: int, event_type: Event, doc_id: str) -> tuple[str, InlineKeyboardMarkup]:
+        role = user_to_state.role
         event = self.event_service.get_event(event_type, doc_id)
         event_summary = PrintUtils.pretty_print_long(event) if event_type is Event.GAME else PrintUtils.pretty_print(event)
         stats_with_names = self.statistics_service.get_event_attendance_summary(doc_id, event_type)
@@ -75,7 +77,7 @@ class EventsView:
         header = PrintUtils.event_label(event_type) + ': ' + event_summary
         text = PrintUtils.pretty_print_event_summary(stats_with_names, header, event_type)
 
-        can_attend = role in RoleSet.PLAYERS
+        can_attend = Audience.PLAYERS.allows(user_to_state)
         if can_attend:
             own = self.attendance_service.get_attendance(telegram_id, doc_id, event_type)
             if event_type is Event.TIMEKEEPING and \
@@ -85,7 +87,7 @@ class EventsView:
             else:
                 text += '\n' + t('Your answer: {answer}', answer=PrintUtils.pretty_print_attendance(own.state))
 
-        markup = EventsMenu.build_card_markup(event_type, doc_id, can_attend, is_admin=(role is Role.ADMIN))
+        markup = EventsMenu.build_card_markup(event_type, doc_id, can_attend, is_admin=user_to_state.is_admin)
         return text, markup
 
     def _upcoming_by_type(self, role: Role) -> dict[Event, list]:

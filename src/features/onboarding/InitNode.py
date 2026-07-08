@@ -55,18 +55,21 @@ class InitNode(Node):
         telegram_id = update.effective_chat.id
         team = await self.find_membership_team(telegram_id)
         if team is not None:
-            # A re-/starting admin (e.g. state healed back to INIT) must not be
-            # demoted - everyone else joins as PLAYER.
-            role = Role.ADMIN if user_to_state.role is Role.ADMIN else Role.PLAYER
+            # join_team keeps an existing admin bit, and an admin's membership role
+            # survives a re-/start too (a retired admin must not be un-retired by
+            # /start after their state healed back to INIT); everyone else re-enters
+            # as PLAYER.
+            role = (user_to_state.role if user_to_state.is_admin
+                    and user_to_state.role in (Role.PLAYER, Role.RETIRED, Role.INACTIVE)
+                    else Role.PLAYER)
             self.user_state_service.join_team(user_to_state, team.doc_id, role)
             await SpectatorOnboarding.send_welcome_and_guide(self, update, user_to_state, team)
         else:
             new_state = UserState.REJECTED
-            user_to_state = user_to_state.add_role(Role.REJECTED)
-            self.user_state_service.update_user_state(user_to_state, new_state)
+            self.user_state_service.reject(user_to_state)
             await self.telegram_service.send_message(
                 update=update,
-                all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+                all_buttons=self.get_commands_for_buttons(user_to_state, new_state),
                 message_type=MessageType.REJECTED,
                 reply_markup=OnboardingMenu.build_choice_markup())
 
@@ -108,5 +111,5 @@ class InitNode(Node):
     async def handle_help(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(
             update=update,
-            all_buttons=self.get_commands_for_buttons(user_to_state.role, new_state),
+            all_buttons=self.get_commands_for_buttons(user_to_state, new_state),
             message_type=MessageType.WRONG_START_COMMAND)

@@ -12,11 +12,11 @@ from localization.Translator import t
 from Utils import Format
 
 
-def build_guide(role: Role, team_name: str) -> str:
-    if role is Role.SPECTATOR:
+def build_guide(user_to_state, team_name: str) -> str:
+    if user_to_state.role is Role.SPECTATOR:
         return _spectator_guide(team_name)
     guide = _player_guide(team_name)
-    if role is Role.ADMIN:
+    if user_to_state.is_admin:
         guide += _admin_addendum()
     return guide
 

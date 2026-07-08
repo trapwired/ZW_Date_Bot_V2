@@ -18,7 +18,7 @@ def _button_data(edit):
 
 
 async def test_panel_is_three_rows_with_the_two_sections(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.PANEL))
 
@@ -32,7 +32,7 @@ async def test_panel_is_three_rows_with_the_two_sections(node_handler, data_acce
 
 async def test_spectators_section_shows_password_and_invite_count(node_handler, services, data_access, bot,
                                                                   default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     # Mint through the handler's own TeamService so its cache and the test agree.
     services["team_service"].create_spectator_invite(default_team)
 
@@ -48,7 +48,7 @@ async def test_spectators_section_shows_password_and_invite_count(node_handler, 
 
 
 async def test_setup_section_holds_name_website_and_trainers(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SETUP_MENU))
 

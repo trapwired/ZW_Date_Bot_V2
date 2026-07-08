@@ -37,10 +37,10 @@ async def send_welcome_and_guide(node, update, user_to_state, team) -> None:
     sequence for players, admins and spectators so the paths can't drift."""
     await node.telegram_service.send_message(
         update=update,
-        all_buttons=node.get_commands_for_buttons(user_to_state.role, UserState.DEFAULT),
+        all_buttons=node.get_commands_for_buttons(user_to_state, UserState.DEFAULT),
         message_type=MessageType.WELCOME,
         message_extra_text=team.name)
     await node.telegram_service.send_message(
         update=update,
         all_buttons=None,
-        message=WelcomeGuide.build_guide(user_to_state.role, team.name))
+        message=WelcomeGuide.build_guide(user_to_state, team.name))

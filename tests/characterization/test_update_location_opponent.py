@@ -20,8 +20,8 @@ FUTURE = "24.12.2030 18:30"
 
 def _seed_game_and_state(data_access, field):
     game = data_access.add(Game(parse(FUTURE).value, "old arena", "old opponent"))
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_EVENT_FIELD,
-              additional_info=CallbackUtils.build_additional_information(1, ADMIN_ID, game.doc_id, Event.GAME, field))
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_EVENT_FIELD,
+              additional_info=CallbackUtils.build_additional_information(1, ADMIN_ID, game.doc_id, Event.GAME, field), is_admin=True)
     return game
 
 

@@ -242,8 +242,9 @@ class DataAccess(object):
         rows = self.firebase_repository.get_users_to_state_by_role(role)
         return [UsersToState.from_dict(row.id, row.to_dict()) for row in rows]
 
-    def get_role_user_count(self, role: Role) -> int:
-        return len(self.firebase_repository.get_users_to_state_by_role(role))
+    def get_admins_to_state(self) -> [UsersToState]:
+        rows = self.firebase_repository.get_admins_to_state()
+        return [UsersToState.from_dict(row.id, row.to_dict()) for row in rows]
 
     def delete_team(self, team: Team) -> None:
         self.firebase_repository.delete_team(team.doc_id)

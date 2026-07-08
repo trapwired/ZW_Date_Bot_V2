@@ -23,7 +23,7 @@ def _confirm_button_data(record):
 
 
 async def test_prompt_moves_to_typed_input_and_shows_current_password(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATOR_PASSWORD_PROMPT))
 
@@ -36,7 +36,7 @@ async def test_typed_password_restages_menu_message_and_deletes_typed_message(no
                                                                              default_team):
     # Entering via the menu tracks that message: the typed password re-renders it with
     # Save/Cancel, the loose typed message is removed, and nothing is persisted yet.
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATOR_PASSWORD_PROMPT), message_id=44)
 
     await drive(node_handler, ADMIN_ID, NEW_PASSWORD)
@@ -57,8 +57,8 @@ async def test_typed_password_restages_menu_message_and_deletes_typed_message(no
 
 
 async def test_save_commits_the_password(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
-              additional_info=NEW_PASSWORD)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
+              additional_info=NEW_PASSWORD, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATOR_PASSWORD_SAVE))
 
@@ -76,8 +76,8 @@ async def test_save_commits_the_password(node_handler, data_access, bot, default
 
 async def test_save_rejects_password_already_used_by_another_team(node_handler, data_access, bot, default_team):
     data_access.add(Team('Berg', group_chat_id=OTHER_TEAM_GROUP, spectator_password=NEW_PASSWORD))
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
-              additional_info=NEW_PASSWORD)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
+              additional_info=NEW_PASSWORD, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATOR_PASSWORD_SAVE))
 
@@ -91,7 +91,7 @@ async def test_save_rejects_password_already_used_by_another_team(node_handler, 
 
 
 async def test_save_rejects_empty_password(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, additional_info='')
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD, additional_info='', is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATOR_PASSWORD_SAVE))
 
@@ -102,8 +102,8 @@ async def test_save_rejects_empty_password(node_handler, data_access, bot, defau
 
 
 async def test_cancel_returns_to_spectators_overview_unchanged(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
-              additional_info=NEW_PASSWORD)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
+              additional_info=NEW_PASSWORD, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.SPECTATOR_PASSWORD_CANCEL))
 

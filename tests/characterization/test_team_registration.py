@@ -28,7 +28,7 @@ async def test_group_admin_registers_team_and_becomes_first_admin(node_handler, 
     assert team.group_chat_id == GROUP_B
 
     issuer_state = data_access.get_user_state(ISSUER)
-    assert issuer_state.role == Role.ADMIN
+    assert issuer_state.role == Role.PLAYER and issuer_state.is_admin
     assert issuer_state.state == UserState.DEFAULT
     assert issuer_state.team_id == team.doc_id
 

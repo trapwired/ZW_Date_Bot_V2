@@ -22,7 +22,7 @@ def _start(event_type: Event) -> str:
 
 
 async def test_add_game_full_navigation_and_persist(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID, _start(Event.GAME))
     assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_ADD_EVENT
@@ -50,7 +50,7 @@ async def test_add_game_full_navigation_and_persist(node_handler, data_access, b
 
 
 async def test_add_training_has_no_opponent_step(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))
     assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_ADD_EVENT
@@ -73,7 +73,7 @@ async def test_add_training_has_no_opponent_step(node_handler, data_access, bot)
 
 
 async def test_add_timekeeping_persists(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID, _start(Event.TIMEKEEPING))
     await drive(node_handler, ADMIN_ID, FUTURE_TIMESTAMP)
@@ -88,7 +88,7 @@ async def test_add_timekeeping_persists(node_handler, data_access, bot):
 
 
 async def test_past_timestamp_is_rejected_and_stays_on_step(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID, _start(Event.GAME))
     await drive(node_handler, ADMIN_ID, "1.1.2020 12:00")  # in the past
@@ -101,7 +101,7 @@ async def test_past_timestamp_is_rejected_and_stays_on_step(node_handler, data_a
 
 
 async def test_cancel_during_wizard_returns_to_main_menu(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive_callback(node_handler, ADMIN_ID, _start(Event.GAME))
     assert current_state(data_access, ADMIN_ID) == UserState.ADMIN_ADD_EVENT
@@ -113,7 +113,7 @@ async def test_cancel_during_wizard_returns_to_main_menu(node_handler, data_acce
 
 
 async def test_save_button_commits_finished_draft(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))
     await drive(node_handler, ADMIN_ID, FUTURE_TIMESTAMP)
     await drive(node_handler, ADMIN_ID, "Sporthalle")
@@ -126,7 +126,7 @@ async def test_save_button_commits_finished_draft(node_handler, data_access, bot
 
 
 async def test_restart_button_starts_a_fresh_draft(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))
     await drive(node_handler, ADMIN_ID, FUTURE_TIMESTAMP)
     assert current_step(data_access, ADMIN_ID) == EventField.LOCATION
@@ -140,7 +140,7 @@ async def test_restart_button_starts_a_fresh_draft(node_handler, data_access, bo
 
 
 async def test_cancel_button_discards_draft(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.GAME))
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WIZARD_CANCEL))
@@ -154,7 +154,7 @@ async def test_cancel_button_discards_draft(node_handler, data_access, bot):
 async def test_second_wizard_start_replaces_the_first_draft(node_handler, data_access, bot):
     # Starting the wizard from two admin-menu messages must not leave two drafts behind
     # (a second TempData row would make every get_draft lookup fail from then on).
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.GAME))
     await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))
 
@@ -170,7 +170,7 @@ async def test_second_wizard_start_replaces_the_first_draft(node_handler, data_a
 
 
 async def test_stale_wizard_button_after_cancel_degrades_gracefully(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.GAME))
     await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.WIZARD_CANCEL))
 
@@ -183,7 +183,7 @@ async def test_stale_wizard_button_after_cancel_degrades_gracefully(node_handler
 async def test_consumed_prompts_are_deleted(node_handler, data_access, bot):
     # Each accepted input deletes the previous 'Send me the ...' prompt; saving deletes
     # the last one, so no consumed prompt is left in the chat.
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))
     await drive(node_handler, ADMIN_ID, FUTURE_TIMESTAMP)
     await drive(node_handler, ADMIN_ID, "Sporthalle")
@@ -196,7 +196,7 @@ async def test_consumed_prompts_are_deleted(node_handler, data_access, bot):
 
 
 async def test_wizard_markup_offers_save_only_on_finish_step(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADMIN_ID, _start(Event.TRAINING))
 
     await drive(node_handler, ADMIN_ID, FUTURE_TIMESTAMP)

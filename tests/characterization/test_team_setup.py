@@ -43,7 +43,7 @@ async def test_added_by_group_admin_registers_team_and_dms_setup_guide(node_hand
     team = TeamService(data_access).find_team_by_group_chat(GROUP)
     assert team is not None and team.name == 'SG Fluffy'
     adder_state = data_access.get_user_state(ADDER_ID)
-    assert adder_state.role == Role.ADMIN and adder_state.team_id == team.doc_id
+    assert adder_state.role == Role.PLAYER and adder_state.is_admin and adder_state.team_id == team.doc_id
     dm = bot.texts_to(ADDER_ID)
     assert len(dm) == 1 and 'SG Fluffy' in dm[0] and 'Spectators' in dm[0]
     group_texts = bot.texts_to(GROUP)
@@ -128,7 +128,7 @@ async def test_removal_from_team_with_more_members_keeps_the_data(node_handler, 
     await node_handler.handle_message(_removed_update(), context=None)
 
     assert TeamService(data_access).find_team_by_group_chat(GROUP) is not None
-    assert data_access.get_user_state(ADDER_ID).role == Role.ADMIN                  # untouched
+    assert data_access.get_user_state(ADDER_ID).is_admin                            # untouched
     maintainer = int(api_config.get_key('Chat_Ids', 'MAINTAINER'))
     assert any('Data kept' in t for t in bot.texts_to(maintainer))
     assert_no_error_reported(bot)
@@ -162,7 +162,7 @@ async def test_choice_buttons_explain_and_password_entry_still_joins(node_handle
 
 
 async def test_admin_renames_team_from_the_panel(node_handler, data_access, bot, default_team):
-    seed_user(data_access, ADDER_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADDER_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     await drive_callback(node_handler, ADDER_ID, AdminMenu.encode(AdminMenu.TEAM_NAME_PROMPT), message_id=88)
     await drive(node_handler, ADDER_ID, 'ZW Legends')
 
@@ -195,8 +195,8 @@ async def test_removal_keeps_team_whose_only_event_is_in_the_past(node_handler, 
 
 async def test_stale_team_name_save_never_commits_another_flows_staged_value(node_handler, data_access, bot,
                                                                              default_team):
-    seed_user(data_access, ADDER_ID, Role.ADMIN, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
-              additional_info='88#1900#SuperSecret99')
+    seed_user(data_access, ADDER_ID, Role.PLAYER, UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD,
+              additional_info='88#1900#SuperSecret99', is_admin=True)
 
     update = await drive_callback(node_handler, ADDER_ID, AdminMenu.encode(AdminMenu.TEAM_NAME_SAVE))
 

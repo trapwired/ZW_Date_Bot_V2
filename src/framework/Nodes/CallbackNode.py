@@ -2,17 +2,17 @@ from abc import ABC
 
 from data.DataAccess import DataAccess
 
-from Enums.RoleSet import RoleSet
+from Enums import Audience
 
 from framework.Services.TelegramService import TelegramService
 from framework.Services.TriggerService import TriggerService
 
 
 class CallbackNode(ABC):
-    # Roles allowed to trigger this callback node. NodeHandler enforces it before dispatch,
-    # mirroring Transition.allowed_roles for the text channel — so a forwarded inline button
+    # Who may trigger this callback node. NodeHandler enforces it before dispatch,
+    # mirroring Transition.audience for the text channel — so a forwarded inline button
     # can't let an unauthorized user run an admin action. Subclasses tighten this.
-    required_roles = RoleSet.EVERYONE
+    audience = Audience.EVERYONE
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService):
         self.data_access = data_access

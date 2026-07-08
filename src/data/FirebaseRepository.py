@@ -9,7 +9,6 @@ from data.TenantContext import current_team_id, team_context
 
 from Enums.Table import Table
 from Enums.Role import Role
-from Enums.RoleSet import RoleSet
 from Enums.Event import Event
 
 from domain.entities.DatabaseEntity import DatabaseEntity
@@ -272,6 +271,14 @@ class FirebaseRepository(object):
             .where(filter=FieldFilter("teamId", "==", current_team_id()))
         return query_ref.get()
 
+    def get_admins_to_state(self):
+        # Admin is the orthogonal isAdmin flag, not a role - same team-scoped roster
+        # view as get_users_to_state_by_role.
+        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
+            .where(filter=FieldFilter("isAdmin", "==", True)) \
+            .where(filter=FieldFilter("teamId", "==", current_team_id()))
+        return query_ref.get()
+
     def get_users_to_state_by_team(self, team_id: str):
         # Membership view over the global identity table, keyed explicitly (used by
         # team-lifecycle code that runs OUTSIDE the ambient tenant context).
@@ -297,7 +304,7 @@ class FirebaseRepository(object):
         # Roster view over the global identity table - team-filtered like
         # get_users_to_state_by_role above.
         query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
-            .where(filter=FieldFilter("role", "in", RoleSet.ACTIVE_PLAYERS)) \
+            .where(filter=FieldFilter("role", "==", Role.PLAYER)) \
             .where(filter=FieldFilter("teamId", "==", current_team_id()))
         entries = query_ref.get()
         return entries

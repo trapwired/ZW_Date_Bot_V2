@@ -27,13 +27,14 @@ async def test_player_gets_guide_after_welcome_on_start(node_handler, data_acces
 
 
 async def test_restarting_admin_keeps_role_and_gets_admin_addendum(node_handler, data_access, bot, default_team):
-    # An admin whose state healed back to INIT re-runs /start: no demotion to PLAYER,
+    # An admin whose state healed back to INIT re-runs /start: the admin flag survives,
     # and their guide includes the admin-panel block.
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.INIT, team_id='')
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.INIT, team_id='', is_admin=True)
 
     await drive(node_handler, ADMIN_ID, '/start')
 
-    assert data_access.get_user_state(ADMIN_ID).role == Role.ADMIN
+    restarted = data_access.get_user_state(ADMIN_ID)
+    assert restarted.role == Role.PLAYER and restarted.is_admin
     guide = bot.texts_to(ADMIN_ID)[1]
     assert 'admin' in guide and 'Reminders' in guide
     assert_no_error_reported(bot)

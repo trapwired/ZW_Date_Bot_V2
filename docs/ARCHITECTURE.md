@@ -31,7 +31,8 @@ across horizontal layers.
    **CallbackNode** owning the callback-data prefix (`EV#` events, `AP#` admin menu,
    `ROLES#` role assignment; old-format attendance buttons are adapted, any other
    pre-redesign button gets an "expired menu" notice). Callback nodes are additionally
-   role-gated (`CallbackNode.required_roles`).
+   audience-gated (`CallbackNode.audience`; admin is the orthogonal `is_admin` flag,
+   see ADR 0005).
 2. The node parses the input and calls its slice **Service** for orchestration.
 3. The service works through **`domain`** models and rules, and reads/writes via the
    **`data`** layer to **Firestore**.
@@ -47,7 +48,7 @@ the services, not the view nodes.
   of places that touch data small and auditable — the foundation the tenancy work
   builds on (see ADR 0001).
 - **Inline-first menus, static reply keyboard.** The reply keyboard is a fixed,
-  role-filtered top-level menu (Events / Admin / Website / Help) built from the
+  audience-filtered top-level menu (Events / Admin / Website / Help) built from the
   DEFAULT node's transitions; everything about a *specific object* (event lists, the
   event card, confirmations, the add-event wizard buttons) lives on inline messages
   edited in place. One event card combines details, live counts, attendance buttons,

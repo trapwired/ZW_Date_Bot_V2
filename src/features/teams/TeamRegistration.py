@@ -10,6 +10,7 @@ from data.TenantContext import team_context
 
 from domain.entities.Team import Team
 from domain.entities.TelegramUser import TelegramUser
+from domain.entities.UsersToState import UsersToState
 
 from features.onboarding import WelcomeGuide
 
@@ -98,13 +99,13 @@ class TeamRegistration:
               '{issuer} can manage events, roles and more via the admin menu there.',
               team=Format.escape(team_name), issuer=issuer_name))
 
-    def _register_and_stamp_admin(self, team_name: str, group_chat_id: int, issuer, issuer_state) -> Team:
+    def _register_and_stamp_admin(self, team_name: str, group_chat_id: int, issuer, issuer_state) -> tuple[Team, UsersToState]:
         team = self.team_service.register_team(team_name, group_chat_id)
         if issuer_state is None:
             issuer_state = self.user_state_service.register_user(
                 TelegramUser(issuer.id, issuer.first_name, issuer.last_name))
-        self.user_state_service.join_team(issuer_state, team.doc_id, Role.ADMIN)
-        return team
+        self.user_state_service.join_team(issuer_state, team.doc_id, Role.PLAYER, is_admin=True)
+        return team, issuer_state
 
     ####################
     # GROUP MEMBERSHIP #
@@ -149,13 +150,13 @@ class TeamRegistration:
             return
 
         team_name = (update.effective_chat.title or '').strip() or f'Team {group_chat_id}'
-        team = self._register_and_stamp_admin(team_name, group_chat_id, adder, adder_state)
-        await self._send_setup_guide(update, team, adder)
+        team, adder_state = self._register_and_stamp_admin(team_name, group_chat_id, adder, adder_state)
+        await self._send_setup_guide(update, team, adder, adder_state)
 
-    async def _send_setup_guide(self, update: Update, team: Team, adder) -> None:
+    async def _send_setup_guide(self, update: Update, team: Team, adder, adder_state) -> None:
         guide = WelcomeGuide.build_admin_setup_guide(team.name)
         buttons = self.node_handler.get_node(UserState.DEFAULT).get_commands_for_buttons(
-            Role.ADMIN, UserState.DEFAULT)
+            adder_state, UserState.DEFAULT)
         try:
             await self.telegram_service.send_onboarding_message(adder.id, guide, buttons)
         except Forbidden:

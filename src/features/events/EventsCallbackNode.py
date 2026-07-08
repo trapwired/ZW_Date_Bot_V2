@@ -7,8 +7,7 @@ from framework.Nodes.CallbackNode import CallbackNode
 from Enums.AttendanceState import AttendanceState
 from Enums.EventField import EventField
 from Enums.Event import Event
-from Enums.Role import Role
-from Enums.RoleSet import RoleSet
+from Enums import Audience
 from Enums.UserState import UserState
 
 from data.DataAccess import DataAccess
@@ -36,7 +35,7 @@ class EventsCallbackNode(CallbackNode):
     message (list <-> card <-> admin actions), so no UserState is involved except when
     an admin starts typing a new field value."""
 
-    required_roles = RoleSet.EVERYONE
+    audience = Audience.EVERYONE
 
     def __init__(self, telegram_service: TelegramService, data_access: DataAccess, trigger_service: TriggerService,
                  user_state_service: UserStateService, ics_service: IcsService, attendance_service,
@@ -59,49 +58,52 @@ class EventsCallbackNode(CallbackNode):
             return
         action, event_type, args = parsed
 
-        role = self.user_state_service.get_user_state(update.effective_chat.id).role
+        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         telegram_id = update.effective_chat.id
 
-        if event_type is Event.TIMEKEEPING and role not in RoleSet.PLAYERS:
+        if event_type is Event.TIMEKEEPING and not (Audience.PLAYERS.allows(user_to_state)
+                                                    or Audience.ADMINS.allows(user_to_state)):
             # Timekeeping events are hidden from spectators; a forwarded button must
-            # not leak the card, attendance names or the calendar file either.
+            # not leak the card, attendance names or the calendar file either. Admins
+            # pass regardless of their role - they manage these events.
             await query.answer()
             return
 
         match action:
             case EventsMenu.LIST:
                 page = int(args[0]) if args else 0
-                await self._show_list(query, role, telegram_id, event_type, page)
+                await self._show_list(query, user_to_state, telegram_id, event_type, page)
             case EventsMenu.CARD:
-                await self._show_card(query, role, telegram_id, event_type, args[0])
-            case EventsMenu.ATTEND if role in RoleSet.PLAYERS:
-                await self._set_attendance(query, role, telegram_id, event_type, args[0],
+                await self._show_card(query, user_to_state, telegram_id, event_type, args[0])
+            case EventsMenu.ATTEND if Audience.PLAYERS.allows(user_to_state):
+                await self._set_attendance(query, user_to_state, telegram_id, event_type, args[0],
                                            AttendanceState(int(args[1])))
             case EventsMenu.CALENDAR:
                 await self._send_ics(query, update, event_type, args[0])
-            case EventsMenu.EDIT_FIELDS if role is Role.ADMIN:
-                await self._show_field_chooser(query, role, telegram_id, event_type, args[0])
-            case EventsMenu.EDIT_FIELD if role is Role.ADMIN:
-                await self._prompt_field_value(update, query, event_type, args[0], EventField(int(args[1])))
-            case EventsMenu.DELETE if role is Role.ADMIN:
-                await self._confirm_delete(query, role, telegram_id, event_type, args[0])
-            case EventsMenu.DELETE_CONFIRMED if role is Role.ADMIN:
+            case EventsMenu.EDIT_FIELDS if Audience.ADMINS.allows(user_to_state):
+                await self._show_field_chooser(query, user_to_state, telegram_id, event_type, args[0])
+            case EventsMenu.EDIT_FIELD if Audience.ADMINS.allows(user_to_state):
+                await self._prompt_field_value(update, query, user_to_state, event_type, args[0],
+                                               EventField(int(args[1])))
+            case EventsMenu.DELETE if Audience.ADMINS.allows(user_to_state):
+                await self._confirm_delete(query, user_to_state, telegram_id, event_type, args[0])
+            case EventsMenu.DELETE_CONFIRMED if Audience.ADMINS.allows(user_to_state):
                 await self._delete(query, event_type, args[0])
             case _:
-                # Unknown action or a role that may not take it (e.g. a spectator
+                # Unknown action or a user who may not take it (e.g. a spectator
                 # pressing a forwarded attendance button) - just dismiss the spinner.
                 await query.answer()
 
-    async def _show_list(self, query, role: Role, telegram_id: int, event_type: Event, page: int = 0):
-        text, markup = self.events_view.build_list(role, telegram_id, event_type, page)
+    async def _show_list(self, query, user_to_state, telegram_id: int, event_type: Event, page: int = 0):
+        text, markup = self.events_view.build_list(user_to_state, telegram_id, event_type, page)
         await query.answer()
         await self.telegram_service.edit_callback_message(query, text, markup)
 
-    async def _show_card(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str):
+    async def _show_card(self, query, user_to_state, telegram_id: int, event_type: Event, doc_id: str):
         await query.answer()
-        await self._render_card(query, role, telegram_id, event_type, doc_id)
+        await self._render_card(query, user_to_state, telegram_id, event_type, doc_id)
 
-    async def _set_attendance(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str,
+    async def _set_attendance(self, query, user_to_state, telegram_id: int, event_type: Event, doc_id: str,
                               state: AttendanceState):
         try:
             if event_type is Event.TIMEKEEPING and state is AttendanceState.YES:
@@ -111,14 +113,14 @@ class EventsCallbackNode(CallbackNode):
                 own = self.attendance_service.get_attendance(telegram_id, doc_id, event_type)
                 if self.attendance_service.timekeeping_is_locked(own, event):
                     await query.answer()
-                    await self._render_card(query, role, telegram_id, event_type, doc_id)
+                    await self._render_card(query, user_to_state, telegram_id, event_type, doc_id)
                     return
             attendance, _ = self.attendance_service.set_attendance(telegram_id, event_type, doc_id, state)
         except ObjectNotFoundException:
             await self._show_event_gone(query, event_type)
             return
         await query.answer()
-        await self._render_card(query, role, telegram_id, event_type, doc_id)
+        await self._render_card(query, user_to_state, telegram_id, event_type, doc_id)
 
         trigger_payload = TriggerPayload(new_attendance=attendance, doc_id=doc_id, event_type=event_type)
         await self.trigger_service.check_triggers(trigger_payload)
@@ -138,9 +140,9 @@ class EventsCallbackNode(CallbackNode):
         finally:
             os.remove(ics_file_path)
 
-    async def _show_field_chooser(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str):
+    async def _show_field_chooser(self, query, user_to_state, telegram_id: int, event_type: Event, doc_id: str):
         try:
-            text, _ = self.events_view.build_card(role, telegram_id, event_type, doc_id)
+            text, _ = self.events_view.build_card(user_to_state, telegram_id, event_type, doc_id)
         except ObjectNotFoundException:
             await self._show_event_gone(query, event_type)
             return
@@ -149,7 +151,7 @@ class EventsCallbackNode(CallbackNode):
         await self.telegram_service.edit_callback_message(query, text + '\n\n' + t('Which field do you want to change?'),
                                                           markup)
 
-    async def _prompt_field_value(self, update: Update, query, event_type: Event, doc_id: str,
+    async def _prompt_field_value(self, update: Update, query, user_to_state, event_type: Event, doc_id: str,
                                   field: EventField):
         if field not in FIELD_ORDER[event_type]:
             # The chooser never offers this combination (e.g. OPPONENT on a training), so
@@ -164,15 +166,14 @@ class EventsCallbackNode(CallbackNode):
         # The admin types the new value next; remember which event/field/card message the
         # answer belongs to (plus the prompt, to clean it up afterwards), and route their
         # next text through the field-edit node.
-        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         user_to_state.additional_info = CallbackUtils.build_additional_information(
             query.message.message_id, query.message.chat_id, doc_id, event_type, field,
             prompt_message_id=sent.message_id if sent else None)
         self.user_state_service.update_user_state(user_to_state, UserState.ADMIN_UPDATE_EVENT_FIELD)
 
-    async def _confirm_delete(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str):
+    async def _confirm_delete(self, query, user_to_state, telegram_id: int, event_type: Event, doc_id: str):
         try:
-            text, _ = self.events_view.build_card(role, telegram_id, event_type, doc_id)
+            text, _ = self.events_view.build_card(user_to_state, telegram_id, event_type, doc_id)
         except ObjectNotFoundException:
             await self._show_event_gone(query, event_type)
             return
@@ -188,9 +189,9 @@ class EventsCallbackNode(CallbackNode):
             query, t('Deleted {event} 👍', event=PrintUtils.event_label(event_type)),
             EventsMenu.build_back_to_list_markup(event_type))
 
-    async def _render_card(self, query, role: Role, telegram_id: int, event_type: Event, doc_id: str):
+    async def _render_card(self, query, user_to_state, telegram_id: int, event_type: Event, doc_id: str):
         try:
-            text, markup = self.events_view.build_card(role, telegram_id, event_type, doc_id)
+            text, markup = self.events_view.build_card(user_to_state, telegram_id, event_type, doc_id)
         except ObjectNotFoundException:
             await self._show_event_gone(query, event_type)
             return

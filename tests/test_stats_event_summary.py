@@ -16,7 +16,7 @@ def test_summary_membership_rules(data_access, game):
     active_no_record = seed_user(data_access, 1, Role.PLAYER, UserState.DEFAULT)
     active_unsure = seed_user(data_access, 2, Role.PLAYER, UserState.DEFAULT)
     active_yes = seed_user(data_access, 3, Role.PLAYER, UserState.DEFAULT)
-    active_no = seed_user(data_access, 4, Role.ADMIN, UserState.DEFAULT)
+    active_no = seed_user(data_access, 4, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     retired_yes = seed_user(data_access, 5, Role.RETIRED, UserState.DEFAULT)
     retired_unsure = seed_user(data_access, 6, Role.RETIRED, UserState.DEFAULT)
     retired_no = seed_user(data_access, 7, Role.RETIRED, UserState.DEFAULT)

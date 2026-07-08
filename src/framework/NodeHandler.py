@@ -7,7 +7,7 @@ from telegram.constants import ChatType
 from telegram.ext import ContextTypes, BaseHandler, CallbackContext
 
 from Enums.UserState import UserState
-from Enums.RoleSet import RoleSet
+from Enums import Audience
 
 from features.attendance.IcsService import IcsService
 from framework.Services.UserStateService import UserStateService
@@ -241,7 +241,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
 
         init_node = InitNode(UserState.INIT, telegram_service, user_state_service, data_access, self.bot,
                              self.team_service)
-        init_node.add_transition('/start', init_node.handle_start, allowed_roles=RoleSet.REALLY_EVERYONE)
+        init_node.add_transition('/start', init_node.handle_start, audience=Audience.REALLY_EVERYONE)
 
         # Any unmatched text on the REJECTED node is treated as a spectator-password
         # attempt (RejectedNode.fallback_action); the password identifies the team.
@@ -251,9 +251,9 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access,
                                    self.website_service, self.events_view, self.team_service)
         default_node.add_transition('events', default_node.handle_events)
-        default_node.add_transition('admin', default_node.handle_admin, allowed_roles=RoleSet.ADMINS)
+        default_node.add_transition('admin', default_node.handle_admin, audience=Audience.ADMINS)
         default_node.add_transition('website', default_node.handle_website)
-        default_node.add_transition('/privacy', default_node.handle_privacy, allowed_roles=RoleSet.REALLY_EVERYONE,
+        default_node.add_transition('/privacy', default_node.handle_privacy, audience=Audience.REALLY_EVERYONE,
                                     in_keyboard=False)
 
         add_event_node = AddEventFieldsNode(UserState.ADMIN_ADD_EVENT, telegram_service, user_state_service,
@@ -310,7 +310,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
     def is_caller_allowed(self, users_to_state, callback_node) -> bool:
         # Forwarded inline buttons keep working callback_data; an unregistered presser
         # (no state) is never allowed, and otherwise gate by the pressing user's role.
-        return users_to_state is not None and users_to_state.role in callback_node.required_roles
+        return users_to_state is not None and callback_node.audience.allows(users_to_state)
 
     def get_callback_node(self, callback_data: str):
         """Route a callback press to its slice's node by data prefix; None means the

@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 
 from Enums.MessageType import MessageType
-from Enums.Role import Role
+from Enums import Audience
 from Enums.UserState import UserState
 
 from framework.Nodes.CallbackNode import CallbackNode
@@ -28,7 +28,7 @@ class OnboardingCallbackNode(CallbackNode):
     parks the presser in the REJECTED state so their next text lands in the
     password fallback; everything else is pure message editing."""
 
-    required_roles = frozenset({Role.INIT, Role.REJECTED})
+    audience = Audience.TEAMLESS
 
     def __init__(self, telegram_service, data_access, trigger_service, user_state_service):
         super().__init__(telegram_service, data_access, trigger_service)

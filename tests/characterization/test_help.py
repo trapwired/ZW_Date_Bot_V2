@@ -56,7 +56,7 @@ async def test_player_keyboard_is_static_events_website(node_handler, data_acces
 
 
 async def test_admin_keyboard_adds_admin_row(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive(node_handler, ADMIN_ID, 'help')
 
@@ -74,7 +74,7 @@ async def test_spectator_keyboard_matches_player_layout(node_handler, data_acces
 
 
 async def test_every_keyboard_button_has_a_help_entry(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     await drive(node_handler, ADMIN_ID, 'help')
 

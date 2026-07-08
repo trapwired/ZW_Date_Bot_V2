@@ -86,7 +86,7 @@ class EditEventFieldNode(Node):
         self.user_state_service.update_user_state(user_to_state, UserState.DEFAULT)
 
     async def _refresh_event_card(self, user_to_state: UsersToState, edit: CallbackUtils.EventFieldEdit):
-        text, markup = self.events_view.build_card(user_to_state.role, edit.chat_id, edit.event_type, edit.doc_id)
+        text, markup = self.events_view.build_card(user_to_state, edit.chat_id, edit.event_type, edit.doc_id)
         await self.telegram_service.edit_inline_message_text(text, edit.message_id, edit.chat_id, markup)
 
     async def notify_all_players(self, event_type: Event, doc_id: str, updated_event, old_event):

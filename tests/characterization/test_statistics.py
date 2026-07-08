@@ -15,7 +15,7 @@ PLAYER_ID = 1401
 
 
 async def test_statistics_menu_lists_all_statistic_screens(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.STATS_MENU))
 
@@ -28,7 +28,7 @@ async def test_statistics_menu_lists_all_statistic_screens(node_handler, data_ac
 
 
 async def test_reminder_statistics_render_into_the_menu_message(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID,
                                   AdminMenu.encode(AdminMenu.STATS_MENU, AdminMenu.REMINDER_STATISTICS))
@@ -38,7 +38,7 @@ async def test_reminder_statistics_render_into_the_menu_message(node_handler, da
 
 
 async def test_event_statistics_render_into_the_menu_message(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID,
                                   AdminMenu.encode(AdminMenu.STATS_MENU, int(Event.GAME)))
@@ -48,7 +48,7 @@ async def test_event_statistics_render_into_the_menu_message(node_handler, data_
 
 
 async def test_reset_statistics_asks_for_confirmation_then_resets(node_handler, data_access, bot):
-    seed_user(data_access, ADMIN_ID, Role.ADMIN, UserState.DEFAULT)
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
 
     update = await drive_callback(node_handler, ADMIN_ID, AdminMenu.encode(AdminMenu.RESET_CONFIRM))
     assert any("Are you sure" in e.text for e in update.callback_query.edits)
