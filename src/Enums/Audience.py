@@ -16,13 +16,12 @@ class Audience:
         return user_to_state.role in self.roles or (self.includes_admins and user_to_state.is_admin)
 
 
-REALLY_EVERYONE = Audience(frozenset(Role), includes_admins=True)
+# REJECTED users only ever act through their own node/onboarding channel (TEAMLESS),
+# exactly as under the old RoleSet.
+REALLY_EVERYONE = Audience(frozenset(Role) - {Role.REJECTED})
 EVERYONE = Audience(frozenset({Role.PLAYER, Role.SPECTATOR, Role.RETIRED}), includes_admins=True)
 # Attendance is tied to the membership role alone: an admin attends because they are
 # (or were) a player, never because they are an admin.
 PLAYERS = Audience(frozenset({Role.PLAYER, Role.RETIRED}))
-ACTIVE_PLAYERS = Audience(frozenset({Role.PLAYER}))
-SPECTATORS = Audience(frozenset({Role.SPECTATOR}))
 ADMINS = Audience(frozenset(), includes_admins=True)
-REJECTED = Audience(frozenset({Role.REJECTED}))
 TEAMLESS = Audience(frozenset({Role.INIT, Role.REJECTED}))

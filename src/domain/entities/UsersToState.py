@@ -1,4 +1,4 @@
-from Enums.Role import Role, LEGACY_ADMIN_ROLE_VALUE
+from Enums.Role import Role, is_legacy_admin_role_value
 from Enums.UserState import UserState
 
 from domain.entities.DatabaseEntity import DatabaseEntity
@@ -25,7 +25,7 @@ class UsersToState(DatabaseEntity):
 
         # Pre-refactor documents stored ADMIN as a role; heal to the orthogonal model
         # (the migration script rewrites the DB, this catches stragglers).
-        if role in (LEGACY_ADMIN_ROLE_VALUE, str(LEGACY_ADMIN_ROLE_VALUE)):
+        if is_legacy_admin_role_value(role):
             role = Role.PLAYER
             is_admin = True
         self.role = get_role(role)

@@ -34,14 +34,16 @@ PLAYER + `isAdmin=true` and stamps `isAdmin=false` elsewhere. The entity heals
 stragglers on read (ADR 0002 pattern), but the migration is NOT optional:
 Firestore roster queries filter on the *stored* values (`role == PLAYER`,
 `isAdmin == true`), so unmigrated admins would drop out of every roster view.
-Legacy inline buttons that encode role 42 (`ROLES#R/A`) map to the admin list /
-admin-flag toggle.
+Legacy inline buttons that encode role 42 map to the new model preserving their
+original meaning: `ROLES#R#42` shows the admin list, `ROLES#A#…#42` is an
+idempotent admin grant (never a toggle - the old button could not demote).
 
 **Lifecycle of the flag.** `join_team` preserves an existing bit (a healed
-admin re-/starting is not demoted) and only grants it explicitly (team
-registration stamps the first admin PLAYER + flag). `leave_team` and the
-REJECTED stance clear it — no team, no admin. The roles menu toggles it
-independently of the role buttons.
+admin re-/starting is not demoted — and keeps their membership role too) and
+only grants it explicitly (team registration stamps the first admin PLAYER +
+flag). `leave_team` and the `UserStateService.reject` seam clear it — no team,
+no admin. The roles menu toggles it independently of the role buttons, guarded:
+the target must still be a team member, and the last admin cannot be removed.
 
 ## Consequences
 - A retired/inactive admin gets no reminders, no announce DMs, and appears in

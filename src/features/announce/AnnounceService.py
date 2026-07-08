@@ -30,7 +30,8 @@ class AnnounceService:
         self.telegram_service = telegram_service
 
     async def send_to_players(self, text: str) -> int:
-        """Fan the announcement out to every active player (admins included) as a
+        """Fan the announcement out to every active player (role PLAYER; a non-playing
+        admin is not part of the roster, ADR 0005) as a
         private message. Best-effort per recipient: one unreachable player must not
         stop the broadcast. Returns the reached count - Forbidden (blocked bot) is
         swallowed inside _send_message and surfaces as a None result, so only a real

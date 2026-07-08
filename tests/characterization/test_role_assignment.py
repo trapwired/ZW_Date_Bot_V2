@@ -108,3 +108,50 @@ async def test_non_admin_cannot_assign_roles(node_handler, data_access, bot):
 
     assert data_access.get_user_state(TARGET_ID).role == Role.PLAYER
     assert_no_error_reported(bot)
+
+async def test_last_admin_cannot_be_removed(node_handler, data_access, bot):
+    admin = seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_toggle_admin(admin.user_id))
+
+    assert data_access.get_user_state(ADMIN_ID).is_admin  # still admin
+    assert 'last admin' in update.callback_query.edits[-1].text
+    assert_no_error_reported(bot)
+
+
+async def test_stale_button_cannot_admin_a_user_who_left_the_team(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.REJECTED, UserState.REJECTED, team_id='')
+
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_toggle_admin(target.user_id))
+
+    updated = data_access.get_user_state(TARGET_ID)
+    assert not updated.is_admin and updated.state == UserState.REJECTED
+    assert 'no longer part of the team' in update.callback_query.edits[-1].text
+    assert_no_error_reported(bot)
+
+
+async def test_legacy_assign_admin_button_is_idempotent_for_existing_admins(node_handler, data_access, bot):
+    # The old button meant 'make ADMIN' - pressing it again must never demote.
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+
+    legacy_assign = RoleAssignment._encode(RoleAssignment.ASSIGN, target.user_id, 42)
+    await drive_callback(node_handler, ADMIN_ID, legacy_assign)
+
+    assert data_access.get_user_state(TARGET_ID).is_admin
+    assert_no_error_reported(bot)
+
+
+async def test_back_from_admin_list_selection_returns_to_admin_list(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+
+    update = await drive_callback(
+        node_handler, ADMIN_ID,
+        RoleAssignment.encode_select_user(target.user_id, RoleAssignment.FROM_ADMIN_LIST))
+
+    markup = update.callback_query.edits[-1].reply_markup
+    back_row = markup.inline_keyboard[-1]
+    assert back_row[0].callback_data == RoleAssignment.encode_list_admins()
+    assert_no_error_reported(bot)

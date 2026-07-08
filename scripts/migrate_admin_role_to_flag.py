@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'src'))
 from firebase_admin import credentials, firestore
 import firebase_admin
 
-from Enums.Role import Role, LEGACY_ADMIN_ROLE_VALUE
+from Enums.Role import Role, is_legacy_admin_role_value
 from Enums.Table import Table
 from data.Tables import Tables
 from Utils import PathUtils
@@ -50,7 +50,9 @@ def main():
     stamped_non_admins = 0
     for doc in collection.get():
         data = doc.to_dict()
-        if int(data.get('role')) == LEGACY_ADMIN_ROLE_VALUE:
+        # A doc without a role (they exist - see migrate_to_multi_team) must not
+        # abort the run; it just gets the false stamp like any non-admin.
+        if is_legacy_admin_role_value(data.get('role')):
             collection.document(doc.id).update({'role': int(Role.PLAYER), 'isAdmin': True})
             migrated_admins += 1
         elif 'isAdmin' not in data:

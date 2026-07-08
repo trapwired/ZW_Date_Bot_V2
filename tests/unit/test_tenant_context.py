@@ -100,5 +100,5 @@ async def test_rosters_are_team_scoped(data_access):
     other = data_access.add(Team('Other', group_chat_id=998))
     with team_context(other.doc_id):
         assert data_access.get_all_players() == []
-        assert data_access.get_role_user_count(R.PLAYER) == 0
+        assert data_access.get_users_to_state_by_role(R.PLAYER) == []
     assert len(data_access.get_all_players()) == 1

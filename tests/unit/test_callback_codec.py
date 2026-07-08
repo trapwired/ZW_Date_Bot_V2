@@ -96,7 +96,8 @@ def test_role_callback_exact_wire_format():
     with team_context('team1'):
         assert RoleAssignment.encode_list_users(Role.PLAYER) == "ROLES#R#0#t:team1"
         assert RoleAssignment.encode_list_admins() == "ROLES#D#t:team1"
-        assert RoleAssignment.encode_select_user("u1") == "ROLES#U#u1#t:team1"
+        assert RoleAssignment.encode_select_user("u1", "0") == "ROLES#U#u1#0#t:team1"
+        assert RoleAssignment.encode_select_user("u1", RoleAssignment.FROM_ADMIN_LIST) == "ROLES#U#u1#D#t:team1"
         assert RoleAssignment.encode_assign("u1", Role.RETIRED) == "ROLES#A#u1#100#t:team1"
         assert RoleAssignment.encode_toggle_admin("u1") == "ROLES#T#u1#t:team1"
         assert RoleAssignment.encode_home() == "ROLES#H#t:team1"

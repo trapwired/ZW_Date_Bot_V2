@@ -41,6 +41,15 @@ class UserStateService(object):
         user_to_state.state = UserState.INIT
         self.data_access.update(user_to_state)
 
+    def reject(self, user_to_state: UsersToState) -> None:
+        """Park a user in the REJECTED stance in one persisted write. Clearing the
+        admin bit lives HERE so no rejection path can leave the admin menus reachable
+        (Audience.ADMINS gates purely on the flag)."""
+        user_to_state.add_role(Role.REJECTED)
+        user_to_state.is_admin = False
+        user_to_state.state = UserState.REJECTED
+        self.data_access.update(user_to_state)
+
     def set_language(self, user_to_state: UsersToState, language: str) -> None:
         user_to_state.language = language
         self.data_access.update(user_to_state)

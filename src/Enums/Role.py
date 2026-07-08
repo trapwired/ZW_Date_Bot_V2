@@ -17,5 +17,13 @@ class Role(IntEnum):
 # in-flight inline buttons still carry it (healed to PLAYER + is_admin).
 LEGACY_ADMIN_ROLE_VALUE = 42
 
+
+def is_legacy_admin_role_value(raw) -> bool:
+    """THE predicate for the retired ADMIN wire/DB value, shared by the entity heal,
+    the roles-menu codec and the migration script so the healing rule cannot drift."""
+    if raw is None or isinstance(raw, Role):
+        return False
+    return int(raw) == LEGACY_ADMIN_ROLE_VALUE
+
 # Roles an admin can hand out via the roles menu, in display order.
 ASSIGNABLE_ROLES = [Role.PLAYER, Role.RETIRED, Role.INACTIVE]

@@ -61,9 +61,11 @@ class EventsCallbackNode(CallbackNode):
         user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         telegram_id = update.effective_chat.id
 
-        if event_type is Event.TIMEKEEPING and not Audience.PLAYERS.allows(user_to_state):
+        if event_type is Event.TIMEKEEPING and not (Audience.PLAYERS.allows(user_to_state)
+                                                    or Audience.ADMINS.allows(user_to_state)):
             # Timekeeping events are hidden from spectators; a forwarded button must
-            # not leak the card, attendance names or the calendar file either.
+            # not leak the card, attendance names or the calendar file either. Admins
+            # pass regardless of their role - they manage these events.
             await query.answer()
             return
 
@@ -78,13 +80,14 @@ class EventsCallbackNode(CallbackNode):
                                            AttendanceState(int(args[1])))
             case EventsMenu.CALENDAR:
                 await self._send_ics(query, update, event_type, args[0])
-            case EventsMenu.EDIT_FIELDS if user_to_state.is_admin:
+            case EventsMenu.EDIT_FIELDS if Audience.ADMINS.allows(user_to_state):
                 await self._show_field_chooser(query, user_to_state, telegram_id, event_type, args[0])
-            case EventsMenu.EDIT_FIELD if user_to_state.is_admin:
-                await self._prompt_field_value(update, query, event_type, args[0], EventField(int(args[1])))
-            case EventsMenu.DELETE if user_to_state.is_admin:
+            case EventsMenu.EDIT_FIELD if Audience.ADMINS.allows(user_to_state):
+                await self._prompt_field_value(update, query, user_to_state, event_type, args[0],
+                                               EventField(int(args[1])))
+            case EventsMenu.DELETE if Audience.ADMINS.allows(user_to_state):
                 await self._confirm_delete(query, user_to_state, telegram_id, event_type, args[0])
-            case EventsMenu.DELETE_CONFIRMED if user_to_state.is_admin:
+            case EventsMenu.DELETE_CONFIRMED if Audience.ADMINS.allows(user_to_state):
                 await self._delete(query, event_type, args[0])
             case _:
                 # Unknown action or a user who may not take it (e.g. a spectator
@@ -148,7 +151,7 @@ class EventsCallbackNode(CallbackNode):
         await self.telegram_service.edit_callback_message(query, text + '\n\n' + t('Which field do you want to change?'),
                                                           markup)
 
-    async def _prompt_field_value(self, update: Update, query, event_type: Event, doc_id: str,
+    async def _prompt_field_value(self, update: Update, query, user_to_state, event_type: Event, doc_id: str,
                                   field: EventField):
         if field not in FIELD_ORDER[event_type]:
             # The chooser never offers this combination (e.g. OPPONENT on a training), so
@@ -163,7 +166,6 @@ class EventsCallbackNode(CallbackNode):
         # The admin types the new value next; remember which event/field/card message the
         # answer belongs to (plus the prompt, to clean it up afterwards), and route their
         # next text through the field-edit node.
-        user_to_state = self.user_state_service.get_user_state(update.effective_chat.id)
         user_to_state.additional_info = CallbackUtils.build_additional_information(
             query.message.message_id, query.message.chat_id, doc_id, event_type, field,
             prompt_message_id=sent.message_id if sent else None)

@@ -59,3 +59,13 @@ class SpectatorPasswordNotAllowedException(ExpectedException):
 class SpectatorPasswordAlreadyTakenException(ExpectedException):
     def __init__(self):
         super().__init__('This spectator password is already taken by another team')
+
+
+class RoleChangeTargetNotInTeamException(ExpectedException):
+    """The roles menu acted on a stale button: the target user has left the team
+    (or was rejected) since the button was minted."""
+
+
+class LastAdminException(ExpectedException):
+    """Removing this admin flag would leave the team with zero admins and no way
+    back into any admin menu."""

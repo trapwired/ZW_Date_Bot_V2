@@ -5,7 +5,7 @@ from telegram.error import TelegramError
 
 from data.DataAccess import DataAccess
 
-from Enums.Role import Role
+from Enums.Role import Role, is_legacy_admin_role_value
 from Enums import Audience
 from Enums.UserState import UserState
 
@@ -17,6 +17,7 @@ from framework.Services.TriggerService import TriggerService
 from framework.Services.UserStateService import UserStateService
 
 from Utils import PrintUtils
+from Utils.CustomExceptions import LastAdminException, RoleChangeTargetNotInTeamException
 from features.adminpanel import AdminMenu
 from features.roles import RoleAssignment
 from Utils import Format
@@ -43,99 +44,120 @@ class AssignRolesCallbackNode(CallbackNode):
             return
         action, args = parsed
 
+        try:
+            await self._dispatch(query, action, args)
+        except RoleChangeTargetNotInTeamException:
+            await self.telegram_service.edit_callback_message(
+                query, t('This user is no longer part of the team.'),
+                reply_markup=RoleAssignment.build_home_markup())
+        except LastAdminException:
+            await self.telegram_service.edit_callback_message(
+                query, t('Cannot remove the last admin - make someone else an admin first.'),
+                reply_markup=RoleAssignment.build_home_markup())
+
+    async def _dispatch(self, query, action: str, args: list[str]):
         match action:
             case RoleAssignment.HOME:
                 await self._show_overview(query)
             case RoleAssignment.LIST_ADMINS:
                 await self._show_admin_list(query)
-            case RoleAssignment.LIST_USERS if RoleAssignment.is_legacy_admin_role_value(args[0]):
+            case RoleAssignment.LIST_USERS if is_legacy_admin_role_value(args[0]):
                 # A pre-refactor button minted when ADMIN was still a role.
                 await self._show_admin_list(query)
             case RoleAssignment.LIST_USERS:
                 await self._show_user_list(query, Role(int(args[0])))
             case RoleAssignment.SELECT_USER:
-                await self._show_assign_options(query, args[0])
+                origin = args[1] if len(args) > 1 else None
+                await self._show_assign_options(query, args[0], origin)
             case RoleAssignment.TOGGLE_ADMIN:
                 await self._toggle_admin(query, args[0])
-            case RoleAssignment.ASSIGN if RoleAssignment.is_legacy_admin_role_value(args[1]):
-                # Old 'make ADMIN' button: the closest new meaning is flipping the flag.
-                await self._toggle_admin(query, args[0])
+            case RoleAssignment.ASSIGN if is_legacy_admin_role_value(args[1]):
+                # Old 'make ADMIN' button: an idempotent grant, never a demotion.
+                await self._grant_admin(query, args[0])
             case RoleAssignment.ASSIGN:
                 await self._assign_role(query, args[0], Role(int(args[1])))
 
     async def _show_overview(self, query):
-        counts = self.role_service.role_counts()
+        counts, admin_count = self.role_service.overview_counts()
         await self.telegram_service.edit_callback_message(
             query, t('<b>Select a role to manage:</b>'),
             reply_markup=RoleAssignment.build_overview_markup(
-                counts, self.role_service.admin_count(),
+                counts, admin_count,
                 back_callback_data=AdminMenu.encode(AdminMenu.PANEL)))
 
     async def _show_user_list(self, query, role: Role):
-        users = self.role_service.users_with_role(role)
-        if len(users) == 0:
-            await self.telegram_service.edit_callback_message(
-                query, t('No users currently have the role {role}.', role=Format.bold(role.name)),
-                reply_markup=RoleAssignment.build_home_markup())
-            return
-
-        await self.telegram_service.edit_callback_message(
-            query, t('Users with role {role} - tap one to change it:', role=Format.bold(role.name)),
-            reply_markup=RoleAssignment.build_user_list_markup(self._entries(users)))
+        await self._show_bucket(
+            query, self.role_service.users_with_role(role), origin=str(int(role)),
+            header=t('Users with role {role} - tap one to change it:', role=Format.bold(role.name)),
+            empty_text=t('No users currently have the role {role}.', role=Format.bold(role.name)))
 
     async def _show_admin_list(self, query):
-        admins = self.role_service.admins()
-        if len(admins) == 0:
+        await self._show_bucket(
+            query, self.role_service.admins(), origin=RoleAssignment.FROM_ADMIN_LIST,
+            header=t('Current admins - tap one to change them:'),
+            empty_text=t('No users are currently admins.'))
+
+    async def _show_bucket(self, query, pairs, origin: str, header: str, empty_text: str):
+        if len(pairs) == 0:
             await self.telegram_service.edit_callback_message(
-                query, t('No users are currently admins.'),
-                reply_markup=RoleAssignment.build_home_markup())
+                query, empty_text, reply_markup=RoleAssignment.build_home_markup())
             return
-
+        entries = [RoleAssignment.UserListEntry(uts.user_id, PrintUtils.get_player_display_name(user),
+                                                uts.role, uts.is_admin)
+                   for uts, user in pairs]
         await self.telegram_service.edit_callback_message(
-            query, t('Current admins - tap one to change them:'),
-            reply_markup=RoleAssignment.build_user_list_markup(self._entries(admins)))
+            query, header, reply_markup=RoleAssignment.build_user_list_markup(entries, origin))
 
-    @staticmethod
-    def _entries(pairs) -> list[tuple[str, str, Role, bool]]:
-        return [(uts.user_id, PrintUtils.get_player_display_name(user), uts.role, uts.is_admin)
-                for uts, user in pairs]
-
-    async def _show_assign_options(self, query, user_doc_id: str):
+    async def _show_assign_options(self, query, user_doc_id: str, origin: str | None):
         user, user_to_state = self.role_service.get_user_and_state(user_doc_id)
         name = Format.bold(PrintUtils.get_player_display_name(user))
         role_label = user_to_state.role.name + (f' {RoleAssignment.ADMIN_MARKER}' if user_to_state.is_admin else '')
+        back = RoleAssignment.encode_origin_list(origin, fallback_role=user_to_state.role)
         await self.telegram_service.edit_callback_message(
             query, t('{name} is currently {role}. Assign a new role:',
                      name=name, role=Format.bold(role_label)),
             reply_markup=RoleAssignment.build_assign_markup(user_doc_id, user_to_state.role,
-                                                            user_to_state.is_admin))
+                                                            user_to_state.is_admin, back))
 
     async def _assign_role(self, query, user_doc_id: str, new_role: Role):
         user, user_to_state = self.role_service.assign_role(user_doc_id, new_role)
-
-        notified = await self._notify_user(
-            user, user_to_state,
-            t('An admin set your role to {role}.', role=Format.bold(new_role.name)))
-
-        name = Format.bold(PrintUtils.get_player_display_name(user))
-        text = t('✅ {name} is now {role}.', name=name, role=Format.bold(new_role.name))
-        if not notified:
-            text += t('\nCould not notify them - they may have removed Telegram.')
-        await self.telegram_service.edit_callback_message(query, text, reply_markup=RoleAssignment.build_home_markup())
+        await self._confirm_change(
+            query, user, user_to_state,
+            user_notice=t('An admin set your role to {role}.', role=Format.bold(new_role.name)),
+            confirmation=t('✅ {name} is now {role}.',
+                           name=Format.bold(PrintUtils.get_player_display_name(user)),
+                           role=Format.bold(new_role.name)))
 
     async def _toggle_admin(self, query, user_doc_id: str):
         user, user_to_state = self.role_service.toggle_admin(user_doc_id)
-
-        notice = (t('An admin gave you admin access.') if user_to_state.is_admin
-                  else t('An admin removed your admin access.'))
-        notified = await self._notify_user(user, user_to_state, notice)
-
         name = Format.bold(PrintUtils.get_player_display_name(user))
-        text = (t('✅ {name} is now an admin.', name=name) if user_to_state.is_admin
-                else t('✅ {name} is no longer an admin.', name=name))
+        if user_to_state.is_admin:
+            notice, confirmation = (t('An admin gave you admin access.'),
+                                    t('✅ {name} is now an admin.', name=name))
+        else:
+            notice, confirmation = (t('An admin removed your admin access.'),
+                                    t('✅ {name} is no longer an admin.', name=name))
+        await self._confirm_change(query, user, user_to_state, notice, confirmation)
+
+    async def _grant_admin(self, query, user_doc_id: str):
+        user, user_to_state, changed = self.role_service.grant_admin(user_doc_id)
+        confirmation = t('✅ {name} is now an admin.',
+                         name=Format.bold(PrintUtils.get_player_display_name(user)))
+        if not changed:
+            # Already an admin: nothing to persist or announce.
+            await self.telegram_service.edit_callback_message(
+                query, confirmation, reply_markup=RoleAssignment.build_home_markup())
+            return
+        await self._confirm_change(query, user, user_to_state,
+                                   user_notice=t('An admin gave you admin access.'),
+                                   confirmation=confirmation)
+
+    async def _confirm_change(self, query, user, user_to_state, user_notice: str, confirmation: str):
+        notified = await self._notify_user(user, user_to_state, user_notice)
         if not notified:
-            text += t('\nCould not notify them - they may have removed Telegram.')
-        await self.telegram_service.edit_callback_message(query, text, reply_markup=RoleAssignment.build_home_markup())
+            confirmation += t('\nCould not notify them - they may have removed Telegram.')
+        await self.telegram_service.edit_callback_message(query, confirmation,
+                                                          reply_markup=RoleAssignment.build_home_markup())
 
     async def _notify_user(self, user, user_to_state, message: str) -> bool:
         # Best-effort: the change is already persisted, so a user we can no longer reach
