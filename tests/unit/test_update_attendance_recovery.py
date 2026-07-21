@@ -35,7 +35,7 @@ class _RaceRepository:
 
 def test_update_attendance_recreates_record_when_write_races_a_delete(data_access):
     repo = _RaceRepository()
-    data_access.firebase_repository = repo
+    data_access.repository = repo
     attendance = Attendance("user-1", "event-1", AttendanceState.YES)
 
     result = data_access.update_attendance(attendance, Event.GAME)
@@ -57,7 +57,7 @@ def test_update_attendance_still_creates_when_no_record_exists(data_access):
             raise AssertionError("update must not be called when no record exists")
 
     repo = _NoRecordRepository()
-    data_access.firebase_repository = repo
+    data_access.repository = repo
     attendance = Attendance("user-2", "event-2", AttendanceState.NO)
 
     result = data_access.update_attendance(attendance, Event.GAME)

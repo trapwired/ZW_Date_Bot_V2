@@ -1,8 +1,8 @@
 import pandas as pd
 from multipledispatch import dispatch
 
-from data.FirebaseRepository import FirebaseRepository
-from data.Tables import Tables, EVENT_ATTENDANCE_TABLES
+from data.RepositoryFactory import create_repository
+from data.Tables import EVENT_ATTENDANCE_TABLES
 
 from Enums.UserState import UserState
 from Enums.Table import Table
@@ -29,7 +29,7 @@ from Utils.ApiConfig import ApiConfig
 class DataAccess(object):
 
     def __init__(self, api_config: ApiConfig):
-        self.firebase_repository = FirebaseRepository(api_config, Tables(api_config))
+        self.repository = create_repository(api_config)
 
     #######
     # ADD #
@@ -37,35 +37,35 @@ class DataAccess(object):
 
     @dispatch(TelegramUser)
     def add(self, user: TelegramUser) -> UsersToState:
-        doc_ref = self.firebase_repository.add(user, Table.USERS_TABLE)
+        doc_ref = self.repository.add(user, Table.USERS_TABLE)
         user_doc_id = doc_ref[1].id
         user_to_state = UsersToState(user_doc_id, UserState.INIT)
-        doc_id = self.firebase_repository.add(user_to_state, Table.USERS_TO_STATE_TABLE)
+        doc_id = self.repository.add(user_to_state, Table.USERS_TO_STATE_TABLE)
         return user_to_state.add_document_id(doc_id[1].id)
 
     @dispatch(Game)
     def add(self, game: Game) -> Game:
-        doc_ref = self.firebase_repository.add(game, Table.GAMES_TABLE)
+        doc_ref = self.repository.add(game, Table.GAMES_TABLE)
         return game.add_document_id(doc_ref[1].id)
 
     @dispatch(Training)
     def add(self, training: Training) -> Training:
-        doc_ref = self.firebase_repository.add(training, Table.TRAININGS_TABLE)
+        doc_ref = self.repository.add(training, Table.TRAININGS_TABLE)
         return training.add_document_id(doc_ref[1].id)
 
     @dispatch(TimekeepingEvent)
     def add(self, timekeeping_event: TimekeepingEvent) -> TimekeepingEvent:
-        doc_ref = self.firebase_repository.add(timekeeping_event, Table.TIMEKEEPING_TABLE)
+        doc_ref = self.repository.add(timekeeping_event, Table.TIMEKEEPING_TABLE)
         return timekeeping_event.add_document_id(doc_ref[1].id)
 
     @dispatch(TempData)
     def add(self, temp_data: TempData) -> TempData:
-        doc_ref = self.firebase_repository.add(temp_data, Table.TEMP_DATA_TABLE)
+        doc_ref = self.repository.add(temp_data, Table.TEMP_DATA_TABLE)
         return temp_data.add_document_id(doc_ref[1].id)
 
     @dispatch(Team)
     def add(self, team: Team) -> Team:
-        doc_ref = self.firebase_repository.add(team, Table.TEAMS_TABLE)
+        doc_ref = self.repository.add(team, Table.TEAMS_TABLE)
         return team.add_document_id(doc_ref[1].id)
 
     ##########
@@ -76,11 +76,11 @@ class DataAccess(object):
                            field_type: EventField):
         match event_type:
             case Event.GAME:
-                event = self.firebase_repository.get_game(event_id)
+                event = self.repository.get_game(event_id)
             case Event.TRAINING:
-                event = self.firebase_repository.get_training(event_id)
+                event = self.repository.get_training(event_id)
             case Event.TIMEKEEPING:
-                event = self.firebase_repository.get_timekeeping(event_id)
+                event = self.repository.get_timekeeping(event_id)
             case _:
                 raise ValueError(f'Unhandled event type: {event_type}')
 
@@ -97,49 +97,49 @@ class DataAccess(object):
     @dispatch(UsersToState)
     def update(self, users_to_state: UsersToState):
         if users_to_state.doc_id is None:
-            return self.firebase_repository.update_user_state_via_user_id(users_to_state)
+            return self.repository.update_user_state_via_user_id(users_to_state)
         else:
-            return self.firebase_repository.update(users_to_state, Table.USERS_TO_STATE_TABLE)
+            return self.repository.update(users_to_state, Table.USERS_TO_STATE_TABLE)
 
     @dispatch(TelegramUser)
     def update(self, user: TelegramUser):
         if user.doc_id is None:
-            return self.firebase_repository.update_user_via_telegram_id(user)
+            return self.repository.update_user_via_telegram_id(user)
         else:
-            return self.firebase_repository.update(user, Table.USERS_TABLE)
+            return self.repository.update(user, Table.USERS_TABLE)
 
     @dispatch(Game)
     def update(self, game: Game):
         if game.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(game, Table.GAMES_TABLE)
+        return self.repository.update(game, Table.GAMES_TABLE)
 
     @dispatch(Training)
     def update(self, training: Training):
         if training.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(training, Table.TRAININGS_TABLE)
+        return self.repository.update(training, Table.TRAININGS_TABLE)
 
     @dispatch(PlayerMetric)
     def update(self, player_metric: PlayerMetric):
         if player_metric.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(player_metric, Table.PLAYER_METRIC)
+        return self.repository.update(player_metric, Table.PLAYER_METRIC)
 
     @dispatch(TimekeepingEvent)
     def update(self, timekeeping_event: TimekeepingEvent):
         if timekeeping_event.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(timekeeping_event, Table.TIMEKEEPING_TABLE)
+        return self.repository.update(timekeeping_event, Table.TIMEKEEPING_TABLE)
 
     def update_attendance(self, attendance: Attendance, event_type: Event) -> Attendance:
         table = EVENT_ATTENDANCE_TABLES[event_type]
-        doc_id = self.firebase_repository.get_event_attendance_doc_id(attendance, table)
+        doc_id = self.repository.get_event_attendance_doc_id(attendance, table)
         if doc_id is None:
             return self._add_attendance(attendance, table)
         attendance.add_document_id(doc_id)
         try:
-            self.firebase_repository.update(attendance, table)
+            self.repository.update(attendance, table)
         except ObjectNotFoundException:
             # The record was deleted between the lookup and the write (a race); recreate it
             # so the player's attendance vote isn't silently lost.
@@ -147,20 +147,20 @@ class DataAccess(object):
         return attendance
 
     def _add_attendance(self, attendance: Attendance, table: Table) -> Attendance:
-        doc_ref = self.firebase_repository.add(attendance, table)
+        doc_ref = self.repository.add(attendance, table)
         return attendance.add_document_id(doc_ref[1].id)
 
     @dispatch(TempData)
     def update(self, temp_data: TempData):
         if temp_data.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(temp_data, Table.TEMP_DATA_TABLE)
+        return self.repository.update(temp_data, Table.TEMP_DATA_TABLE)
 
     @dispatch(Team)
     def update(self, team: Team):
         if team.doc_id is None:
             raise DocumentIdNotPresentException()
-        return self.firebase_repository.update(team, Table.TEAMS_TABLE)
+        return self.repository.update(team, Table.TEAMS_TABLE)
 
     #######
     # GET #
@@ -178,35 +178,35 @@ class DataAccess(object):
                 raise ValueError(f'Unhandled event type: {event_type}')
 
     def get_game(self, doc_id: str):
-        return self.firebase_repository.get_game(doc_id)
+        return self.repository.get_game(doc_id)
 
     def get_training(self, doc_id: str):
-        return self.firebase_repository.get_training(doc_id)
+        return self.repository.get_training(doc_id)
 
     def get_timekeeping(self, doc_id: str):
-        return self.firebase_repository.get_timekeeping(doc_id)
+        return self.repository.get_timekeeping(doc_id)
 
     def get_attendance(self, telegram_id: str, event_doc_id: str, event_type: Event) -> Attendance:
-        user = self.firebase_repository.get_user(telegram_id)
+        user = self.repository.get_user(telegram_id)
         table = EVENT_ATTENDANCE_TABLES[event_type]
         try:
-            return self.firebase_repository.get_attendance(user, event_doc_id, table)
+            return self.repository.get_attendance(user, event_doc_id, table)
         except ObjectNotFoundException:
             return Attendance(user.doc_id, event_doc_id, AttendanceState.UNSURE)
 
     def get_user_state(self, telegram_id: int) -> UsersToState:
-        user = self.firebase_repository.get_user(telegram_id)
-        return self.firebase_repository.get_user_state(user)
+        user = self.repository.get_user(telegram_id)
+        return self.repository.get_user_state(user)
 
     def get_user(self, telegram_id: int) -> TelegramUser:
-        return self.firebase_repository.get_user(telegram_id)
+        return self.repository.get_user(telegram_id)
 
     def get_player_metric(self, telegram_id: int):
-        user = self.firebase_repository.get_user(telegram_id)
-        return self.firebase_repository.get_player_metric(user)
+        user = self.repository.get_user(telegram_id)
+        return self.repository.get_player_metric(user)
 
     def get_ordered_games(self) -> [Game]:
-        event_list = self.firebase_repository.get_future_events(Table.GAMES_TABLE)
+        event_list = self.repository.get_future_events(Table.GAMES_TABLE)
         game_list = []
         for game in event_list:
             new_game = Game.from_dict(game.id, game.to_dict())
@@ -214,7 +214,7 @@ class DataAccess(object):
         return sorted(game_list, key=lambda g: g.timestamp)
 
     def get_ordered_trainings(self) -> [Training]:
-        event_list = self.firebase_repository.get_future_events(Table.TRAININGS_TABLE)
+        event_list = self.repository.get_future_events(Table.TRAININGS_TABLE)
         training_list = []
         for training in event_list:
             new_training = Training.from_dict(training.id, training.to_dict())
@@ -222,7 +222,7 @@ class DataAccess(object):
         return sorted(training_list, key=lambda t: t.timestamp)
 
     def get_ordered_timekeepings(self) -> [TimekeepingEvent]:
-        event_list = self.firebase_repository.get_future_events(Table.TIMEKEEPING_TABLE)
+        event_list = self.repository.get_future_events(Table.TIMEKEEPING_TABLE)
         timekeepings_list = []
         for timekeeping in event_list:
             new_timekeeping = TimekeepingEvent.from_dict(timekeeping.id, timekeeping.to_dict())
@@ -230,40 +230,40 @@ class DataAccess(object):
         return sorted(timekeepings_list, key=lambda t: t.timestamp)
 
     def get_all_players(self) -> [TelegramUser]:
-        all_users_to_state = self.firebase_repository.get_all_active_players_to_state()
+        all_users_to_state = self.repository.get_all_active_players_to_state()
         all_players = []
         for uts_ref in all_users_to_state:
             uts = UsersToState.from_dict(uts_ref.id, uts_ref.to_dict())
-            player = self.firebase_repository.get_user(uts.user_id)
+            player = self.repository.get_user(uts.user_id)
             all_players.append(player)
         return all_players
 
     def get_users_to_state_by_role(self, role: Role) -> [UsersToState]:
-        rows = self.firebase_repository.get_users_to_state_by_role(role)
+        rows = self.repository.get_users_to_state_by_role(role)
         return [UsersToState.from_dict(row.id, row.to_dict()) for row in rows]
 
     def get_admins_to_state(self) -> [UsersToState]:
-        rows = self.firebase_repository.get_admins_to_state()
+        rows = self.repository.get_admins_to_state()
         return [UsersToState.from_dict(row.id, row.to_dict()) for row in rows]
 
     def delete_team(self, team: Team) -> None:
-        self.firebase_repository.delete_team(team.doc_id)
+        self.repository.delete_team(team.doc_id)
 
     def get_users_to_state_by_team(self, team_id: str) -> [UsersToState]:
-        rows = self.firebase_repository.get_users_to_state_by_team(team_id)
+        rows = self.repository.get_users_to_state_by_team(team_id)
         return [UsersToState.from_dict(row.id, row.to_dict()) for row in rows]
 
     def get_user_by_doc_id(self, user_doc_id: str) -> TelegramUser:
-        return self.firebase_repository.get_user(user_doc_id)
+        return self.repository.get_user(user_doc_id)
 
     def get_user_state_for_user(self, user: TelegramUser) -> UsersToState:
-        return self.firebase_repository.get_user_state(user)
+        return self.repository.get_user_state(user)
 
     def get_team(self, doc_id: str) -> Team:
-        return self.firebase_repository.get_team(doc_id)
+        return self.repository.get_team(doc_id)
 
     def get_all_teams(self) -> list[Team]:
-        return self.firebase_repository.get_all_teams()
+        return self.repository.get_all_teams()
 
 
     def get_stats_event(self, event_id: str, event_type: Event) -> (list, list, list):
@@ -278,11 +278,11 @@ class DataAccess(object):
 
         active_player_ids = [
             UsersToState.from_dict(element.id, element.to_dict()).user_id
-            for element in self.firebase_repository.get_all_active_players_to_state()
+            for element in self.repository.get_all_active_players_to_state()
         ]
         active_player_id_set = set(active_player_ids)
 
-        event_attendance_list = self.firebase_repository.get_attendance_list(event_id, table=EVENT_ATTENDANCE_TABLES[event_type])
+        event_attendance_list = self.repository.get_attendance_list(event_id, table=EVENT_ATTENDANCE_TABLES[event_type])
         for attendance in event_attendance_list:
             new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
             user_id = new_attendance.user_id
@@ -316,55 +316,55 @@ class DataAccess(object):
         return yes_with_names, no_with_names, unsure_with_names
 
     def get_temp_data(self, user_id: str) -> TempData:
-        return self.firebase_repository.get_temp_data(user_id)
+        return self.repository.get_temp_data(user_id)
 
     def get_website(self) -> str | None:
-        settings = self.firebase_repository.get_settings()
+        settings = self.repository.get_settings()
         return settings.website if settings else None
 
     def set_website(self, website: str):
-        self.firebase_repository.set_settings(Settings(website))
+        self.repository.set_settings(Settings(website))
 
     def add_names(self, doc_id_list: list) -> list[TelegramUser]:
         result = []
         for doc in doc_id_list:
-            user_ref = self.firebase_repository.get_document(doc, Table.USERS_TABLE)
+            user_ref = self.repository.get_document(doc, Table.USERS_TABLE)
             user = TelegramUser.from_dict(user_ref.id, user_ref.to_dict())
             result.append(user)
         return result
 
     def has_any_docs(self, table: Table) -> bool:
-        return self.firebase_repository.has_any_docs(table)
+        return self.repository.has_any_docs(table)
 
     def any_events_in_future(self, event_table: Table):
-        events = self.firebase_repository.get_future_events(event_table)
+        events = self.repository.get_future_events(event_table)
         return len(events) > 0
 
     def get_all_event_attendances(self, telegram_user: TelegramUser):
         attendance_dict = {}
         all_events = [Event.GAME, Event.TIMEKEEPING, Event.TRAINING]
         for event in all_events:
-            event_attendance_list = self.firebase_repository.get_all_user_event_attendance(telegram_user, event)
+            event_attendance_list = self.repository.get_all_user_event_attendance(telegram_user, event)
             for attendance in event_attendance_list:
                 new_attendance = Attendance.from_dict(attendance.id, attendance.to_dict())
                 attendance_dict[new_attendance.event_id] = new_attendance
         return attendance_dict
 
     def get_user_to_player_metric(self) -> dict:
-        all_player_metrics = self.firebase_repository.get_all_player_metrics()
+        all_player_metrics = self.repository.get_all_player_metrics()
         users_to_player_metric_dict = dict()
 
         for row in all_player_metrics:
             player_metric = PlayerMetric.from_dict(row.id, row.to_dict())
-            user = self.firebase_repository.get_user(player_metric.user_id)
+            user = self.repository.get_user(player_metric.user_id)
             users_to_player_metric_dict[user] = player_metric
 
         return users_to_player_metric_dict
 
     def get_attendance_statistics(self, event_type: Event):
-        relevant_event_ids = self.firebase_repository.get_all_relevant_event_ids(event_type)
-        all_attendances = self.firebase_repository.get_all_event_attendances(event_type, relevant_event_ids)
-        all_active_players = self.firebase_repository.get_all_active_players_to_state()
+        relevant_event_ids = self.repository.get_all_relevant_event_ids(event_type)
+        all_attendances = self.repository.get_all_event_attendances(event_type, relevant_event_ids)
+        all_active_players = self.repository.get_all_active_players_to_state()
         user_id_to_attendance_dict = dict()
 
         for active_player in all_active_players:
@@ -379,7 +379,7 @@ class DataAccess(object):
 
         user_to_attendance_dict = dict()
         for user_id, attendance_list in user_id_to_attendance_dict.items():
-            user = self.firebase_repository.get_user(user_id)
+            user = self.repository.get_user(user_id)
             user_to_attendance_dict[user] = attendance_list
 
         return user_to_attendance_dict
@@ -391,26 +391,26 @@ class DataAccess(object):
     def delete_event(self, event_type: Event, doc_id: str):
         match event_type:
             case Event.GAME:
-                self.firebase_repository.delete_game(doc_id)
+                self.repository.delete_game(doc_id)
             case Event.TRAINING:
-                self.firebase_repository.delete_training(doc_id)
+                self.repository.delete_training(doc_id)
             case Event.TIMEKEEPING:
-                self.firebase_repository.delete_timekeeping(doc_id)
+                self.repository.delete_timekeeping(doc_id)
             case _:
                 raise ValueError(f'Unhandled event type: {event_type}')
-        self.firebase_repository.delete_event_attendances(event_type, doc_id)
+        self.repository.delete_event_attendances(event_type, doc_id)
 
     @dispatch(TempData)
     def delete(self, temp_data: TempData):
-        self.firebase_repository.delete_temp_data(temp_data)
+        self.repository.delete_temp_data(temp_data)
 
     def reset_statistics(self) -> int:
         # Ends the current season: hard-deletes every player's reminder statistics.
-        return self.firebase_repository.delete_all_player_metrics()
+        return self.repository.delete_all_player_metrics()
 
     ########
     # ELSE #
     ########
 
     def reset_all_player_event_attendance(self, event_type: Event, doc_id: str):
-        self.firebase_repository.reset_all_player_event_attendance(doc_id, EVENT_ATTENDANCE_TABLES[event_type])
+        self.repository.reset_all_player_event_attendance(doc_id, EVENT_ATTENDANCE_TABLES[event_type])

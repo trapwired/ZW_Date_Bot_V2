@@ -4,6 +4,7 @@ import firebase_admin
 from firebase_admin import firestore
 from google.cloud.firestore_v1 import FieldFilter
 
+from data.Repository import Repository
 from data.Tables import Tables, EVENT_TABLES, EVENT_ATTENDANCE_TABLES
 from data.TenantContext import current_team_id, team_context
 
@@ -61,7 +62,7 @@ def get_current_season_dates():
     return season_start, season_end
 
 
-class FirebaseRepository(object):
+class FirebaseRepository(Repository):
     # The settings table holds a single configuration document under a fixed id, so it can be
     # read/written deterministically without a query (no "more than one" ambiguity).
     SETTINGS_DOC_ID = 'config'
