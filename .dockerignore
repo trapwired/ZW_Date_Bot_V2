@@ -4,7 +4,6 @@ secrets/
 venv/
 tests/
 docs/
-scripts/
 ics_files/
 .github/
 .git/
