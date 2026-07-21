@@ -3,6 +3,7 @@ api_config.ini. Missing/empty setting defaults to firestore so existing deployed
 configs keep working untouched; an unknown value fails loud at startup instead
 of silently running the wrong store."""
 from data.FirebaseRepository import FirebaseRepository
+from data.PostgresRepository import PostgresRepository
 from data.Repository import Repository
 from data.Tables import Tables
 
@@ -19,5 +20,5 @@ def create_repository(api_config: ApiConfig) -> Repository:
     if backend == FIRESTORE:
         return FirebaseRepository(api_config, Tables(api_config))
     if backend == POSTGRES:
-        raise NotImplementedError('postgres backend lands in Stage B2 of the VPS migration')
+        return PostgresRepository(api_config)
     raise ValueError(f'Unknown [Database] backend "{backend}" - use "{FIRESTORE}" or "{POSTGRES}"')

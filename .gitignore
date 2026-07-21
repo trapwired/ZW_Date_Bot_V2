@@ -214,3 +214,4 @@ fabric.properties
 /dataSources.local.xml
 
 /src/data.txt
+secrets-local/

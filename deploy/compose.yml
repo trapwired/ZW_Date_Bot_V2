@@ -1,11 +1,40 @@
 # Lives at /srv/apps/zwdatebot/compose.yml on the VPS (shipped by deploy.yml).
 # Long polling: no ports, no networks, no Caddy site block.
+#
+# postgres runs "dark" until the Stage B cutover: the bot stays on
+# [Database] backend = firestore until the server's api_config.ini flips to
+# backend = postgres + dsn = postgresql://zwdatebot:...@postgres:5432/zwdatebot.
+# The central VPS backup auto-discovers the container (nightly pg_dumpall).
 services:
   zwdatebot:
     image: zwdatebot:latest
     container_name: zwdatebot
     restart: unless-stopped
     env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       # Whole dir (filename-agnostic: api_config.ini names the Firebase JSON).
       - ./secrets:/app/secrets:ro
+
+  postgres:
+    image: postgres:16
+    container_name: zwdatebot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zwdatebot
+      # Set in /srv/apps/zwdatebot/.env (never in this public repo); the same
+      # password goes into the dsn in the server's api_config.ini at cutover.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: zwdatebot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zwdatebot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

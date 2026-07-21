@@ -12,6 +12,7 @@ from Enums.Table import Table
 from Enums.Role import Role
 from Enums.Event import Event
 
+from domain.Season import get_current_season_dates
 from domain.entities.DatabaseEntity import DatabaseEntity
 from domain.entities.Game import Game
 from domain.entities.Team import Team
@@ -43,23 +44,6 @@ if GLOBAL_TABLES | TEAM_SCOPED_TABLES != set(Table) or GLOBAL_TABLES & TEAM_SCOP
     # A new Table member must be consciously classified as global or team-scoped;
     # failing at import time makes the whole test suite catch the omission.
     raise AssertionError('every Table must be classified as exactly one of GLOBAL_TABLES / TEAM_SCOPED_TABLES')
-
-
-def get_current_season_dates():
-    today = datetime.today()
-    current_year = today.year
-
-    # Determine if we are in the first half of the year (January to June)
-    if today.month < 7:
-        # Current season started last year on July 1st
-        season_start = datetime(current_year - 1, 7, 1)
-        season_end = datetime(current_year, 6, 30)
-    else:
-        # Current season started this year on July 1st
-        season_start = datetime(current_year, 7, 1)
-        season_end = datetime(current_year + 1, 6, 30)
-
-    return season_start, season_end
 
 
 class FirebaseRepository(Repository):
