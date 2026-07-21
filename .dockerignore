@@ -1,0 +1,13 @@
+# Public repo + bind-mounted secrets: the image must never contain a real secret.
+secrets/
+!secrets/example_api_config.ini
+venv/
+tests/
+docs/
+scripts/
+ics_files/
+.github/
+.git/
+.idea/
+.pytest_cache/
+**/__pycache__/
