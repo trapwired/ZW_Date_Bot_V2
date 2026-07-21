@@ -37,36 +37,35 @@ class DataAccess(object):
 
     @dispatch(TelegramUser)
     def add(self, user: TelegramUser) -> UsersToState:
-        doc_ref = self.repository.add(user, Table.USERS_TABLE)
-        user_doc_id = doc_ref[1].id
+        user_doc_id = self.repository.add(user, Table.USERS_TABLE)
         user_to_state = UsersToState(user_doc_id, UserState.INIT)
         doc_id = self.repository.add(user_to_state, Table.USERS_TO_STATE_TABLE)
-        return user_to_state.add_document_id(doc_id[1].id)
+        return user_to_state.add_document_id(doc_id)
 
     @dispatch(Game)
     def add(self, game: Game) -> Game:
-        doc_ref = self.repository.add(game, Table.GAMES_TABLE)
-        return game.add_document_id(doc_ref[1].id)
+        doc_id = self.repository.add(game, Table.GAMES_TABLE)
+        return game.add_document_id(doc_id)
 
     @dispatch(Training)
     def add(self, training: Training) -> Training:
-        doc_ref = self.repository.add(training, Table.TRAININGS_TABLE)
-        return training.add_document_id(doc_ref[1].id)
+        doc_id = self.repository.add(training, Table.TRAININGS_TABLE)
+        return training.add_document_id(doc_id)
 
     @dispatch(TimekeepingEvent)
     def add(self, timekeeping_event: TimekeepingEvent) -> TimekeepingEvent:
-        doc_ref = self.repository.add(timekeeping_event, Table.TIMEKEEPING_TABLE)
-        return timekeeping_event.add_document_id(doc_ref[1].id)
+        doc_id = self.repository.add(timekeeping_event, Table.TIMEKEEPING_TABLE)
+        return timekeeping_event.add_document_id(doc_id)
 
     @dispatch(TempData)
     def add(self, temp_data: TempData) -> TempData:
-        doc_ref = self.repository.add(temp_data, Table.TEMP_DATA_TABLE)
-        return temp_data.add_document_id(doc_ref[1].id)
+        doc_id = self.repository.add(temp_data, Table.TEMP_DATA_TABLE)
+        return temp_data.add_document_id(doc_id)
 
     @dispatch(Team)
     def add(self, team: Team) -> Team:
-        doc_ref = self.repository.add(team, Table.TEAMS_TABLE)
-        return team.add_document_id(doc_ref[1].id)
+        doc_id = self.repository.add(team, Table.TEAMS_TABLE)
+        return team.add_document_id(doc_id)
 
     ##########
     # UPDATE #
@@ -147,8 +146,8 @@ class DataAccess(object):
         return attendance
 
     def _add_attendance(self, attendance: Attendance, table: Table) -> Attendance:
-        doc_ref = self.repository.add(attendance, table)
-        return attendance.add_document_id(doc_ref[1].id)
+        doc_id = self.repository.add(attendance, table)
+        return attendance.add_document_id(doc_id)
 
     @dispatch(TempData)
     def update(self, temp_data: TempData):

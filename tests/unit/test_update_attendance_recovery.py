@@ -9,14 +9,10 @@ from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 from domain.entities.Attendance import Attendance
 from Utils.CustomExceptions import ObjectNotFoundException
+from tests.doubles.stub_repository import StubRepository
 
 
-class _FakeDocRef:
-    def __init__(self, doc_id):
-        self.id = doc_id
-
-
-class _RaceRepository:
+class _RaceRepository(StubRepository):
     """Finds the record, but the update fails because it was deleted in between."""
 
     def __init__(self):
@@ -30,7 +26,7 @@ class _RaceRepository:
 
     def add(self, attendance, table):
         self.added.append(attendance)
-        return (None, _FakeDocRef("recreated-doc-id"))
+        return "recreated-doc-id"
 
 
 def test_update_attendance_recreates_record_when_write_races_a_delete(data_access):

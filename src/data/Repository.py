@@ -2,10 +2,11 @@
 implements this surface, and DataAccess talks only to it. Swapping backends is
 config (`[Database] backend`), never a code edit.
 
-Query methods that today return Firestore snapshots are specified as returning
-"rows": any object with `.id` and `.to_dict()` (Firestore snapshots satisfy this
-natively; other backends return an equivalent lightweight record). DataAccess
-already consumes exactly that duck type.
+Contracts every backend must honour (DataAccess depends on all three):
+- Query methods return "rows": any object with `.id` and `.to_dict()` (Firestore
+  snapshots satisfy this natively; other backends return an equivalent record).
+- `add` returns the new row's id as a str.
+- Reads/updates against a missing document raise ObjectNotFoundException.
 """
 from abc import ABC, abstractmethod
 
@@ -29,10 +30,6 @@ class Repository(ABC):
     """What a storage backend must provide. Method semantics are pinned by the
     Firestore implementation and its tests; PostgresRepository (Stage B2) must
     match them exactly."""
-
-    @abstractmethod
-    def raise_exception_if_document_not_exists(self, table: Table, document_ref: str):
-        ...
 
     @abstractmethod
     def get_document(self, doc_id: str, table: Table):
@@ -139,7 +136,7 @@ class Repository(ABC):
         ...
 
     @abstractmethod
-    def add(self, new_object: DatabaseEntity, table: Table):
+    def add(self, new_object: DatabaseEntity, table: Table) -> str:
         ...
 
     @abstractmethod
@@ -180,14 +177,6 @@ class Repository(ABC):
 
     @abstractmethod
     def delete_all_player_metrics(self) -> int:
-        ...
-
-    @abstractmethod
-    def get_event_attendance_table(self, event_type: Event) -> Table:
-        ...
-
-    @abstractmethod
-    def get_event_table(self, event_type: Event) -> Table:
         ...
 
     @abstractmethod

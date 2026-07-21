@@ -90,7 +90,7 @@ class FirebaseRepository(Repository):
                 .document(current_team_id())
                 .collection(name))
 
-    def raise_exception_if_document_not_exists(self, table: Table, document_ref: str):
+    def _raise_exception_if_document_not_exists(self, table: Table, document_ref: str):
         doc = self._collection(table).document(document_ref)
         res = doc.get().to_dict()
         if res is None:
@@ -101,7 +101,7 @@ class FirebaseRepository(Repository):
     #######
 
     def get_document(self, doc_id: str, table: Table):
-        self.raise_exception_if_document_not_exists(table, doc_id)
+        self._raise_exception_if_document_not_exists(table, doc_id)
         query_ref = self._collection(table).document(doc_id)
         return query_ref.get()
 
@@ -223,7 +223,7 @@ class FirebaseRepository(Repository):
         return Attendance.from_dict(attendance.id, attendance.to_dict())
 
     def get_all_user_event_attendance(self, user: TelegramUser, event_type: Event):
-        table = self.get_event_attendance_table(event_type)
+        table = self._get_event_attendance_table(event_type)
         query_ref = self._collection(table).where(filter=FieldFilter("userId", "==", user.doc_id))
         entries = query_ref.get()
         return entries
@@ -234,7 +234,7 @@ class FirebaseRepository(Repository):
     def get_all_event_attendances(self, event_type: Event, relevant_doc_ids: list[str]):
         if len(relevant_doc_ids) == 0:
             return []
-        table = self.get_event_attendance_table(event_type)
+        table = self._get_event_attendance_table(event_type)
         entries = []
         for i in range(0, len(relevant_doc_ids), self.FIRESTORE_IN_LIMIT):
             batch = relevant_doc_ids[i:i + self.FIRESTORE_IN_LIMIT]
@@ -243,7 +243,7 @@ class FirebaseRepository(Repository):
         return entries
 
     def get_all_relevant_event_ids(self, event_type: Event):
-        table = self.get_event_table(event_type)
+        table = self._get_event_table(event_type)
         season_start, _ = get_current_season_dates()
         query_ref = (self._collection(table)) \
             .where(filter=FieldFilter("timestamp", ">", season_start)) \
@@ -325,16 +325,17 @@ class FirebaseRepository(Repository):
     # ADD / UPDATE #
     ################
 
-    def add(self, new_object: DatabaseEntity, table: Table):
-        return self._collection(table).add(new_object.to_dict())
+    def add(self, new_object: DatabaseEntity, table: Table) -> str:
+        _, document_reference = self._collection(table).add(new_object.to_dict())
+        return document_reference.id
 
     def update(self, db_object: DatabaseEntity, table: Table):
-        self.raise_exception_if_document_not_exists(table, db_object.doc_id)
+        self._raise_exception_if_document_not_exists(table, db_object.doc_id)
         self._collection(table).document(db_object.doc_id).update(db_object.to_dict())
         return db_object
 
     def update_user_state(self, user_to_state: UsersToState):
-        self.raise_exception_if_document_not_exists(Table.USERS_TO_STATE_TABLE, user_to_state.doc_id)
+        self._raise_exception_if_document_not_exists(Table.USERS_TO_STATE_TABLE, user_to_state.doc_id)
         self._collection(Table.USERS_TO_STATE_TABLE).document(user_to_state.doc_id).update(
             {'state': int(user_to_state.state)})
 
@@ -373,7 +374,7 @@ class FirebaseRepository(Repository):
         self._collection(Table.TIMEKEEPING_TABLE).document(doc_id).delete()
 
     def delete_event_attendances(self, event_type: Event, event_doc_id: str):
-        table = self.get_event_attendance_table(event_type)
+        table = self._get_event_attendance_table(event_type)
         query_ref = self._collection(table) \
             .where(filter=FieldFilter("eventId", "==", event_doc_id))
         self._delete_documents(table, query_ref.stream())
@@ -392,10 +393,10 @@ class FirebaseRepository(Repository):
     # ELSE #
     ########
 
-    def get_event_attendance_table(self, event_type: Event) -> Table:
+    def _get_event_attendance_table(self, event_type: Event) -> Table:
         return EVENT_ATTENDANCE_TABLES[event_type]
 
-    def get_event_table(self, event_type: Event) -> Table:
+    def _get_event_table(self, event_type: Event) -> Table:
         return EVENT_TABLES[event_type]
 
     def reset_all_player_event_attendance(self, doc_id: str, table: Table):
