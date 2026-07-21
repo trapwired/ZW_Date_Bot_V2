@@ -1,27 +1,34 @@
 name: Deploy
 # Runs only after a PR is merged (push to main). Tests already ran as a required check on
 # the PR, so deployment does not re-run them.
+#
+# Pattern (CaDo, see DomiCloud VPS_HANDOVER.md): build the image on the runner, ship it
+# as a tarball over SSH (no registry, no auth), then compose up on the VPS. CI holds only
+# the deploy SSH key - app secrets live solely in /srv/apps/zwdatebot/ on the server.
 on:
   push:
     branches: [main]
+  workflow_dispatch: {}   # manual runs: prove the pipeline pre-cutover (standby-safe)
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: ${{ secrets.DROPLET_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /root/ZW_Date_Bot_V2
-            before=$(git rev-parse HEAD)
-            git pull origin main
-            after=$(git rev-parse HEAD)
-            if ! git diff --quiet "$before" "$after" -- requirements.txt; then
-              echo "requirements.txt changed — updating packages"
-              venv/bin/pip install --upgrade pip
-              venv/bin/pip install -r requirements.txt
-            fi
-            systemctl restart zwdatebot
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t zwdatebot:latest .
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Ship image + compose, restart
+        run: |
+          SSH="ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.DEPLOY_HOST }}"
+          docker save zwdatebot:latest | gzip | $SSH "gunzip | docker load"
+          scp -i ~/.ssh/deploy_key deploy/compose.yml \
+            "ubuntu@${{ secrets.DEPLOY_HOST }}:/srv/apps/zwdatebot/compose.yml"
+          $SSH "cd /srv/apps/zwdatebot && docker compose up -d && docker image prune -f"

@@ -1,0 +1,11 @@
+# Lives at /srv/apps/zwdatebot/compose.yml on the VPS (shipped by deploy.yml).
+# Long polling: no ports, no networks, no Caddy site block.
+services:
+  zwdatebot:
+    image: zwdatebot:latest
+    container_name: zwdatebot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # Whole dir (filename-agnostic: api_config.ini names the Firebase JSON).
+      - ./secrets:/app/secrets:ro

@@ -7,6 +7,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes
 
 from Utils.ApiConfig import ApiConfig
 
+from framework import Heartbeat
 from framework.CommandDescriptions import CommandDescriptions
 from framework.NodeHandler import NodeHandler
 from localization.Languages import SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
@@ -77,6 +78,7 @@ def run_job_queue():
     job_queue = application.job_queue
     job_queue.run_once(send_hi, 1)
     job_queue.run_once(register_bot_commands, 1)
+    Heartbeat.register(job_queue)
 
     # Individual event reminders
     job_queue.run_daily(  # Game Reminders, each day at 11:59 local time
