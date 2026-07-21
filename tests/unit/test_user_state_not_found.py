@@ -18,7 +18,7 @@ def test_get_user_state_raises_object_not_found_when_no_state_doc(data_access):
     user = TelegramUser(123, "Ghost", "User", doc_id="user-doc-without-state")
 
     with pytest.raises(ObjectNotFoundException):
-        data_access.firebase_repository.get_user_state(user)
+        data_access.repository.get_user_state(user)
 
 
 def test_update_user_state_via_user_id_raises_when_state_doc_missing(data_access):

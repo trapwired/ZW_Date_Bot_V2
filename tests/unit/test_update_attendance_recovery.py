@@ -9,14 +9,10 @@ from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 from domain.entities.Attendance import Attendance
 from Utils.CustomExceptions import ObjectNotFoundException
+from tests.doubles.stub_repository import StubRepository
 
 
-class _FakeDocRef:
-    def __init__(self, doc_id):
-        self.id = doc_id
-
-
-class _RaceRepository:
+class _RaceRepository(StubRepository):
     """Finds the record, but the update fails because it was deleted in between."""
 
     def __init__(self):
@@ -30,12 +26,12 @@ class _RaceRepository:
 
     def add(self, attendance, table):
         self.added.append(attendance)
-        return (None, _FakeDocRef("recreated-doc-id"))
+        return "recreated-doc-id"
 
 
 def test_update_attendance_recreates_record_when_write_races_a_delete(data_access):
     repo = _RaceRepository()
-    data_access.firebase_repository = repo
+    data_access.repository = repo
     attendance = Attendance("user-1", "event-1", AttendanceState.YES)
 
     result = data_access.update_attendance(attendance, Event.GAME)
@@ -57,7 +53,7 @@ def test_update_attendance_still_creates_when_no_record_exists(data_access):
             raise AssertionError("update must not be called when no record exists")
 
     repo = _NoRecordRepository()
-    data_access.firebase_repository = repo
+    data_access.repository = repo
     attendance = Attendance("user-2", "event-2", AttendanceState.NO)
 
     result = data_access.update_attendance(attendance, Event.GAME)
