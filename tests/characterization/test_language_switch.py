@@ -95,8 +95,11 @@ async def test_group_summary_speaks_the_team_language(services, data_access, def
     default_team.language = 'de'
     data_access.update(default_team)
     # Later today: still in the future (get_ordered_games filters past events) but
-    # matching the same-day reminder window.
-    data_access.add(Game(datetime.now() + timedelta(minutes=5), 'home arena', 'rivals fc'))
+    # matching the same-day reminder window. Capped at 23:59 so a run in the last
+    # minutes before midnight doesn't push the game into tomorrow (flaked at 23:5x).
+    now = datetime.now()
+    game_time = min(now + timedelta(minutes=5), now.replace(hour=23, minute=59, second=0))
+    data_access.add(Game(game_time, 'home arena', 'rivals fc'))
 
     await services['scheduling_service'].send_same_day_game_reminder(None)
 
