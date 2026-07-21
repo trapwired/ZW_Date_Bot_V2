@@ -170,8 +170,8 @@ class FirebaseRepository(Repository):
                 self._collection(Table.PLAYER_METRIC).document(entry.id).delete()
             return PlayerMetric.from_dict(entries[0].id, entries[0].to_dict())
         new_player_metric = PlayerMetric(user.doc_id, 0, 0, 0, DateTimeUtils.get_local_now())
-        doc_ref = self.add(new_player_metric, Table.PLAYER_METRIC)
-        return new_player_metric.add_document_id(doc_ref[1].id)
+        doc_id = self.add(new_player_metric, Table.PLAYER_METRIC)
+        return new_player_metric.add_document_id(doc_id)
 
     def get_temp_data(self, user_doc_id: str) -> TempData:
         query_ref = (self._collection(Table.TEMP_DATA_TABLE)
