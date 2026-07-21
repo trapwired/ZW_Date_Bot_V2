@@ -31,11 +31,11 @@ def test_unset_backend_defaults_to_firestore(monkeypatch, configured):
 
 
 @pytest.mark.parametrize('configured', ['postgres', 'Postgres', ' POSTGRES '])
-def test_postgres_backend_not_yet_implemented(configured):
+def test_postgres_backend_normalized(monkeypatch, configured):
     # Case/whitespace are normalized: a hand-edited config at cutover must reach the
     # intended branch, not the unknown-backend error (which would crashloop the container).
-    with pytest.raises(NotImplementedError):
-        RepositoryFactory.create_repository(FakeApiConfig(configured))
+    monkeypatch.setattr(RepositoryFactory, 'PostgresRepository', lambda *a, **k: 'postgres-repo')
+    assert RepositoryFactory.create_repository(FakeApiConfig(configured)) == 'postgres-repo'
 
 
 def test_unknown_backend_fails_loud():
