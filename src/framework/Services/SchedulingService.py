@@ -15,6 +15,7 @@ from Enums.MessageType import MessageType
 
 from features.events import EventsMenu
 
+from Utils import DateTimeUtils
 from Utils import PrintUtils
 from Utils.ApiConfig import ApiConfig
 
@@ -28,9 +29,13 @@ from framework.RecipientLanguage import recipient_language_context
 
 
 def get_events_in_x_days(all_future_events, reminder_frequency):
+    # Event timestamps are Zurich-local; "today" must be too, or a UTC host clock
+    # (CI, the VPS container) disagrees with the events' dates between 22:00 and
+    # midnight UTC and same-day/x-day windows silently miss.
+    today = DateTimeUtils.get_local_now().date()
     relevant_events = []
     for event in all_future_events:
-        if (event.timestamp.date() - datetime.date.today()).days in reminder_frequency:
+        if (event.timestamp.date() - today).days in reminder_frequency:
             relevant_events.append(event)
     return relevant_events
 
