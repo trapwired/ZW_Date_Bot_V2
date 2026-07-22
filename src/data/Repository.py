@@ -3,8 +3,7 @@ implements this surface, and DataAccess talks only to it. Swapping backends is
 config (`[Database] backend`), never a code edit.
 
 Contracts every backend must honour (DataAccess depends on all three):
-- Query methods return "rows": any object with `.id` and `.to_dict()` (Firestore
-  snapshots satisfy this natively; other backends return an equivalent record).
+- Query methods return "rows": any object with `.id` and `.to_dict()`.
 - `add` returns the new row's id as a str.
 - Reads/updates against a missing document raise ObjectNotFoundException.
 """
@@ -28,8 +27,7 @@ from domain.entities.UsersToState import UsersToState
 
 class Repository(ABC):
     """What a storage backend must provide. Method semantics are pinned by the
-    Firestore implementation and its tests; PostgresRepository (Stage B2) must
-    match them exactly."""
+    contract tests (tests/contract), which run every backend side by side."""
 
     @abstractmethod
     def get_document(self, doc_id: str, table: Table):

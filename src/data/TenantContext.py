@@ -1,7 +1,7 @@
 """The ambient tenant context: which team's data the current unit of work (update,
 scheduled job iteration, migration step) operates on.
 
-Lives in data/ so FirebaseRepository can consume it without a layering cycle.
+Lives in data/ so the repository backends can consume it without a layering cycle.
 Fail-closed by design: touching a team-scoped collection with no team resolved
 raises instead of reading across tenants (see ADR 0001).
 """

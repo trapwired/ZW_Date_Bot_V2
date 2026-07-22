@@ -5,7 +5,7 @@ that everything still works, or try new features. Fully offline from prod.
 
 ## One-time setup
 
-1. Create `secrets-local/` in the repo root (gitignored) with two files:
+1. Create `secrets-local/` in the repo root (gitignored) with one file:
    - `api_config.ini` — copy `secrets/example_api_config.ini`, then set:
      ```ini
      [Telegram]
@@ -16,8 +16,6 @@ that everything still works, or try new features. Fully offline from prod.
      dsn = postgresql://zwdatebot:zwdatebot@postgres:5432/zwdatebot
      ```
      (chat ids → your own Telegram id, like the example.)
-   - the Firebase service-account JSON named in the config — only read while
-     `backend = firestore`; keep the dev copy or an empty `{}` after Stage B.
 
 ## Daily loop
 
@@ -40,7 +38,15 @@ and a free restore drill:
 scp ubuntu@179.237.110.135:/srv/backups/<date>/zwdatebot-postgres_pg_dumpall.sql.gz .
 gunzip -c zwdatebot-postgres_pg_dumpall.sql.gz | \
   docker exec -i zwdatebot-local-postgres psql -U zwdatebot postgres
+docker exec zwdatebot-local-postgres psql -U zwdatebot -d postgres \
+  -c "ALTER ROLE zwdatebot PASSWORD 'zwdatebot';"
 ```
+
+The `ALTER ROLE` afterwards is required: the dump carries the *prod* password
+for the `zwdatebot` role and overwrites the local one, which breaks the seed
+script and every host connection on port 5434. (Restoring into an already-seeded
+database also spews `already exists` errors — harmless, or start from a fresh
+volume with `down -v` first.)
 
 Tear down: `docker compose -f deploy/compose.local.yml down` (`-v` to drop the
 data volume too).

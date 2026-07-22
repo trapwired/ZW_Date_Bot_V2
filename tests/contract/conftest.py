@@ -1,7 +1,8 @@
 """Contract-test harness: every test in this directory runs against BOTH storage
-backends - FirebaseRepository on the in-memory Firestore double and
+backends - InMemoryRepository (the double the whole test suite runs on) and
 PostgresRepository on a real Postgres - so the seam's semantics cannot drift
-between them (the parity guarantee Stage B rests on).
+between them. This is what makes the in-memory double trustworthy: any behavior
+the characterization tests rely on is pinned to the production backend here.
 
 Postgres comes from POSTGRES_TEST_DSN (CI provides a service container; locally
 `docker run -d -p 5433:5432 -e POSTGRES_USER=zwdatebot -e POSTGRES_PASSWORD=zwdatebot
@@ -25,19 +26,10 @@ class _DsnOnlyConfig:
         return POSTGRES_TEST_DSN if identifier == 'dsn' else default
 
 
-def _firestore_repository(monkeypatch, api_config):
-    from tests.doubles.fake_firestore import FakeFirestoreClient, FakeFieldFilter
-    import firebase_admin
-    import firebase_admin.credentials  # noqa: F401
-    import data.FirebaseRepository as fr
-    from data.FirebaseRepository import FirebaseRepository
+def _in_memory_repository(api_config):
+    from tests.doubles.in_memory_repository import InMemoryRepository
     from data.Tables import Tables
-
-    monkeypatch.setattr("firebase_admin.credentials.Certificate", lambda *a, **k: object())
-    monkeypatch.setattr("firebase_admin.initialize_app", lambda *a, **k: object())
-    monkeypatch.setattr(fr.firestore, "client", lambda app: FakeFirestoreClient())
-    monkeypatch.setattr(fr, "FieldFilter", FakeFieldFilter)
-    return FirebaseRepository(api_config, Tables(api_config))
+    return InMemoryRepository(Tables(api_config))
 
 
 def _postgres_repository():
@@ -57,10 +49,10 @@ def _truncate_all(repository):
     repository._execute(f'TRUNCATE {tables}')
 
 
-@pytest.fixture(params=['firestore', 'postgres'])
-def repository(request, monkeypatch, api_config):
-    if request.param == 'firestore':
-        repo = _firestore_repository(monkeypatch, api_config)
+@pytest.fixture(params=['inmemory', 'postgres'])
+def repository(request, api_config):
+    if request.param == 'inmemory':
+        repo = _in_memory_repository(api_config)
     else:
         repo = _postgres_repository()
         _truncate_all(repo)

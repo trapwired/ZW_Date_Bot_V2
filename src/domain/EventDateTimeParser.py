@@ -1,4 +1,4 @@
-"""Parsing of user-entered event date/times — domain logic, no Telegram/Firebase.
+"""Parsing of user-entered event date/times — domain logic, no Telegram, no storage.
 
 Returns an explicit ParsedDateTime result instead of the old str-or-Timestamp
 union, so callers branch on `.ok` rather than `type(x) is str`.

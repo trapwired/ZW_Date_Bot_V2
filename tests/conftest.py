@@ -1,22 +1,17 @@
 """Test harness for ZW_Date_Bot_V2.
 
-Doubles live at the two external boundaries — Firestore (``self.db``) and
-telegram.Bot — so everything we actually own (DataAccess, FirebaseRepository,
-Services, Nodes, NodeHandler) runs for real under test. See tests/doubles/.
+Doubles live at the two external boundaries — storage (InMemoryRepository, a
+full in-memory backend behind the Repository seam) and telegram.Bot — so
+everything we actually own (DataAccess, Services, Nodes, NodeHandler) runs for
+real under test. See tests/doubles/.
 """
 import pytest
 
-from tests.doubles.fake_firestore import FakeFirestoreClient, FakeFieldFilter
 from tests.doubles.fake_bot import FakeBot
 
 # Literal fake ids: the default team's routing must not depend on the developer's
 # real secrets/api_config.ini (its TRAINERS_* keys are migration seed only).
 DEFAULT_TEAM_TRAINERS = [911000001, 911000002]
-
-
-@pytest.fixture
-def fake_firestore():
-    return FakeFirestoreClient()
 
 
 @pytest.fixture
@@ -31,26 +26,19 @@ def api_config():
 
 
 @pytest.fixture
-def data_access(monkeypatch, fake_firestore, api_config):
-    """Real DataAccess + FirebaseRepository on top of the in-memory Firestore client.
+def data_access(api_config):
+    """Real DataAccess on top of the in-memory Repository backend.
 
     Registers a single default team and sets it as the ambient tenant context, so the
     team-scoped collections most tests touch are reachable. The /start flow rebinds the
     same team via find_team_by_group_chat on [Telegram] group_chat_id (the membership group)."""
-    import firebase_admin
-    import firebase_admin.credentials  # noqa: F401 - ensure submodule is importable before patching
-    import data.FirebaseRepository as fr
-
-    monkeypatch.setattr("firebase_admin.credentials.Certificate", lambda *a, **k: object())
-    monkeypatch.setattr("firebase_admin.initialize_app", lambda *a, **k: object())
-    monkeypatch.setattr(fr.firestore, "client", lambda app: fake_firestore)
-    monkeypatch.setattr(fr, "FieldFilter", FakeFieldFilter)
-
+    from tests.doubles.in_memory_repository import InMemoryRepository
     from data.DataAccess import DataAccess
+    from data.Tables import Tables
     from domain.entities.Team import Team
     from data.TenantContext import set_current_team, reset_current_team
 
-    data_access = DataAccess(api_config)
+    data_access = DataAccess(api_config, repository=InMemoryRepository(Tables(api_config)))
     team = data_access.add(Team('Züri West',
                                 group_chat_id=int(api_config.get_key('Telegram', 'group_chat_id')),
                                 spectator_password=api_config.get_key('Chats', 'SPECTATOR_PASSWORD'),

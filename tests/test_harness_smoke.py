@@ -1,6 +1,6 @@
 """Smoke tests: prove the harness wires up and the doubles behave.
 
-If these pass, the in-memory Firestore + FakeBot stack is sound and NodeHandler's
+If these pass, the InMemoryRepository + FakeBot stack is sound and NodeHandler's
 startup invariants (do_checks) hold — the foundation for the characterization suite.
 """
 from Enums.UserState import UserState
@@ -23,8 +23,8 @@ def test_data_access_user_roundtrip(data_access):
     assert fetched.telegramId == 999
 
 
-def test_in_memory_firestore_is_isolated_per_test(data_access):
-    # Should start empty every test; relies on a fresh FakeFirestoreClient per test.
+def test_in_memory_storage_is_isolated_per_test(data_access):
+    # Should start empty every test; relies on a fresh InMemoryRepository per test.
     from Utils.CustomExceptions import ObjectNotFoundException
     import pytest
     with pytest.raises(ObjectNotFoundException):

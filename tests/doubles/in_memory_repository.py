@@ -1,11 +1,19 @@
+"""In-memory Repository backend for tests.
+
+A dict-backed hierarchical document store plus a Repository implementation on
+top of it, so DataAccess and everything above runs for real under test with no
+external services. Its seam semantics are pinned against PostgresRepository by
+the contract suite (tests/contract) - if the two drift, contract tests fail.
+
+Only the store surface the repository actually exercises is implemented;
+anything else raises so gaps surface loudly instead of silently.
+"""
 from datetime import datetime
 
-import firebase_admin
-from firebase_admin import firestore
-from google.cloud.firestore_v1 import FieldFilter
+import pandas as pd
 
 from data.Repository import Repository
-from data.Tables import Tables, EVENT_TABLES, EVENT_ATTENDANCE_TABLES
+from data.Tables import Tables, EVENT_TABLES, EVENT_ATTENDANCE_TABLES, GLOBAL_TABLES, TEAM_SCOPED_TABLES
 from data.TenantContext import current_team_id, team_context
 
 from Enums.Table import Table
@@ -27,41 +35,162 @@ from domain.entities.Settings import Settings
 
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, \
     NoTempDataFoundException, TooManyObjectsFoundException
-from Utils import PathUtils
-from Utils.ApiConfig import ApiConfig
 from Utils import DateTimeUtils
 
-# Tenancy classification (ADR 0001): identity and the team registry itself are global -
-# team resolution needs the user record before a team is known; everything else lives
-# under teams/{teamId}/<collection> and is unreachable without a tenant context.
-GLOBAL_TABLES = {Table.USERS_TABLE, Table.USERS_TO_STATE_TABLE, Table.TEAMS_TABLE}
-TEAM_SCOPED_TABLES = {
-    Table.GAMES_TABLE, Table.TRAININGS_TABLE, Table.TIMEKEEPING_TABLE,
-    Table.GAME_ATTENDANCE_TABLE, Table.TRAINING_ATTENDANCE_TABLE, Table.TIMEKEEPING_ATTENDANCE_TABLE,
-    Table.PLAYER_METRIC, Table.TEMP_DATA_TABLE, Table.SETTINGS_TABLE,
-}
-if GLOBAL_TABLES | TEAM_SCOPED_TABLES != set(Table) or GLOBAL_TABLES & TEAM_SCOPED_TABLES:
-    # A new Table member must be consciously classified as global or team-scoped;
-    # failing at import time makes the whole test suite catch the omission.
-    raise AssertionError('every Table must be classified as exactly one of GLOBAL_TABLES / TEAM_SCOPED_TABLES')
+
+def _strip_tz(value):
+    # Stored event timestamps are tz-aware (Europe/Zurich); query bounds are naive
+    # datetimes. Normalise both to naive for ordering comparisons so instants compare
+    # regardless of tz representation (Postgres timestamptz behaves the same way).
+    if isinstance(value, pd.Timestamp):
+        return value.tz_localize(None) if value.tzinfo is not None else value
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.replace(tzinfo=None)
+    return value
 
 
-class FirebaseRepository(Repository):
+class _FieldFilter:
+    def __init__(self, field, op, value):
+        self.field = field
+        self.op = op
+        self.value = value
+
+    def matches(self, data: dict) -> bool:
+        actual = data.get(self.field)
+        if self.op == "==":
+            return actual == self.value
+        if self.op == "in":
+            return actual in self.value
+        if self.op in (">", "<", ">=", "<="):
+            if actual is None:
+                return False
+            a, b = _strip_tz(actual), _strip_tz(self.value)
+            if self.op == ">":
+                return a > b
+            if self.op == "<":
+                return a < b
+            if self.op == ">=":
+                return a >= b
+            return a <= b
+        raise NotImplementedError(f"_FieldFilter op not supported: {self.op}")
+
+
+class _Row:
+    """A query/read result: the `.id` + `.to_dict()` row contract of the seam."""
+
+    def __init__(self, doc_id, data):
+        self.id = doc_id
+        self._data = data
+
+    @property
+    def exists(self):
+        return self._data is not None
+
+    def to_dict(self):
+        return dict(self._data) if self._data is not None else None
+
+
+class _DocumentRef:
+    def __init__(self, collection: "_Collection", doc_id: str):
+        self._collection = collection
+        self.id = doc_id
+
+    def get(self):
+        return _Row(self.id, self._collection.store.get(self.id))
+
+    def set(self, data: dict):
+        self._collection.store[self.id] = dict(data)
+
+    def update(self, data: dict):
+        # Merges top-level keys, it does not replace the doc.
+        existing = self._collection.store.setdefault(self.id, {})
+        existing.update(data)
+
+    def delete(self):
+        self._collection.store.pop(self.id, None)
+
+    def collection(self, name: str) -> "_Collection":
+        # Subcollections key the shared storage by path, mirroring the teams/{id}/<name>
+        # hierarchy. Works even for a doc that doesn't exist yet.
+        return _Collection(self._collection._store, f"{self._collection.name}/{self.id}/{name}")
+
+
+class _Query:
+    def __init__(self, collection: "_Collection", filters):
+        self._collection = collection
+        self._filters = filters
+
+    def where(self, filter):  # noqa: A002 - mirrors the query-builder kwarg name
+        return _Query(self._collection, self._filters + [filter])
+
+    def get(self):
+        return [_Row(doc_id, data)
+                for doc_id, data in list(self._collection.store.items())
+                if all(f.matches(data) for f in self._filters)]
+
+    def stream(self):
+        return iter(self.get())
+
+
+class _Collection:
+    def __init__(self, store: "_MemoryStore", name: str):
+        self._store = store
+        self.name = name
+        self.store = store.storage.setdefault(name, {})
+
+    def document(self, doc_id: str = None):
+        if doc_id is None:
+            doc_id = self._store.next_id()
+        return _DocumentRef(self, doc_id)
+
+    def where(self, filter):  # noqa: A002 - mirrors the query-builder kwarg name
+        return _Query(self, [filter])
+
+    def add(self, data: dict) -> _DocumentRef:
+        doc_id = self._store.next_id()
+        self.store[doc_id] = dict(data)
+        return _DocumentRef(self, doc_id)
+
+    def stream(self):
+        return iter(self.get())
+
+    def get(self):
+        return [_Row(doc_id, data) for doc_id, data in list(self.store.items())]
+
+    def limit(self, count: int):
+        return _LimitedCollection(self, count)
+
+
+class _LimitedCollection:
+    def __init__(self, collection: _Collection, count: int):
+        self._collection = collection
+        self._count = count
+
+    def get(self):
+        return self._collection.get()[:self._count]
+
+
+class _MemoryStore:
+    def __init__(self):
+        self.storage = {}
+        self._counter = 0
+
+    def next_id(self) -> str:
+        self._counter += 1
+        return f"doc{self._counter}"
+
+    def collection(self, name: str) -> _Collection:
+        return _Collection(self, name)
+
+
+class InMemoryRepository(Repository):
     # The settings table holds a single configuration document under a fixed id, so it can be
     # read/written deterministically without a query (no "more than one" ambiguity).
     SETTINGS_DOC_ID = 'config'
 
-    def __init__(self, api_config: ApiConfig, tables: Tables):
+    def __init__(self, tables: Tables):
         self.tables = tables
-        api_config_path = PathUtils.get_secrets_file_path(api_config.get_key('Firebase', 'credentialsFileName'))
-        cred_object = firebase_admin.credentials.Certificate(api_config_path)
-        try:
-            # initialize_app throws if the default app already exists; reuse it so a second
-            # repository instance doesn't crash the process.
-            default_app = firebase_admin.get_app()
-        except ValueError:
-            default_app = firebase_admin.initialize_app(cred_object)
-        self.db = firestore.client(default_app)
+        self.db = _MemoryStore()
 
     def _collection(self, table: Table):
         """THE tenancy seam: every collection access resolves through here. Team-scoped
@@ -86,29 +215,25 @@ class FirebaseRepository(Repository):
 
     def get_document(self, doc_id: str, table: Table):
         self._raise_exception_if_document_not_exists(table, doc_id)
-        query_ref = self._collection(table).document(doc_id)
-        return query_ref.get()
+        return self._collection(table).document(doc_id).get()
 
     def get_user(self, telegram_id_or_doc_id: int | str) -> TelegramUser | None:
         if isinstance(telegram_id_or_doc_id, str):
             res = self.get_document(telegram_id_or_doc_id, Table.USERS_TABLE)
             return TelegramUser.from_dict(res.id, res.to_dict())
 
-        query_ref = self._collection(Table.USERS_TABLE).where(
-            filter=FieldFilter("telegramId", "==", telegram_id_or_doc_id))
-        res = query_ref.get()
+        res = self._collection(Table.USERS_TABLE).where(
+            _FieldFilter("telegramId", "==", telegram_id_or_doc_id)).get()
         if len(res) == 0:
             raise ObjectNotFoundException(self.tables.get(Table.USERS_TABLE), telegram_id_or_doc_id)
         if len(res) == 1:
             return TelegramUser.from_dict(res[0].id, res[0].to_dict())
-        else:
-            raise MoreThanOneObjectFoundException
+        raise MoreThanOneObjectFoundException
 
     def get_user_state(self, user: TelegramUser) -> UsersToState | None:
         user_id = user.doc_id
-        query_ref = self._collection(Table.USERS_TO_STATE_TABLE).where(
-            filter=FieldFilter("userId", "==", user_id))
-        res = query_ref.get()
+        res = self._collection(Table.USERS_TO_STATE_TABLE).where(
+            _FieldFilter("userId", "==", user_id)).get()
         if len(res) == 1:
             return UsersToState.from_dict(res[0].id, res[0].to_dict())
         if len(res) > 1:
@@ -139,11 +264,10 @@ class FirebaseRepository(Repository):
 
     def get_player_metric(self, user: TelegramUser):
         season_start, season_end = get_current_season_dates()
-        query_ref = (self._collection(Table.PLAYER_METRIC)
-            .where(filter=FieldFilter("userId", "==", user.doc_id))) \
-            .where(filter=FieldFilter("insertTimestamp", ">", season_start)) \
-            .where(filter=FieldFilter("insertTimestamp", "<", season_end))
-        entries = query_ref.get()
+        entries = (self._collection(Table.PLAYER_METRIC)
+                   .where(_FieldFilter("userId", "==", user.doc_id))
+                   .where(_FieldFilter("insertTimestamp", ">", season_start))
+                   .where(_FieldFilter("insertTimestamp", "<", season_end))).get()
         if len(entries) == 1:
             return PlayerMetric.from_dict(entries[0].id, entries[0].to_dict())
         if len(entries) > 1:
@@ -158,9 +282,8 @@ class FirebaseRepository(Repository):
         return new_player_metric.add_document_id(doc_id)
 
     def get_temp_data(self, user_doc_id: str) -> TempData:
-        query_ref = (self._collection(Table.TEMP_DATA_TABLE)
-                     .where(filter=FieldFilter("userDocId", "==", user_doc_id)))
-        result_list = query_ref.get()
+        result_list = (self._collection(Table.TEMP_DATA_TABLE)
+                       .where(_FieldFilter("userDocId", "==", user_doc_id))).get()
         if len(result_list) == 0:
             raise NoTempDataFoundException()
         if len(result_list) > 1:
@@ -179,26 +302,16 @@ class FirebaseRepository(Repository):
         self._collection(Table.SETTINGS_TABLE).document(self.SETTINGS_DOC_ID).set(settings.to_dict())
 
     def get_future_events(self, table: Table) -> list:
-        # get all events in table which take place in the future
-        now = datetime.now()
-        query_ref = (self._collection(table)
-                     .where(filter=FieldFilter("timestamp", ">", now)))
-        event_list = query_ref.get()
-        if len(event_list) == 0:
-            return []
-        return event_list
+        return self._collection(table).where(
+            _FieldFilter("timestamp", ">", datetime.now())).get()
 
     def get_attendance_list(self, doc_id: str, table: Table):
-        query_ref = (self._collection(table)
-                     .where(filter=FieldFilter("eventId", "==", doc_id)))
-        entries = query_ref.get()
-        return entries
+        return self._collection(table).where(_FieldFilter("eventId", "==", doc_id)).get()
 
     def get_attendance(self, user: TelegramUser, event_doc_id: str, table: Table):
-        query_ref = self._collection(table) \
-            .where(filter=FieldFilter("userId", "==", user.doc_id)) \
-            .where(filter=FieldFilter("eventId", "==", event_doc_id))
-        result = query_ref.get()
+        result = (self._collection(table)
+                  .where(_FieldFilter("userId", "==", user.doc_id))
+                  .where(_FieldFilter("eventId", "==", event_doc_id))).get()
         if len(result) == 0:
             raise ObjectNotFoundException(self.tables.get(table), user.doc_id)
         if len(result) > 1:
@@ -208,75 +321,55 @@ class FirebaseRepository(Repository):
 
     def get_all_user_event_attendance(self, user: TelegramUser, event_type: Event):
         table = self._get_event_attendance_table(event_type)
-        query_ref = self._collection(table).where(filter=FieldFilter("userId", "==", user.doc_id))
-        entries = query_ref.get()
-        return entries
-
-    # Firestore caps the 'in' operator at 30 comparison values, so batch the ids.
-    FIRESTORE_IN_LIMIT = 30
+        return self._collection(table).where(_FieldFilter("userId", "==", user.doc_id)).get()
 
     def get_all_event_attendances(self, event_type: Event, relevant_doc_ids: list[str]):
         if len(relevant_doc_ids) == 0:
             return []
         table = self._get_event_attendance_table(event_type)
-        entries = []
-        for i in range(0, len(relevant_doc_ids), self.FIRESTORE_IN_LIMIT):
-            batch = relevant_doc_ids[i:i + self.FIRESTORE_IN_LIMIT]
-            query_ref = self._collection(table).where(filter=FieldFilter("eventId", "in", batch))
-            entries.extend(query_ref.get())
-        return entries
+        return self._collection(table).where(
+            _FieldFilter("eventId", "in", relevant_doc_ids)).get()
 
     def get_all_relevant_event_ids(self, event_type: Event):
         table = self._get_event_table(event_type)
         season_start, _ = get_current_season_dates()
-        query_ref = (self._collection(table)) \
-            .where(filter=FieldFilter("timestamp", ">", season_start)) \
-            .where(filter=FieldFilter("timestamp", "<", DateTimeUtils.get_local_now()))
-        # filter > start date and < end date
-        entries = query_ref.get()
-        result = []
-        for row in entries:
-            result.append(row.id)
-        return result
+        entries = (self._collection(table)
+                   .where(_FieldFilter("timestamp", ">", season_start))
+                   .where(_FieldFilter("timestamp", "<", DateTimeUtils.get_local_now()))).get()
+        return [row.id for row in entries]
 
     def get_all_player_metrics(self):
         season_start, season_end = get_current_season_dates()
-        query_ref = (self._collection(Table.PLAYER_METRIC)) \
-            .where(filter=FieldFilter("insertTimestamp", ">", season_start)) \
-            .where(filter=FieldFilter("insertTimestamp", "<", season_end))
-        entries = query_ref.get()
-        return entries
+        return (self._collection(Table.PLAYER_METRIC)
+                .where(_FieldFilter("insertTimestamp", ">", season_start))
+                .where(_FieldFilter("insertTimestamp", "<", season_end))).get()
 
     def get_users_to_state_by_role(self, role: Role):
         # users_to_state is a global identity table, but role queries are roster views -
         # inherently team-scoped, so they filter on the ambient team (and fail closed
         # without one) even though the collection itself is not partitioned.
-        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
-            .where(filter=FieldFilter("role", "==", role)) \
-            .where(filter=FieldFilter("teamId", "==", current_team_id()))
-        return query_ref.get()
+        return (self._collection(Table.USERS_TO_STATE_TABLE)
+                .where(_FieldFilter("role", "==", role))
+                .where(_FieldFilter("teamId", "==", current_team_id()))).get()
 
     def get_admins_to_state(self):
         # Admin is the orthogonal isAdmin flag, not a role - same team-scoped roster
         # view as get_users_to_state_by_role.
-        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
-            .where(filter=FieldFilter("isAdmin", "==", True)) \
-            .where(filter=FieldFilter("teamId", "==", current_team_id()))
-        return query_ref.get()
+        return (self._collection(Table.USERS_TO_STATE_TABLE)
+                .where(_FieldFilter("isAdmin", "==", True))
+                .where(_FieldFilter("teamId", "==", current_team_id()))).get()
 
     def get_users_to_state_by_team(self, team_id: str):
         # Membership view over the global identity table, keyed explicitly (used by
         # team-lifecycle code that runs OUTSIDE the ambient tenant context).
-        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
-            .where(filter=FieldFilter("teamId", "==", team_id))
-        return query_ref.get()
+        return self._collection(Table.USERS_TO_STATE_TABLE).where(
+            _FieldFilter("teamId", "==", team_id)).get()
 
     def has_any_docs(self, table: Table) -> bool:
         return len(self._collection(table).limit(1).get()) > 0
 
     def delete_team(self, doc_id: str):
-        # Firestore does NOT cascade a document delete into its subcollections, so a
-        # rolled-back team must purge its team-scoped docs first (a fresh team holds at
+        # A rolled-back team must purge its team-scoped docs first (a fresh team holds at
         # most a settings doc or an abandoned wizard draft) or they orphan forever.
         with team_context(doc_id):
             for table in TEAM_SCOPED_TABLES:
@@ -288,17 +381,14 @@ class FirebaseRepository(Repository):
     def get_all_active_players_to_state(self):
         # Roster view over the global identity table - team-filtered like
         # get_users_to_state_by_role above.
-        query_ref = self._collection(Table.USERS_TO_STATE_TABLE) \
-            .where(filter=FieldFilter("role", "==", Role.PLAYER)) \
-            .where(filter=FieldFilter("teamId", "==", current_team_id()))
-        entries = query_ref.get()
-        return entries
+        return (self._collection(Table.USERS_TO_STATE_TABLE)
+                .where(_FieldFilter("role", "==", Role.PLAYER))
+                .where(_FieldFilter("teamId", "==", current_team_id()))).get()
 
     def get_event_attendance_doc_id(self, attendance: Attendance, table: Table):
-        query_ref = self._collection(table) \
-            .where(filter=FieldFilter("userId", "==", attendance.user_id)) \
-            .where(filter=FieldFilter("eventId", "==", attendance.event_id))
-        result = query_ref.get()
+        result = (self._collection(table)
+                  .where(_FieldFilter("userId", "==", attendance.user_id))
+                  .where(_FieldFilter("eventId", "==", attendance.event_id))).get()
         if len(result) == 0:
             return None
         if len(result) > 1:
@@ -310,8 +400,7 @@ class FirebaseRepository(Repository):
     ################
 
     def add(self, new_object: DatabaseEntity, table: Table) -> str:
-        _, document_reference = self._collection(table).add(new_object.to_dict())
-        return document_reference.id
+        return self._collection(table).add(new_object.to_dict()).id
 
     def update(self, db_object: DatabaseEntity, table: Table):
         self._raise_exception_if_document_not_exists(table, db_object.doc_id)
@@ -324,9 +413,8 @@ class FirebaseRepository(Repository):
             {'state': int(user_to_state.state)})
 
     def update_user_state_via_user_id(self, user_to_state: UsersToState):
-        query_ref = self._collection(Table.USERS_TO_STATE_TABLE).where(
-            filter=FieldFilter("userId", "==", user_to_state.user_id))
-        res = query_ref.get()
+        res = self._collection(Table.USERS_TO_STATE_TABLE).where(
+            _FieldFilter("userId", "==", user_to_state.user_id)).get()
         if len(res) == 1:
             updated_user_to_state = user_to_state.add_document_id(res[0].id)
             self.update_user_state(updated_user_to_state)
@@ -359,12 +447,11 @@ class FirebaseRepository(Repository):
 
     def delete_event_attendances(self, event_type: Event, event_doc_id: str):
         table = self._get_event_attendance_table(event_type)
-        query_ref = self._collection(table) \
-            .where(filter=FieldFilter("eventId", "==", event_doc_id))
-        self._delete_documents(table, query_ref.stream())
+        rows = self._collection(table).where(_FieldFilter("eventId", "==", event_doc_id)).get()
+        self._delete_documents(table, rows)
 
     def delete_all_player_metrics(self) -> int:
-        return self._delete_documents(Table.PLAYER_METRIC, self._collection(Table.PLAYER_METRIC).stream())
+        return self._delete_documents(Table.PLAYER_METRIC, self._collection(Table.PLAYER_METRIC).get())
 
     def _delete_documents(self, table: Table, docs) -> int:
         deleted_count = 0
@@ -385,8 +472,6 @@ class FirebaseRepository(Repository):
 
     def reset_all_player_event_attendance(self, doc_id: str, table: Table):
         collection_reference = self._collection(table)
-        attendance_rows = collection_reference.where(filter=FieldFilter("eventId", "==", doc_id)).get()
-        field_update = {"state": 0}
+        attendance_rows = collection_reference.where(_FieldFilter("eventId", "==", doc_id)).get()
         for row in attendance_rows:
-            doc = collection_reference.document(row.id)
-            doc.update(field_update)
+            collection_reference.document(row.id).update({"state": 0})

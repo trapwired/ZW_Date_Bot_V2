@@ -1,16 +1,17 @@
-"""Postgres implementation of the storage seam (Stage B).
+"""Postgres implementation of the storage seam.
 
-Semantics mirror FirebaseRepository method for method - the contract tests in
-tests/contract/ run both implementations' behavior against the seam's rules.
+Semantics were transplanted method for method from the retired
+FirebaseRepository - the contract tests in tests/contract/ pin them against the
+in-memory test backend so they cannot drift.
 
 Shape notes:
 - Entities keep speaking camelCase dicts (their from_dict/to_dict); each table
   spec maps those keys to snake_case columns and back. Query methods return Row
   records satisfying the seam's row duck type (.id / .to_dict()).
-- The three Firestore attendance collections are ONE attendance table with an
-  event_type discriminator, injected on write and filtered on read.
+- The three per-event attendance tables of the Firestore era are ONE attendance
+  table with an event_type discriminator, injected on write and filtered on read.
 - Tenancy: team-scoped tables carry a team_id column filled from the ambient
-  TenantContext (the Postgres analogue of FirebaseRepository._collection).
+  TenantContext; queries fail closed without a resolved team.
 """
 from dataclasses import dataclass
 from datetime import datetime
@@ -161,7 +162,7 @@ class PostgresRepository(Repository):
     def _scope_conditions(spec: TableSpec, scoped: bool) -> tuple[list, list]:
         conditions, params = [], []
         if spec.team_scoped and scoped:
-            # Fail-closed like FirebaseRepository._collection: no ambient team, no data.
+            # Fail-closed (ADR 0001): no ambient team, no data.
             conditions.append('team_id = %s')
             params.append(current_team_id())
         if spec.event_type is not None:
