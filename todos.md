@@ -4,15 +4,31 @@ The architecture refactor is complete (see [`docs/ARCHITECTURE.md`](docs/ARCHITE
 Everything below is optional follow-up work, grouped by size. Each item notes where to
 start and a rough effort (S / M / L). Pick top-down within a group.
 
+## Hosting / migration (time-bound — from the VPS migration, plan in the DomiCloud repo)
+
+Bot runs containerized on the Infomaniak VPS against Postgres since 22.07.
+(Stage A hosting 21.07., Stage B database 22.07.; Firestore frozen = rollback.)
+
+- [ ] **B5 — Firebase decommission (~05.08., needs Domi sign-off).** Final Firestore
+      export → kDrive archive → delete the Firebase project → PR stripping
+      `firebase_admin`/`google-cloud-*` deps, `FirebaseRepository`, and the
+      fake-Firestore test double (tests move to the seam; the contract suite +
+      `StubRepository` already point the way). Gated on the item below.
+- [ ] **Local dev flow, once (Domi — B5 gate).** Follow [`docs/local-dev.md`](docs/local-dev.md);
+      use the backup-restore variant and it doubles as the still-open restore drill.
+- [ ] **~28.07. droplet decommission** (tracked in cado repo too): retires the whole
+      DO box → then delete the `DROPLET_HOST`/`DROPLET_SSH_KEY` repo secrets here,
+      and the throwaway test bot in BotFather can go anytime.
+
 ## Features (M)
 
 - [ ] **Trigger: warn trainers when all keepers said no to a game.**
     - The stub comment already sits in `TriggerService.initialize_triggers`; the trigger
       itself is the easy part (pre_condition NO + GAME, condition via a domain predicate
       in `GameRules`, same shape as the low-availability one).
-    - Needs a keeper designation first: `Role` is the single access-role enum
-      (PLAYER/ADMIN/…), so keeper is an orthogonal *position* attribute on the player
-      (e.g. `position` field on `TelegramUser`), not a new `Role` value.
+    - Needs a keeper designation first: keeper is an orthogonal *position* attribute
+      on the player (e.g. `position` field on `TelegramUser`), not a new `Role` value —
+      same orthogonal-attribute pattern as the `is_admin` flag (ADR 0005).
     - Admins assign it via a flow analogous to `/assign_roles` (reuse that slice's
       pattern in `features/roles/`).
     - Also needs a settable "which sport does this team play" entry per team (keeper
