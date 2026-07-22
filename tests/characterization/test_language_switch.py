@@ -95,7 +95,8 @@ async def test_group_summary_speaks_the_team_language(services, data_access, def
     default_team.language = 'de'
     data_access.update(default_team)
     # Later today: still in the future (get_ordered_games filters past events) but
-    # matching the same-day reminder window.
+    # matching the same-day reminder window (frame-safe: the window compares in
+    # Zurich time, the same frame Game timestamps are converted into).
     data_access.add(Game(datetime.now() + timedelta(minutes=5), 'home arena', 'rivals fc'))
 
     await services['scheduling_service'].send_same_day_game_reminder(None)

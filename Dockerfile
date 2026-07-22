@@ -8,6 +8,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
+COPY scripts/ scripts/
 COPY secrets/example_api_config.ini secrets/example_api_config.ini
 
 # ics_files is written at runtime (calendar exports); secrets/ is the bind-mount
