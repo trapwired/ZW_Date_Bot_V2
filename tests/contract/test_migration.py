@@ -76,3 +76,18 @@ def test_migration_is_idempotent(stores):
     first = postgres._execute('SELECT count(*) FROM attendance').fetchone()[0]
     migrate(db, tables, postgres)  # rerun = same state, no duplicates
     assert postgres._execute('SELECT count(*) FROM attendance').fetchone()[0] == first
+
+
+def test_migration_skips_empty_placeholder_docs(stores):
+    firebase, postgres, db, tables = stores
+    _populate(firebase)
+    # Firestore keep-alive doc: fixed id, no fields (crashed the first prod run).
+    from data.TenantContext import current_team_id
+    team_doc = db.collection(tables.get(Table.TEAMS_TABLE)).document(
+        db.collection(tables.get(Table.TEAMS_TABLE)).get()[0].id)
+    team_doc.collection(tables.get(Table.TEMP_DATA_TABLE)).document('do_not_delete').set({})
+
+    copied, skipped = migrate(db, tables, postgres)
+
+    assert any('do_not_delete' in path for path in skipped)
+    assert postgres._execute('SELECT count(*) FROM temp_data').fetchone()[0] == 0

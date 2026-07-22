@@ -77,25 +77,39 @@ def upsert(pg: PostgresRepository, table: Table, doc_id: str, data: dict, team_i
         values)
 
 
-def migrate(db, tables: Tables, pg: PostgresRepository) -> list[tuple[str, str, int]]:
-    """Copies everything; returns (table label, team, count) rows for the report."""
+def _is_placeholder(table: Table, data: dict) -> bool:
+    # Firestore drops empty collections, so keep-alive docs exist (e.g. Temp_Data/
+    # 'do_not_delete': every field null). No mapped field with a value = not data.
+    spec = TABLE_SPECS[table]
+    return not any(data.get(key) is not None for key in spec.columns)
+
+
+def migrate(db, tables: Tables, pg: PostgresRepository) -> tuple[list[tuple[str, str, int]], list[str]]:
+    """Copies everything; returns ((table label, team, count) rows, skipped doc paths)."""
     copied = []
+    skipped = []
+
+    def copy_docs(table: Table, docs, team_id, team_label):
+        count = 0
+        for doc in docs:
+            data = doc.to_dict() or {}
+            if _is_placeholder(table, data):
+                skipped.append(f'{tables.get(table)}/{doc.id}')
+                continue
+            upsert(pg, table, doc.id, data, team_id=team_id)
+            count += 1
+        copied.append((tables.get(table), team_label, count))
 
     for table in sorted(GLOBAL_TABLES, key=lambda t: t.name):
-        docs = list(db.collection(tables.get(table)).stream())
-        for doc in docs:
-            upsert(pg, table, doc.id, doc.to_dict(), team_id=None)
-        copied.append((tables.get(table), '(global)', len(docs)))
+        copy_docs(table, db.collection(tables.get(table)).stream(), None, '(global)')
 
     team_ids = [doc.id for doc in db.collection(tables.get(Table.TEAMS_TABLE)).stream()]
     for table in sorted(set(Table) - GLOBAL_TABLES, key=lambda t: t.name):
         for team_id in team_ids:
-            docs = list(db.collection(tables.get(Table.TEAMS_TABLE))
-                        .document(team_id).collection(tables.get(table)).stream())
-            for doc in docs:
-                upsert(pg, table, doc.id, doc.to_dict(), team_id=team_id)
-            copied.append((tables.get(table), team_id[:8], len(docs)))
-    return copied
+            docs = db.collection(tables.get(Table.TEAMS_TABLE)).document(team_id) \
+                .collection(tables.get(table)).stream()
+            copy_docs(table, docs, team_id, team_id[:8])
+    return copied, skipped
 
 
 def verify(db, tables: Tables, pg: PostgresRepository, copied) -> bool:
@@ -146,7 +160,9 @@ def main():
     tables = Tables(api_config)
     pg = PostgresRepository(_DsnConfig(args.dsn))
 
-    copied = migrate(db, tables, pg)
+    copied, skipped = migrate(db, tables, pg)
+    for path in skipped:
+        print(f'skipped placeholder doc: {path}')
     ok = verify(db, tables, pg, copied)
     pg.pool.close()
     print('\nRESULT:', 'VERIFIED ✓' if ok else 'FAILED ✗ - do not cut over')
