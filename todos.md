@@ -9,12 +9,12 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 Bot runs containerized on the Infomaniak VPS against Postgres since 22.07.
 (Stage A hosting 21.07., Stage B database 22.07.; Firestore frozen = rollback.)
 
-- [ ] **B5 — Firebase decommission: delete the project (last step, Domi).** Done
-      22.07.: final Firestore export (5774 docs incl. legacy collections) archived to
-      kDrive `Backups/zw-date-bot-firestore-final/`; firebase strip PR (this branch);
-      local-dev flow + restore drill run end-to-end. Remaining: delete the
-      `zw-date-bot` Firebase project in the console (30-day recovery window applies)
-      and a quick Telegram smoke test of the local dev bot.
+- [x] **B5 — Firebase decommission. DONE 22.07.**: final Firestore export (5774 docs
+      incl. legacy collections) archived to kDrive
+      `Backups/zw-date-bot-firestore-final/`; firebase strip merged (PR #61);
+      local-dev flow + restore drill run end-to-end, dev bot smoke-tested; the
+      `zw-date-bot` Firebase project deleted (recoverable in console until ~21.08.,
+      then gone).
 - [ ] **~28.07. droplet decommission** (tracked in cado repo too): retires the whole
       DO box → then delete the `DROPLET_HOST`/`DROPLET_SSH_KEY` repo secrets here,
       and the throwaway test bot in BotFather can go anytime.
