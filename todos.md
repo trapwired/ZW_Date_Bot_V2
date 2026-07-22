@@ -6,18 +6,15 @@ start and a rough effort (S / M / L). Pick top-down within a group.
 
 ## Hosting / migration (time-bound — from the VPS migration, plan in the DomiCloud repo)
 
-Bot runs containerized on the Infomaniak VPS against Postgres since 22.07.
-(Stage A hosting 21.07., Stage B database 22.07.; Firestore frozen = rollback.)
+Migration COMPLETE 22.07.: bot runs containerized on the Infomaniak VPS against
+Postgres (Stage A hosting 21.07., Stage B database + B5 Firebase decommission
+22.07., DO droplet decommissioned 22.07., `DROPLET_*` repo secrets deleted).
+Firestore's final export (5774 docs incl. legacy collections) is archived on
+kDrive under `Backups/zw-date-bot-firestore-final/`; the Firebase project is
+deleted (console-recoverable until ~21.08., then gone).
 
-- [x] **B5 — Firebase decommission. DONE 22.07.**: final Firestore export (5774 docs
-      incl. legacy collections) archived to kDrive
-      `Backups/zw-date-bot-firestore-final/`; firebase strip merged (PR #61);
-      local-dev flow + restore drill run end-to-end, dev bot smoke-tested; the
-      `zw-date-bot` Firebase project deleted (recoverable in console until ~21.08.,
-      then gone).
-- [ ] **~28.07. droplet decommission** (tracked in cado repo too): retires the whole
-      DO box → then delete the `DROPLET_HOST`/`DROPLET_SSH_KEY` repo secrets here,
-      and the throwaway test bot in BotFather can go anytime.
+- [ ] **Delete the throwaway test bot in BotFather** — anytime, or keep it as the
+      local-dev bot (docs/local-dev.md uses a dev token).
 
 ## Features (M)
 
