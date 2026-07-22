@@ -18,8 +18,8 @@ src/
                TelegramService, UserStateService, SchedulingService, ...
   features/    one folder per capability, each owning its Node(s) + Service:
                eventmgmt · attendance · stats · roles · website · onboarding · menu
-  domain/      entities + business rules (policies, parsing) — no Telegram, no Firestore
-  data/        DataAccess + FirebaseRepository (the Firestore boundary)
+  domain/      entities + business rules (policies, parsing) — no Telegram, no SQL
+  data/        DataAccess + PostgresRepository (the storage boundary)
   Enums/  Utils/   shared cross-cutting code
 ```
 
@@ -27,7 +27,7 @@ src/
 `UserState`: plain text goes to a feature **Node**, an inline-button tap goes to a
 **CallbackNode**. The node parses the input, calls its slice **Service** for
 orchestration, which reads/writes through **`domain`** models and the **`data`** layer
-to **Firestore**; the reply is sent back out via `TelegramService`.
+to **Postgres**; the reply is sent back out via `TelegramService`.
 
 **Background jobs.** `SchedulingService` runs on APScheduler to send attendance
 reminders and trainer summaries, reading events via `data` and sending via
@@ -38,10 +38,11 @@ decisions in [`docs/adr/`](docs/adr).
 
 ## Setup
 
-Two things are required to run the bot: a Telegram bot token and a Firebase
-credentials file. Put the api-token and the exact filename of the firebase-credentials
-file in `secrets/api_config.ini` — an example `api-config.ini` is included in that
-folder; just replace the values.
+Two things are required to run the bot: a Telegram bot token and a Postgres to
+connect to. Put the api-token and the `[Database]` dsn in `secrets/api_config.ini`
+— an example `api-config.ini` is included in that folder; just replace the values.
+For a full local stack (bot + Postgres in docker) see
+[`docs/local-dev.md`](docs/local-dev.md).
 
 ## Reference
 

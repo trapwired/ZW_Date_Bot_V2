@@ -12,7 +12,7 @@ COPY scripts/ scripts/
 COPY secrets/example_api_config.ini secrets/example_api_config.ini
 
 # ics_files is written at runtime (calendar exports); secrets/ is the bind-mount
-# target for api_config.ini + the Firebase service-account JSON.
+# target for api_config.ini.
 RUN useradd --create-home appuser \
     && mkdir -p ics_files \
     && chown -R appuser:appuser /app

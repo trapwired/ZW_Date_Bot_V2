@@ -11,7 +11,7 @@ import pytest
 
 from data.TenantContext import (set_current_team, reset_current_team, team_context,
                                  MissingTenantContextError)
-from data.FirebaseRepository import GLOBAL_TABLES, TEAM_SCOPED_TABLES
+from data.Tables import GLOBAL_TABLES, TEAM_SCOPED_TABLES
 
 from Enums.Table import Table
 from Enums.Role import Role

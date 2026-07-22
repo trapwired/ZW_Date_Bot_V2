@@ -40,3 +40,17 @@ EVENT_TABLES = {Event.GAME: Table.GAMES_TABLE,
 EVENT_ATTENDANCE_TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
                            Event.TRAINING: Table.TRAINING_ATTENDANCE_TABLE,
                            Event.TIMEKEEPING: Table.TIMEKEEPING_ATTENDANCE_TABLE}
+
+# Tenancy classification (ADR 0001): identity and the team registry itself are global -
+# team resolution needs the user record before a team is known; everything else is
+# team-partitioned and unreachable without a tenant context.
+GLOBAL_TABLES = {Table.USERS_TABLE, Table.USERS_TO_STATE_TABLE, Table.TEAMS_TABLE}
+TEAM_SCOPED_TABLES = {
+    Table.GAMES_TABLE, Table.TRAININGS_TABLE, Table.TIMEKEEPING_TABLE,
+    Table.GAME_ATTENDANCE_TABLE, Table.TRAINING_ATTENDANCE_TABLE, Table.TIMEKEEPING_ATTENDANCE_TABLE,
+    Table.PLAYER_METRIC, Table.TEMP_DATA_TABLE, Table.SETTINGS_TABLE,
+}
+if GLOBAL_TABLES | TEAM_SCOPED_TABLES != set(Table) or GLOBAL_TABLES & TEAM_SCOPED_TABLES:
+    # A new Table member must be consciously classified as global or team-scoped;
+    # failing at import time makes the whole test suite catch the omission.
+    raise AssertionError('every Table must be classified as exactly one of GLOBAL_TABLES / TEAM_SCOPED_TABLES')

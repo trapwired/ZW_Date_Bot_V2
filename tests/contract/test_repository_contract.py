@@ -162,7 +162,7 @@ def test_delete_and_reset_event_attendances(repository):
 
 def test_all_event_attendances_batches_and_empty_input(repository):
     user = _seed_user(repository)
-    for n in range(35):  # crosses Firestore's 30-value 'in' batch limit
+    for n in range(35):  # large id list (crossed the Firestore-era 30-value batch limit)
         repository.add(Attendance(user.doc_id, f'ev-{n}', AttendanceState.YES),
                        Table.GAME_ATTENDANCE_TABLE)
     ids = [f'ev-{n}' for n in range(35)]

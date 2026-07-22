@@ -28,8 +28,9 @@ from Utils.ApiConfig import ApiConfig
 
 class DataAccess(object):
 
-    def __init__(self, api_config: ApiConfig):
-        self.repository = create_repository(api_config)
+    def __init__(self, api_config: ApiConfig, repository=None):
+        # Injection seam for tests (in-memory backend); production resolves via config.
+        self.repository = repository or create_repository(api_config)
 
     #######
     # ADD #

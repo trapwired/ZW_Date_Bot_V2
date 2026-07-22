@@ -6,6 +6,10 @@
 # Expects ./secrets-local/api_config.ini (gitignored) with the dev token,
 # backend = postgres and dsn = postgresql://zwdatebot:zwdatebot@postgres:5432/zwdatebot.
 # Seed test data:  ./venv/bin/python scripts/seed_local_db.py
+# Explicit project name: the default ("deploy", from the directory) collides with
+# any other repo whose compose file also lives in deploy/ and hijacks its containers.
+name: zwdatebot-local
+
 services:
   zwdatebot:
     build: ..

@@ -33,7 +33,7 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Provide test config
         # The real secrets/api_config.ini is gitignored; the tracked example carries every
-        # section the tests need (Firebase creds are monkeypatched, so no real key required).
+        # section the tests need (storage is in-memory or the service container, no real secrets).
         run: cp secrets/example_api_config.ini secrets/api_config.ini
       - name: Run tests
         run: pytest -q

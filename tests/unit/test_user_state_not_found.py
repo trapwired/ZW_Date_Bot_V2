@@ -1,4 +1,4 @@
-"""Unit: the two not-found paths in FirebaseRepository must raise ObjectNotFoundException.
+"""Unit: the two not-found paths in the repository must raise ObjectNotFoundException.
 
 Both were previously broken and untested:
 - get_user_state indexed res[0] on an empty result -> IndexError, masking the intended

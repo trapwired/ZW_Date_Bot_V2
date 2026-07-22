@@ -16,8 +16,8 @@ src/
   features/    one folder per capability, each owning its Node(s) + Service:
                events · adminpanel · eventmgmt · attendance · stats · roles · website
                · onboarding · menu
-  domain/      entities + business rules (policies, parsing) — no Telegram, no Firestore
-  data/        DataAccess + FirebaseRepository (the Firestore boundary)
+  domain/      entities + business rules (policies, parsing) — no Telegram, no SQL
+  data/        DataAccess + PostgresRepository (the storage boundary)
   Enums/  Utils/   shared cross-cutting code
 ```
 
@@ -35,7 +35,7 @@ across horizontal layers.
    see ADR 0005).
 2. The node parses the input and calls its slice **Service** for orchestration.
 3. The service works through **`domain`** models and rules, and reads/writes via the
-   **`data`** layer to **Firestore**.
+   **`data`** layer to **Postgres**.
 4. The reply is rendered and sent back out through **`TelegramService`**.
 
 Nodes stay thin (parse → call service → render); orchestration and data access live in
@@ -44,7 +44,7 @@ the services, not the view nodes.
 ## Design principles
 
 - **Thin nodes, service-owned data access.** A feature node never touches `DataAccess`
-  directly; it goes node → service → `DataAccess` → Firestore. This keeps the number
+  directly; it goes node → service → `DataAccess` → the repository. This keeps the number
   of places that touch data small and auditable — the foundation the tenancy work
   builds on (see ADR 0001).
 - **Inline-first menus, static reply keyboard.** The reply keyboard is a fixed,
