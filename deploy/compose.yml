@@ -1,12 +1,15 @@
-# Lives at /srv/apps/zwdatebot/compose.yml on the VPS (shipped by deploy.yml).
-# Long polling: no ports, no networks, no Caddy site block.
+# Lives at /srv/apps/zwdatebot/compose.yml on the VPS.
+# NOT shipped automatically (pull-based deploy) — when this file changes, update the
+# server copy by hand. Long polling: no ports, no networks, no Caddy site block.
 #
 # The bot runs on [Database] backend = postgres + dsn =
 # postgresql://zwdatebot:...@postgres:5432/zwdatebot in the server's api_config.ini.
 # The central VPS backup auto-discovers the container (nightly pg_dumpall).
 services:
   zwdatebot:
-    image: zwdatebot:latest
+    # Built + pushed by .github/workflows/deploy.yml; the server pulls it on a
+    # signed webhook (no SSH). Rollback: retag a :<sha> image to :latest, up -d.
+    image: ghcr.io/trapwired/zwdatebot:latest
     container_name: zwdatebot
     restart: unless-stopped
     env_file: .env

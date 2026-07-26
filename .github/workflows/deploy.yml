@@ -2,38 +2,58 @@ name: Deploy
 # Runs only after a PR is merged (push to main). Tests already ran as a required check on
 # the PR, so deployment does not re-run them.
 #
-# Pattern (CaDo, see DomiCloud VPS_HANDOVER.md): build the image on the runner, ship it
-# as a tarball over SSH (no registry, no auth), then compose up on the VPS. CI holds only
-# the deploy SSH key - app secrets live solely in /srv/apps/zwdatebot/ on the server.
+# Pull-based deploy (DomiCloud WIREGUARD_MIGRATION_PLAN.md, Phase B): build the image on
+# the runner, push it to GHCR, then poke a signed webhook. The VPS pulls the image itself
+# and recreates the container — CI never touches SSH, so no deploy key lives here and the
+# server's port 22 can stay off the public internet.
+#
+# Repo secret: WEBHOOK_SECRET (per-app HMAC secret, mirrored in /srv/apps/deploy/.env).
+# The compose file on the server is NOT shipped by this workflow anymore — it changes
+# rarely; update /srv/apps/zwdatebot/compose.yml by hand when deploy/compose.yml changes.
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}   # manual runs: prove the pipeline pre-cutover (standby-safe)
-# Two quick merges deploy concurrently and race on the image/compose scp;
-# serialize and drop superseded runs.
+  workflow_dispatch: {}   # manual runs: prove the pipeline
+# Two quick merges would race on the image push + deploy; serialize and drop superseded runs.
 concurrency:
   group: deploy
   cancel-in-progress: true
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write        # push the image to GHCR
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build image
-        run: docker build -t zwdatebot:latest .
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # :latest is what the server's compose.yml references; the sha tag keeps an
+          # immutable handle for rollback (retag + `docker compose up -d` on the box).
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/zwdatebot:latest
+            ghcr.io/${{ github.repository_owner }}/zwdatebot:${{ github.sha }}
 
-      - name: Ship image + compose, restart
+      - name: Trigger deploy webhook
+        env:
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
-          SSH="ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.DEPLOY_HOST }}"
-          docker save zwdatebot:latest | gzip | $SSH "gunzip | docker load"
-          scp -i ~/.ssh/deploy_key deploy/compose.yml \
-            "ubuntu@${{ secrets.DEPLOY_HOST }}:/srv/apps/zwdatebot/compose.yml"
-          $SSH "cd /srv/apps/zwdatebot && docker compose up -d && docker image prune -f"
+          set -euo pipefail
+          BODY="{\"app\":\"zwdatebot\",\"sha\":\"${GITHUB_SHA}\"}"
+          SIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print $NF}')"
+          curl -fsS --retry 3 --retry-delay 5 -X POST \
+            -H 'Content-Type: application/json' \
+            -H "X-Hub-Signature-256: $SIG" \
+            -d "$BODY" \
+            https://deploy.ca-do.ch/hook/zwdatebot
