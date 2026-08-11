@@ -62,6 +62,8 @@ from Utils.ApiConfig import ApiConfig
 EXPIRED_MENU_TEXT = ('This menu is from an older version of the bot and no longer works - '
                      'use the keyboard below (Events / Admin) instead.')
 FOREIGN_TEAM_MENU_TEXT = 'This menu belongs to a different team.'
+STALE_CALLBACK_TEXT = ('Your button press reached me too late - I was probably just restarting. '
+                       'It may not have been applied: please reopen the menu and check.')
 
 
 def add_nodes_reference_to_all_nodes(nodes: dict):
@@ -199,6 +201,14 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         except BadRequest as e:
             if "Message is not modified" in str(e):
                 logging.debug(f"Ignoring 'Message is not modified' error: {e}")
+                return
+            if "Query is too old" in str(e) or "query id is invalid" in str(e):
+                # The press sat in the update queue past Telegram's callback timeout
+                # (bot offline or restarting, e.g. during a deploy). answer() then always
+                # fails and aborts the handler mid-way, so the tap may or may not have
+                # been applied - tell the presser instead of alerting the maintainer.
+                logging.info(f"Stale callback query from chat {update.effective_chat.id}: {e}")
+                await self.telegram_service.send_message(update, None, message=t(STALE_CALLBACK_TEXT))
                 return
             await self.telegram_service.report_exception('Exception in NodeHandler.handle_message', e, update)
         except Exception as e:

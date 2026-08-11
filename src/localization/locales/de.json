@@ -137,6 +137,7 @@
  "Yes, end the season": "Ja, Saison beenden",
  "You already belong to a team, so you cannot register another one.": "Du gehörst bereits zu einem Team und kannst kein weiteres registrieren.",
  "Your answer: {answer}": "Deine Antwort: {answer}",
+ "Your button press reached me too late - I was probably just restarting. It may not have been applied: please reopen the menu and check.": "Dein Knopfdruck hat mich zu spät erreicht - wahrscheinlich wurde ich gerade neu gestartet. Er wurde möglicherweise nicht übernommen: Öffne das Menü bitte neu und prüfe.",
  "freetext, spaces allowed, no max length, but end will be trimmed": "Freitext, Leerzeichen erlaubt, keine Maximallänge, aber das Ende wird abgeschnitten",
  "group chat (no trainers set)": "Gruppenchat (keine Trainer festgelegt)",
  "group chat fallback": "Gruppenchat als Ersatz",
