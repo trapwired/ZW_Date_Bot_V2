@@ -137,6 +137,7 @@
  "Yes, end the season": "Ja, Saison beände",
  "You already belong to a team, so you cannot register another one.": "Du ghörsch scho zu eme Team und chasch keis wiiters registriere.",
  "Your answer: {answer}": "Dini Antwort: {answer}",
+ "Your button press reached me too late - I was probably just restarting. It may not have been applied: please reopen the menu and check.": "Din Knopfdruck isch z spaat bi mir aacho - wahrschiinlich bin i grad neu gstartet worde. Är isch vilicht nöd übernaa worde: Mach s Menü bitte neu uf und lueg nache.",
  "freetext, spaces allowed, no max length, but end will be trimmed": "Freitext, Leerschläg erlaubt, kei Maximallängi, aber s Ändi wird abgschnitte",
  "group chat (no trainers set)": "Gruppechat (kei Trainer festgleit)",
  "group chat fallback": "Gruppechat als Ersatz",
