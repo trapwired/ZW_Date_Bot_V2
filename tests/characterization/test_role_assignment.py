@@ -6,10 +6,15 @@ The entry point is the admin menu's Roles button (ROLES#H). NodeHandler gates ca
 nodes by the pressing user's admin flag, so the caller is seeded as an admin for the
 positive cases.
 """
+import pytest
+
+from Enums.AttendanceState import AttendanceState
 from Enums.Role import Role
 from Enums.UserState import UserState
 from features.roles import RoleAssignment
-from tests.helpers import drive, drive_callback, seed_user, assert_no_error_reported, forbid_chat
+from Utils.CustomExceptions import ObjectNotFoundException
+from tests.helpers import (drive, drive_callback, seed_user, set_attendance,
+                           assert_no_error_reported, forbid_chat)
 
 ADMIN_ID = 1200
 TARGET_ID = 1201
@@ -157,6 +162,146 @@ async def test_assigning_a_role_to_an_unreachable_user_keeps_the_assigned_role(n
     assert data_access.get_user_state(TARGET_ID).role == Role.PLAYER
     assert 'Could not notify' in update.callback_query.edits[-1].text
     assert not [m for m in bot.sent if 'Setting User to Inactive' in m.text]
+    assert_no_error_reported(bot)
+
+
+async def test_remove_shows_a_confirmation_with_the_group_chat_warning(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_remove(target.user_id))
+
+    edit = update.callback_query.edits[-1]
+    assert 'permanently deletes' in edit.text and 'group chat' in edit.text
+    data = [b.callback_data for row in edit.reply_markup.inline_keyboard for b in row]
+    assert RoleAssignment.encode_remove_confirmed(target.user_id) in data
+    assert data_access.get_user_state(TARGET_ID).role == Role.PLAYER  # nothing deleted yet
+    assert_no_error_reported(bot)
+
+
+async def test_remove_confirmed_deletes_the_user_and_notifies_them(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+    set_attendance(data_access, target.user_id, 'ev-1', AttendanceState.YES)
+
+    update = await drive_callback(node_handler, ADMIN_ID,
+                                  RoleAssignment.encode_remove_confirmed(target.user_id))
+
+    with pytest.raises(ObjectNotFoundException):
+        data_access.get_user_state(TARGET_ID)
+    goodbye = [m for m in bot.sent if m.chat_id == TARGET_ID]
+    assert goodbye and 'removed you from the bot' in goodbye[-1].text
+    confirmation = update.callback_query.edits[-1].text
+    assert 'group chat' in confirmation and '/start' in confirmation
+    assert_no_error_reported(bot)
+
+
+async def test_remove_confirmed_succeeds_even_when_the_user_is_unreachable(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+    forbid_chat(bot, TARGET_ID)
+
+    update = await drive_callback(node_handler, ADMIN_ID,
+                                  RoleAssignment.encode_remove_confirmed(target.user_id))
+
+    with pytest.raises(ObjectNotFoundException):
+        data_access.get_user_state(TARGET_ID)
+    assert 'Could not notify' in update.callback_query.edits[-1].text
+    assert_no_error_reported(bot)
+
+
+async def test_the_last_admin_cannot_be_removed_from_the_bot(node_handler, data_access, bot):
+    admin = seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+
+    update = await drive_callback(node_handler, ADMIN_ID,
+                                  RoleAssignment.encode_remove_confirmed(admin.user_id))
+
+    assert data_access.get_user_state(ADMIN_ID).is_admin  # still there, still admin
+    assert 'last admin' in update.callback_query.edits[-1].text
+    assert_no_error_reported(bot)
+
+
+async def test_non_admin_cannot_remove_a_user(node_handler, data_access, bot):
+    seed_user(data_access, NON_ADMIN_ID, Role.PLAYER, UserState.DEFAULT)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive_callback(node_handler, NON_ADMIN_ID,
+                         RoleAssignment.encode_remove_confirmed(target.user_id))
+
+    assert data_access.get_user_state(TARGET_ID).role == Role.PLAYER
+    assert_no_error_reported(bot)
+
+
+async def test_rename_flow_prompts_types_confirms_and_persists(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    prompt = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename(target.user_id))
+    assert 'send me the new name' in prompt.callback_query.edits[-1].text
+    assert data_access.get_user_state(ADMIN_ID).state == UserState.ADMIN_UPDATE_PLAYER_NAME
+
+    await drive(node_handler, ADMIN_ID, 'Max Muster')  # typed value re-renders the menu message
+    assert 'Max Muster' in bot.edits[-1].text
+
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename_save())
+
+    renamed = data_access.get_user_by_doc_id(target.user_id)
+    assert renamed.firstname == 'Max' and renamed.lastname == 'Muster'
+    assert data_access.get_user_state(ADMIN_ID).state == UserState.DEFAULT
+    notice = [m for m in bot.sent if m.chat_id == TARGET_ID]
+    assert notice and 'changed your name' in notice[-1].text
+    assert_no_error_reported(bot)
+
+
+async def test_rename_with_a_single_word_clears_the_last_name(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename(target.user_id))
+    await drive(node_handler, ADMIN_ID, 'Maxi')
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename_save())
+
+    renamed = data_access.get_user_by_doc_id(target.user_id)
+    assert renamed.firstname == 'Maxi' and not renamed.lastname
+    assert_no_error_reported(bot)
+
+
+async def test_rename_cancel_resets_the_admins_typed_state(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename(target.user_id))
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename_cancel())
+
+    acting = data_access.get_user_state(ADMIN_ID)
+    assert acting.state == UserState.DEFAULT and acting.additional_info == ''
+    assert 'Select a role to manage' in update.callback_query.edits[-1].text
+    assert data_access.get_user_by_doc_id(target.user_id).firstname == 'Test'  # unchanged
+    assert_no_error_reported(bot)
+
+
+async def test_stale_rename_save_never_commits_another_flows_staged_value(node_handler, data_access, bot):
+    # The admin abandoned the rename and their staged value now belongs to a different
+    # typed flow - a leftover Save button must not write it as someone's name.
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename_save())
+
+    assert 'no longer active' in update.callback_query.edits[-1].text
+    assert data_access.get_user_by_doc_id(target.user_id).firstname == 'Test'
+    assert_no_error_reported(bot)
+
+
+async def test_home_resets_an_abandoned_rename(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename(target.user_id))
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_home())
+
+    acting = data_access.get_user_state(ADMIN_ID)
+    assert acting.state == UserState.DEFAULT and acting.additional_info == ''
     assert_no_error_reported(bot)
 
 

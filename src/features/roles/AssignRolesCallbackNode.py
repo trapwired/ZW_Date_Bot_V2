@@ -1,6 +1,6 @@
 import logging
 
-from telegram import Update
+from telegram import ReplyKeyboardRemove, Update
 from telegram.error import TelegramError
 
 from data.DataAccess import DataAccess
@@ -11,11 +11,14 @@ from Enums.UserState import UserState
 
 from framework.Nodes.CallbackNode import CallbackNode
 from framework.RecipientLanguage import recipient_language_context
+from localization.LanguageContext import language_context
+from localization.Languages import resolve_user_language
 
 from framework.Services.TelegramService import TelegramService
 from framework.Services.TriggerService import TriggerService
 from framework.Services.UserStateService import UserStateService
 
+from Utils import InlineInputStaging
 from Utils import PrintUtils
 from Utils.CustomExceptions import LastAdminException, RoleChangeTargetNotInTeamException
 from features.adminpanel import AdminMenu
@@ -76,8 +79,21 @@ class AssignRolesCallbackNode(CallbackNode):
                 await self._grant_admin(query, args[0])
             case RoleAssignment.ASSIGN:
                 await self._assign_role(query, args[0], Role(int(args[1])))
+            case RoleAssignment.REMOVE:
+                await self._show_remove_confirmation(query, args[0])
+            case RoleAssignment.REMOVE_CONFIRMED:
+                await self._remove_user(query, args[0])
+            case RoleAssignment.RENAME:
+                await self._prompt_rename(query, args[0])
+            case RoleAssignment.RENAME_SAVE:
+                await self._finish_rename(query)
+            case RoleAssignment.RENAME_CANCEL:
+                await self._cancel_rename(query)
 
     async def _show_overview(self, query):
+        # An abandoned rename must not leave the admin's next text message routed to
+        # the rename node (mirrors AdminMenuCallbackNode._reset_typed_state).
+        self._reset_rename_state(query)
         counts, admin_count = self.role_service.overview_counts()
         await self.telegram_service.edit_callback_message(
             query, t('<b>Select a role to manage:</b>'),
@@ -151,6 +167,93 @@ class AssignRolesCallbackNode(CallbackNode):
         await self._confirm_change(query, user, user_to_state,
                                    user_notice=t('An admin gave you admin access.'),
                                    confirmation=confirmation)
+
+    async def _show_remove_confirmation(self, query, user_doc_id: str):
+        user, _ = self.role_service.get_user_and_state(user_doc_id)
+        await self.telegram_service.edit_callback_message(
+            query,
+            t('⚠️ Remove {name} from the bot?\n\n'
+              'This permanently deletes them and all their data (attendance answers, '
+              'reminder statistics) and cannot be undone.\n\n'
+              'Also remove them from the team group chat - otherwise they can simply '
+              'rejoin via /start.',
+              name=Format.bold(PrintUtils.get_player_display_name(user))),
+            reply_markup=RoleAssignment.build_remove_confirmation_markup(user_doc_id))
+
+    async def _remove_user(self, query, user_doc_id: str):
+        user, removed_state = self.role_service.remove_user(user_doc_id)
+        # Goodbye AFTER the delete (the irreversible action must not hinge on
+        # reachability), addressed via the pre-deletion snapshots.
+        notified = await self._send_goodbye(user, removed_state)
+        confirmation = t('✅ {name} was removed from the bot with all their data.',
+                         name=Format.bold(PrintUtils.get_player_display_name(user)))
+        if not notified:
+            confirmation += t('\nCould not notify them - they may have removed Telegram.')
+        confirmation += '\n\n' + t('⚠️ Also remove them from the team group chat - '
+                                   'otherwise they can simply rejoin via /start.')
+        await self.telegram_service.edit_callback_message(query, confirmation,
+                                                          reply_markup=RoleAssignment.build_home_markup())
+
+    async def _send_goodbye(self, user, removed_state) -> bool:
+        try:
+            # Their users_to_state row is already gone, so the language comes from the
+            # snapshot; the reply keyboard is withdrawn along with their membership.
+            with language_context(resolve_user_language(removed_state.language, None)):
+                await self.telegram_service.send_message_or_raise(
+                    user.telegramId,
+                    t('An admin removed you from the bot - all your data was deleted.'),
+                    reply_markup=ReplyKeyboardRemove())
+            return True
+        except TelegramError as e:
+            logging.info(f'Could not send goodbye to removed user {user.telegramId}: {e}')
+            return False
+
+    async def _prompt_rename(self, query, user_doc_id: str):
+        user, _ = self.role_service.get_user_and_state(user_doc_id)
+        acting = self.user_state_service.get_user_state(query.from_user.id)
+        # Remember which menu message to keep re-rendering AND whom to rename;
+        # nothing is persisted until Save.
+        acting.additional_info = InlineInputStaging.build(
+            query.message.message_id, query.message.chat.id,
+            RoleAssignment.pack_rename_value(user_doc_id, ''))
+        self.user_state_service.update_user_state(acting, UserState.ADMIN_UPDATE_PLAYER_NAME)
+        await self.telegram_service.edit_callback_message(
+            query,
+            t('{name} - send me the new name (first name, optionally followed by a last name).',
+              name=Format.bold(PrintUtils.get_player_display_name(user))),
+            reply_markup=RoleAssignment.build_rename_prompt_markup())
+
+    async def _finish_rename(self, query):
+        acting = self.user_state_service.get_user_state(query.from_user.id)
+        target_doc_id, new_name = RoleAssignment.unpack_rename_value(
+            InlineInputStaging.parse(acting.additional_info)[2])
+        if acting.state is not UserState.ADMIN_UPDATE_PLAYER_NAME or not new_name.strip():
+            # Stale button from an abandoned flow: additional_info may hold ANOTHER
+            # flow's staged value - never commit it as a name (mirrors the team rename).
+            await self.telegram_service.edit_callback_message(
+                query, t('This rename is no longer active - start again via the roles menu.'),
+                reply_markup=RoleAssignment.build_home_markup())
+            return
+        user, target_state = self.role_service.rename_user(target_doc_id, new_name)
+        self._clear_typed_state(acting)
+        name = Format.bold(PrintUtils.get_player_display_name(user))
+        await self._confirm_change(
+            query, user, target_state,
+            user_notice=t('An admin changed your name to {name}.', name=name),
+            confirmation=t('✅ This player is now called {name}.', name=name))
+
+    async def _cancel_rename(self, query):
+        # _show_overview already resets an active rename.
+        await self._show_overview(query)
+
+    def _reset_rename_state(self, query) -> None:
+        acting = self.user_state_service.get_user_state(query.from_user.id)
+        if acting.state is UserState.ADMIN_UPDATE_PLAYER_NAME:
+            self._clear_typed_state(acting)
+
+    def _clear_typed_state(self, acting) -> None:
+        acting.additional_info = ''
+        self.user_state_service.update_user_state(acting, UserState.DEFAULT)
 
     async def _confirm_change(self, query, user, user_to_state, user_notice: str, confirmation: str):
         notified = await self._notify_user(user, user_to_state, user_notice)

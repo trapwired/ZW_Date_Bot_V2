@@ -404,6 +404,11 @@ class DataAccess(object):
     def delete(self, temp_data: TempData):
         self.repository.delete_temp_data(temp_data)
 
+    def delete_user_data(self, user_doc_id: str) -> None:
+        """Permanently delete one user everywhere: attendance answers, reminder
+        statistics, wizard drafts, state and identity. Irreversible."""
+        self.repository.delete_user_data(user_doc_id)
+
     def reset_statistics(self) -> int:
         # Ends the current season: hard-deletes every player's reminder statistics.
         return self.repository.delete_all_player_metrics()

@@ -60,10 +60,14 @@ the services, not the view nodes.
 - **Event type is data, not code paths.** Game / Training / Timekeeping are handled by
   one polymorphic flow parameterized by `Event`, not by three copy-pasted handlers.
 - **Wizard/edit step lives in context, not the state machine.** The add-event wizard's
-  current field *and event type* are held in the draft (`TempData`); the field edit
-  carries its context in `UsersToState.additional_info`. `UserState` therefore only
-  models *which typed input is expected* — six states total (INIT, DEFAULT, the three
-  typed-input states, REJECTED); all menu navigation is inline.
+  current field *and event type* are held in the draft (`TempData`); the field edit —
+  and any typed flow that targets another object, like the player rename — carries its
+  context in `UsersToState.additional_info` (`Utils/InlineInputStaging.py`).
+  `UserState` therefore only models *which typed input is expected*: INIT, DEFAULT and
+  REJECTED plus one state per typed-input flow (add-event wizard, event-field edit,
+  website, spectator password, announcement, team name, player rename); all menu
+  navigation is inline. The shared skeleton is `framework/Nodes/TypedInputNode.py` —
+  type, re-render the menu message, persist nothing until Save.
 - **Typed-input states can't strand the user.** The keyboard stays visible during
   typed input, and its main-menu commands act as escape hatches: they clean up the
   in-flight flow (drop the draft / staged input) and navigate.
@@ -88,6 +92,12 @@ scripts (see ADR 0002): `UserState._missing_` coerces removed legacy enum values
 their surviving state, and `TempData.from_dict` infers a missing `step` from the fields
 already collected. A user mid-flow at deploy time is read back cleanly instead of
 crashing.
+
+**User data lifecycle.** Admins can permanently remove a player via the roles menu;
+`Repository.delete_user_data` is the single purge seam (attendance, reminder
+statistics, wizard drafts, state and identity in one transaction on the Postgres
+backend). The flow reminds the admin to also remove the person from the team group
+chat — group membership is what lets `/start` re-join them.
 
 ## Background jobs
 
