@@ -9,7 +9,7 @@ positive cases.
 from Enums.Role import Role
 from Enums.UserState import UserState
 from features.roles import RoleAssignment
-from tests.helpers import drive, drive_callback, seed_user, assert_no_error_reported
+from tests.helpers import drive, drive_callback, seed_user, assert_no_error_reported, forbid_chat
 
 ADMIN_ID = 1200
 TARGET_ID = 1201
@@ -140,6 +140,23 @@ async def test_legacy_assign_admin_button_is_idempotent_for_existing_admins(node
     await drive_callback(node_handler, ADMIN_ID, legacy_assign)
 
     assert data_access.get_user_state(TARGET_ID).is_admin
+    assert_no_error_reported(bot)
+
+
+async def test_assigning_a_role_to_an_unreachable_user_keeps_the_assigned_role(node_handler, data_access, bot):
+    # Regression: the swallowing _send_message reacted to Forbidden by setting the user
+    # INACTIVE - silently overwriting the role the admin had just assigned, claiming
+    # success, and spamming the maintainer on every retry.
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.INACTIVE, UserState.DEFAULT)
+    forbid_chat(bot, TARGET_ID)
+
+    update = await drive_callback(node_handler, ADMIN_ID,
+                                  RoleAssignment.encode_assign(target.user_id, Role.PLAYER))
+
+    assert data_access.get_user_state(TARGET_ID).role == Role.PLAYER
+    assert 'Could not notify' in update.callback_query.edits[-1].text
+    assert not [m for m in bot.sent if 'Setting User to Inactive' in m.text]
     assert_no_error_reported(bot)
 
 
