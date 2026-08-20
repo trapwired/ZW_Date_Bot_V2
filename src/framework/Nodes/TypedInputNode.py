@@ -37,6 +37,11 @@ class TypedInputNode(Node):
         it - a rejected value must never sit behind the confirm buttons. None accepts."""
         return None
 
+    def staged_value(self, previous_value: str, typed: str) -> str:
+        """What lands in the staging slot for an accepted typed value. Flows that carry
+        context in the slot (the roles rename keeps its target user id) preserve it here."""
+        return typed
+
     def _clear_staged_value(self, user_to_state: UsersToState) -> None:
         user_to_state.additional_info = ''
 
@@ -47,14 +52,15 @@ class TypedInputNode(Node):
     async def handle_typed_value(self, update: Update, user_to_state: UsersToState,
                                  new_state: UserState) -> None:
         # Any free text typed in this state is the value; retyping replaces it.
-        message_id, chat_id, _ = InlineInputStaging.parse(user_to_state.additional_info)
+        message_id, chat_id, previous_value = InlineInputStaging.parse(user_to_state.additional_info)
         value = update.message.text.strip()
 
         rejection = self.review_value(value)
         if rejection is not None:
             message, markup = rejection
         else:
-            user_to_state.additional_info = InlineInputStaging.build(message_id, chat_id, value)
+            user_to_state.additional_info = InlineInputStaging.build(
+                message_id, chat_id, self.staged_value(previous_value, value))
             self.user_state_service.update_user_state(user_to_state, self.state)
             # confirm_text implementations localize themselves (t() around their own
             # template) - finished text with the value inlined can't be a catalog key.

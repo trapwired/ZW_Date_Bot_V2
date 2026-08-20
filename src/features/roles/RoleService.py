@@ -60,6 +60,19 @@ class RoleService:
             return user, user_to_state, False
         return user, self._set_admin(user_to_state, True), True
 
+    def rename_user(self, user_doc_id: str, new_name: str) -> tuple[TelegramUser, UsersToState]:
+        """First word becomes the first name, the rest the last name (display shows
+        'Firstname L.'). Raises ValueError on a blank name."""
+        user, user_to_state = self.get_user_and_state(user_doc_id)
+        self._ensure_still_a_member(user_to_state)
+        firstname, _, lastname = new_name.strip().partition(' ')
+        if not firstname:
+            raise ValueError('name must not be blank')
+        user.firstname = firstname
+        user.lastname = lastname.strip()
+        self.data_access.update(user)
+        return user, user_to_state
+
     def remove_user(self, user_doc_id: str) -> tuple[TelegramUser, UsersToState]:
         """Permanently delete a user and ALL their data (identity, state, attendance,
         reminder statistics, wizard drafts). Returns the pre-deletion snapshots so the

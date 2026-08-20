@@ -232,6 +232,79 @@ async def test_non_admin_cannot_remove_a_user(node_handler, data_access, bot):
     assert_no_error_reported(bot)
 
 
+async def test_rename_flow_prompts_types_confirms_and_persists(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    prompt = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename(target.user_id))
+    assert 'send me the new name' in prompt.callback_query.edits[-1].text
+    assert data_access.get_user_state(ADMIN_ID).state == UserState.ADMIN_UPDATE_PLAYER_NAME
+
+    await drive(node_handler, ADMIN_ID, 'Max Muster')  # typed value re-renders the menu message
+    assert 'Max Muster' in bot.edits[-1].text
+
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename_save())
+
+    renamed = data_access.get_user_by_doc_id(target.user_id)
+    assert renamed.firstname == 'Max' and renamed.lastname == 'Muster'
+    assert data_access.get_user_state(ADMIN_ID).state == UserState.DEFAULT
+    notice = [m for m in bot.sent if m.chat_id == TARGET_ID]
+    assert notice and 'changed your name' in notice[-1].text
+    assert_no_error_reported(bot)
+
+
+async def test_rename_with_a_single_word_clears_the_last_name(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename(target.user_id))
+    await drive(node_handler, ADMIN_ID, 'Maxi')
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename_save())
+
+    renamed = data_access.get_user_by_doc_id(target.user_id)
+    assert renamed.firstname == 'Maxi' and not renamed.lastname
+    assert_no_error_reported(bot)
+
+
+async def test_rename_cancel_resets_the_admins_typed_state(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename(target.user_id))
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename_cancel())
+
+    acting = data_access.get_user_state(ADMIN_ID)
+    assert acting.state == UserState.DEFAULT and acting.additional_info == ''
+    assert 'Select a role to manage' in update.callback_query.edits[-1].text
+    assert data_access.get_user_by_doc_id(target.user_id).firstname == 'Test'  # unchanged
+    assert_no_error_reported(bot)
+
+
+async def test_stale_rename_save_never_commits_another_flows_staged_value(node_handler, data_access, bot):
+    # The admin abandoned the rename and their staged value now belongs to a different
+    # typed flow - a leftover Save button must not write it as someone's name.
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename_save())
+
+    assert 'no longer active' in update.callback_query.edits[-1].text
+    assert data_access.get_user_by_doc_id(target.user_id).firstname == 'Test'
+    assert_no_error_reported(bot)
+
+
+async def test_home_resets_an_abandoned_rename(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_rename(target.user_id))
+    await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_home())
+
+    acting = data_access.get_user_state(ADMIN_ID)
+    assert acting.state == UserState.DEFAULT and acting.additional_info == ''
+    assert_no_error_reported(bot)
+
+
 async def test_back_from_admin_list_selection_returns_to_admin_list(node_handler, data_access, bot):
     seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
     target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)

@@ -22,6 +22,9 @@ ASSIGN = 'A'        # write a new role to one user
 TOGGLE_ADMIN = 'T'  # flip one user's admin flag
 REMOVE = 'X'            # show the removal confirmation for one user
 REMOVE_CONFIRMED = 'C'  # permanently delete one user and all their data
+RENAME = 'N'         # start typing a new name for one user
+RENAME_SAVE = 'NY'   # commit the typed name
+RENAME_CANCEL = 'NN'  # discard the typed name
 HOME = 'H'          # back to the role overview
 
 ADMIN_MARKER = '⭐'
@@ -74,6 +77,33 @@ def encode_remove(user_doc_id: str) -> str:
 
 def encode_remove_confirmed(user_doc_id: str) -> str:
     return _encode(REMOVE_CONFIRMED, user_doc_id)
+
+
+def encode_rename(user_doc_id: str) -> str:
+    return _encode(RENAME, user_doc_id)
+
+
+def encode_rename_save() -> str:
+    return _encode(RENAME_SAVE)
+
+
+def encode_rename_cancel() -> str:
+    return _encode(RENAME_CANCEL)
+
+
+# The rename flow's InlineInputStaging value slot: '<target_doc_id>#<typed name>'.
+# Only the leading id is split off, so the name itself may contain the delimiter.
+_RENAME_TARGET_DELIMITER = '#'
+
+
+def pack_rename_value(target_doc_id: str, name: str) -> str:
+    return f'{target_doc_id}{_RENAME_TARGET_DELIMITER}{name}'
+
+
+def unpack_rename_value(value: str) -> tuple[str, str]:
+    """-> (target user doc id, typed name)."""
+    target_doc_id, _, name = value.partition(_RENAME_TARGET_DELIMITER)
+    return target_doc_id, name
 
 
 def encode_home() -> str:
@@ -130,6 +160,7 @@ def build_assign_markup(user_doc_id: str, current_role: Role, is_admin: bool,
     admin_label = (t('{marker} Remove admin', marker=ADMIN_MARKER) if is_admin
                    else t('{marker} Make admin', marker=ADMIN_MARKER))
     rows.append([InlineKeyboardButton(admin_label, callback_data=encode_toggle_admin(user_doc_id))])
+    rows.append([InlineKeyboardButton(t('✏️ Change name'), callback_data=encode_rename(user_doc_id))])
     rows.append([InlineKeyboardButton(t('🗑 Remove from bot'), callback_data=encode_remove(user_doc_id))])
     rows.append([InlineKeyboardButton(t('« Back'), callback_data=back_callback_data)])
     return InlineKeyboardMarkup(rows)
@@ -140,6 +171,17 @@ def build_remove_confirmation_markup(user_doc_id: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(t('❗ Yes, remove permanently'),
                               callback_data=encode_remove_confirmed(user_doc_id))],
         [InlineKeyboardButton(t('« Back'), callback_data=encode_home())],
+    ])
+
+
+def build_rename_prompt_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton(t('Cancel'), callback_data=encode_rename_cancel())]])
+
+
+def build_rename_confirm_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(t('💾 Save'), callback_data=encode_rename_save()),
+         InlineKeyboardButton(t('Cancel'), callback_data=encode_rename_cancel())],
     ])
 
 

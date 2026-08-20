@@ -42,6 +42,7 @@ from features.adminpanel import AdminMenu
 from features.adminpanel.AdminMenuCallbackNode import AdminMenuCallbackNode
 from features.roles import RoleAssignment
 from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
+from features.roles.RenamePlayerNode import RenamePlayerNode
 from features.language import LanguageMenu
 from features.language.LanguageCallbackNode import LanguageCallbackNode
 
@@ -284,6 +285,9 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         update_team_name_node = UpdateTeamNameNode(UserState.ADMIN_UPDATE_TEAM_NAME, telegram_service,
                                                    user_state_service, data_access)
 
+        rename_player_node = RenamePlayerNode(UserState.ADMIN_UPDATE_PLAYER_NAME, telegram_service,
+                                              user_state_service, data_access)
+
         return {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
@@ -294,6 +298,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_UPDATE_SPECTATOR_PASSWORD: update_spectator_password_node,
             UserState.ADMIN_ANNOUNCE: announce_node,
             UserState.ADMIN_UPDATE_TEAM_NAME: update_team_name_node,
+            UserState.ADMIN_UPDATE_PLAYER_NAME: rename_player_node,
         }
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
