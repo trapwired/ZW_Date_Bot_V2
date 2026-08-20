@@ -4,6 +4,25 @@ A Telegram bot (built on [python-telegram-bot](https://github.com/python-telegra
 that manages a sports team's schedule — games, trainings and timekeeping events — and
 tracks each player's attendance.
 
+## Features
+
+- 📅 **Events & attendance** — games, trainings and timekeeping duties as inline
+  cards: details, live counts, Yes / No / Unsure buttons and calendar export on one
+  message.
+- 🔔 **Reminders** — scheduled private nudges for unanswered events, trainer
+  summaries, and a warning when too few players are available for a game.
+- 👥 **Roles & admin** — admin is a flag orthogonal to the membership role
+  (PLAYER / RETIRED / INACTIVE / SPECTATOR). Admins manage everything inline:
+  assign roles, grant/revoke admin, rename a player, or remove one from the bot
+  entirely (all their data is purged).
+- 📣 **Announcements** — admins broadcast to every player privately or to the
+  group chat.
+- 🌍 **Languages** — each user gets the bot in their own language
+  (en / de / gsw / fr / it); group messages follow the team language.
+- 🏟 **Multi-team** — adding the bot to a group chat registers a team; group
+  membership gates who can join as a player, spectators enter via password or
+  one-time invite links.
+
 ## Architecture
 
 Interactive diagram:
