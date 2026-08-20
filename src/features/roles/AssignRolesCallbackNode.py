@@ -161,17 +161,17 @@ class AssignRolesCallbackNode(CallbackNode):
 
     async def _notify_user(self, user, user_to_state, message: str) -> bool:
         # Best-effort: the change is already persisted, so a user we can no longer reach
-        # (deleted account, blocked bot) must not fail the whole flow.
+        # (deleted account, blocked bot) must not fail the whole flow. The RAISING send
+        # is deliberate: the swallowing _send_message would react to Forbidden by setting
+        # the user INACTIVE, silently overwriting the role the admin just assigned.
         default_node = self.node_handler.get_node(UserState.DEFAULT)
         buttons = default_node.get_commands_for_buttons(user_to_state, UserState.DEFAULT)
         try:
             # The notice (and refreshed keyboard) speak the AFFECTED user's language,
             # not the acting admin's.
             with recipient_language_context(self.data_access, user.telegramId):
-                await self.telegram_service.send_message(
-                    update=user,
-                    all_buttons=buttons,
-                    message=message)
+                await self.telegram_service.send_message_or_raise(
+                    user.telegramId, message, all_buttons=buttons)
             return True
         except TelegramError as e:
             logging.info(f'Could not notify user {user.telegramId} of role change: {e}')

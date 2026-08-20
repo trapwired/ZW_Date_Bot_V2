@@ -110,11 +110,15 @@ class TelegramService(object):
             self._bot_username = (await self.bot.get_me()).username
         return self._bot_username
 
-    async def send_onboarding_message(self, chat_id: int, message: str, all_buttons: [str] = None):
+    async def send_message_or_raise(self, chat_id: int, message: str, all_buttons: [str] = None,
+                                    reply_markup=None):
         """Direct send that RAISES on failure (unlike _send_message, which swallows
-        Forbidden and deactivates the user) - team-setup callers handle an unreachable
-        person with a group fallback instead."""
-        reply_markup = ReplyKeyboardMarkup(generate_keyboard(all_buttons)) if all_buttons else None
+        Forbidden and deactivates the user) - for callers that act on the outcome
+        themselves: team setup falls back to the group, the roles flow reports
+        'could not notify' instead of letting the swallow path overwrite the role
+        it just assigned."""
+        if reply_markup is None and all_buttons:
+            reply_markup = ReplyKeyboardMarkup(generate_keyboard(all_buttons))
         return await self._send_raw(chat_id, message, reply_markup)
 
     async def _send_raw(self, chat_id: int, message: str, reply_markup=None):

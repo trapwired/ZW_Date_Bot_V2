@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from telegram import Update, Message, Chat, User, ChatMemberAdministrator
 from telegram.constants import ChatType
+from telegram.error import Forbidden
 
 from Enums.Role import Role
 from Enums.UserState import UserState
@@ -156,6 +157,19 @@ def current_step(data_access, telegram_id: int):
     """The add-event wizard step held in the user's draft (TempData.step)."""
     user_id = data_access.get_user_state(telegram_id).user_id
     return data_access.get_temp_data(user_id).step
+
+
+def forbid_chat(bot, forbidden_chat_id) -> None:
+    """Make sends to one chat raise Forbidden (deleted account, blocked bot, kicked
+    from group); every other chat passes through to the recording FakeBot."""
+    original = bot.send_message
+
+    async def send(chat_id, text, reply_markup=None, parse_mode=None):
+        if chat_id == forbidden_chat_id:
+            raise Forbidden('bot was kicked')
+        return await original(chat_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
+
+    bot.send_message = send
 
 
 def assert_no_error_reported(bot) -> None:

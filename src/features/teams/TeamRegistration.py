@@ -158,7 +158,7 @@ class TeamRegistration:
         buttons = self.node_handler.get_node(UserState.DEFAULT).get_commands_for_buttons(
             adder_state, UserState.DEFAULT)
         try:
-            await self.telegram_service.send_onboarding_message(adder.id, guide, buttons)
+            await self.telegram_service.send_message_or_raise(adder.id, guide, buttons)
         except Forbidden:
             # Telegram forbids messaging a user who never opened a chat with the bot;
             # transient errors (timeouts, rate limits) re-raise into the normal
@@ -196,7 +196,7 @@ class TeamRegistration:
         for member in members:
             try:
                 user = self.data_access.get_user_by_doc_id(member.user_id)
-                await self.telegram_service.send_onboarding_message(
+                await self.telegram_service.send_message_or_raise(
                     user.telegramId, t('Setup cancelled - the team "{team}" was rolled '
                                        'back. Add me to a group chat again anytime to start over.',
                                        team=Format.escape(team.name)))
