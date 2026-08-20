@@ -60,6 +60,18 @@ class RoleService:
             return user, user_to_state, False
         return user, self._set_admin(user_to_state, True), True
 
+    def remove_user(self, user_doc_id: str) -> tuple[TelegramUser, UsersToState]:
+        """Permanently delete a user and ALL their data (identity, state, attendance,
+        reminder statistics, wizard drafts). Returns the pre-deletion snapshots so the
+        caller can still address the person (goodbye message, confirmation text)."""
+        user, user_to_state = self.get_user_and_state(user_doc_id)
+        self._ensure_still_a_member(user_to_state)
+        if user_to_state.is_admin and len(self.data_access.get_admins_to_state()) <= 1:
+            # Zero admins = nobody can ever reach the admin menus again.
+            raise LastAdminException()
+        self.data_access.delete_user_data(user_doc_id)
+        return user, user_to_state
+
     def _set_admin(self, user_to_state: UsersToState, is_admin: bool) -> UsersToState:
         self._ensure_still_a_member(user_to_state)
         if not is_admin and len(self.data_access.get_admins_to_state()) <= 1:

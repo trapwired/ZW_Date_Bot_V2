@@ -422,6 +422,20 @@ class PostgresRepository(Repository):
         result = self._execute('DELETE FROM player_metric WHERE team_id = %s', (current_team_id(),))
         return result.rowcount
 
+    def delete_user_data(self, user_doc_id: str):
+        # Team-scoped leftovers first, then the global identity pair - one transaction,
+        # so a failure never leaves a half-deleted user behind.
+        team_id = current_team_id()
+        with self.pool.connection() as connection:
+            connection.execute('DELETE FROM attendance WHERE user_id = %s AND team_id = %s',
+                               (user_doc_id, team_id))
+            connection.execute('DELETE FROM player_metric WHERE user_id = %s AND team_id = %s',
+                               (user_doc_id, team_id))
+            connection.execute('DELETE FROM temp_data WHERE user_doc_id = %s AND team_id = %s',
+                               (user_doc_id, team_id))
+            connection.execute('DELETE FROM users_to_state WHERE user_id = %s', (user_doc_id,))
+            connection.execute('DELETE FROM users WHERE id = %s', (user_doc_id,))
+
     ########
     # ELSE #
     ########

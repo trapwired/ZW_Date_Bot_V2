@@ -1,6 +1,6 @@
 import logging
 
-from telegram import Update
+from telegram import ReplyKeyboardRemove, Update
 from telegram.error import TelegramError
 
 from data.DataAccess import DataAccess
@@ -11,6 +11,8 @@ from Enums.UserState import UserState
 
 from framework.Nodes.CallbackNode import CallbackNode
 from framework.RecipientLanguage import recipient_language_context
+from localization.LanguageContext import language_context
+from localization.Languages import resolve_user_language
 
 from framework.Services.TelegramService import TelegramService
 from framework.Services.TriggerService import TriggerService
@@ -76,6 +78,10 @@ class AssignRolesCallbackNode(CallbackNode):
                 await self._grant_admin(query, args[0])
             case RoleAssignment.ASSIGN:
                 await self._assign_role(query, args[0], Role(int(args[1])))
+            case RoleAssignment.REMOVE:
+                await self._show_remove_confirmation(query, args[0])
+            case RoleAssignment.REMOVE_CONFIRMED:
+                await self._remove_user(query, args[0])
 
     async def _show_overview(self, query):
         counts, admin_count = self.role_service.overview_counts()
@@ -151,6 +157,46 @@ class AssignRolesCallbackNode(CallbackNode):
         await self._confirm_change(query, user, user_to_state,
                                    user_notice=t('An admin gave you admin access.'),
                                    confirmation=confirmation)
+
+    async def _show_remove_confirmation(self, query, user_doc_id: str):
+        user, _ = self.role_service.get_user_and_state(user_doc_id)
+        await self.telegram_service.edit_callback_message(
+            query,
+            t('⚠️ Remove {name} from the bot?\n\n'
+              'This permanently deletes them and all their data (attendance answers, '
+              'reminder statistics) and cannot be undone.\n\n'
+              'Also remove them from the team group chat - otherwise they can simply '
+              'rejoin via /start.',
+              name=Format.bold(PrintUtils.get_player_display_name(user))),
+            reply_markup=RoleAssignment.build_remove_confirmation_markup(user_doc_id))
+
+    async def _remove_user(self, query, user_doc_id: str):
+        user, removed_state = self.role_service.remove_user(user_doc_id)
+        # Goodbye AFTER the delete (the irreversible action must not hinge on
+        # reachability), addressed via the pre-deletion snapshots.
+        notified = await self._send_goodbye(user, removed_state)
+        confirmation = t('✅ {name} was removed from the bot with all their data.',
+                         name=Format.bold(PrintUtils.get_player_display_name(user)))
+        if not notified:
+            confirmation += t('\nCould not notify them - they may have removed Telegram.')
+        confirmation += '\n\n' + t('⚠️ Also remove them from the team group chat - '
+                                   'otherwise they can simply rejoin via /start.')
+        await self.telegram_service.edit_callback_message(query, confirmation,
+                                                          reply_markup=RoleAssignment.build_home_markup())
+
+    async def _send_goodbye(self, user, removed_state) -> bool:
+        try:
+            # Their users_to_state row is already gone, so the language comes from the
+            # snapshot; the reply keyboard is withdrawn along with their membership.
+            with language_context(resolve_user_language(removed_state.language, None)):
+                await self.telegram_service.send_message_or_raise(
+                    user.telegramId,
+                    t('An admin removed you from the bot - all your data was deleted.'),
+                    reply_markup=ReplyKeyboardRemove())
+            return True
+        except TelegramError as e:
+            logging.info(f'Could not send goodbye to removed user {user.telegramId}: {e}')
+            return False
 
     async def _confirm_change(self, query, user, user_to_state, user_notice: str, confirmation: str):
         notified = await self._notify_user(user, user_to_state, user_notice)

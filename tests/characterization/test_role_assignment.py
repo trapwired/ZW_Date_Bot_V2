@@ -6,10 +6,15 @@ The entry point is the admin menu's Roles button (ROLES#H). NodeHandler gates ca
 nodes by the pressing user's admin flag, so the caller is seeded as an admin for the
 positive cases.
 """
+import pytest
+
+from Enums.AttendanceState import AttendanceState
 from Enums.Role import Role
 from Enums.UserState import UserState
 from features.roles import RoleAssignment
-from tests.helpers import drive, drive_callback, seed_user, assert_no_error_reported, forbid_chat
+from Utils.CustomExceptions import ObjectNotFoundException
+from tests.helpers import (drive, drive_callback, seed_user, set_attendance,
+                           assert_no_error_reported, forbid_chat)
 
 ADMIN_ID = 1200
 TARGET_ID = 1201
@@ -157,6 +162,73 @@ async def test_assigning_a_role_to_an_unreachable_user_keeps_the_assigned_role(n
     assert data_access.get_user_state(TARGET_ID).role == Role.PLAYER
     assert 'Could not notify' in update.callback_query.edits[-1].text
     assert not [m for m in bot.sent if 'Setting User to Inactive' in m.text]
+    assert_no_error_reported(bot)
+
+
+async def test_remove_shows_a_confirmation_with_the_group_chat_warning(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    update = await drive_callback(node_handler, ADMIN_ID, RoleAssignment.encode_remove(target.user_id))
+
+    edit = update.callback_query.edits[-1]
+    assert 'permanently deletes' in edit.text and 'group chat' in edit.text
+    data = [b.callback_data for row in edit.reply_markup.inline_keyboard for b in row]
+    assert RoleAssignment.encode_remove_confirmed(target.user_id) in data
+    assert data_access.get_user_state(TARGET_ID).role == Role.PLAYER  # nothing deleted yet
+    assert_no_error_reported(bot)
+
+
+async def test_remove_confirmed_deletes_the_user_and_notifies_them(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+    set_attendance(data_access, target.user_id, 'ev-1', AttendanceState.YES)
+
+    update = await drive_callback(node_handler, ADMIN_ID,
+                                  RoleAssignment.encode_remove_confirmed(target.user_id))
+
+    with pytest.raises(ObjectNotFoundException):
+        data_access.get_user_state(TARGET_ID)
+    goodbye = [m for m in bot.sent if m.chat_id == TARGET_ID]
+    assert goodbye and 'removed you from the bot' in goodbye[-1].text
+    confirmation = update.callback_query.edits[-1].text
+    assert 'group chat' in confirmation and '/start' in confirmation
+    assert_no_error_reported(bot)
+
+
+async def test_remove_confirmed_succeeds_even_when_the_user_is_unreachable(node_handler, data_access, bot):
+    seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+    forbid_chat(bot, TARGET_ID)
+
+    update = await drive_callback(node_handler, ADMIN_ID,
+                                  RoleAssignment.encode_remove_confirmed(target.user_id))
+
+    with pytest.raises(ObjectNotFoundException):
+        data_access.get_user_state(TARGET_ID)
+    assert 'Could not notify' in update.callback_query.edits[-1].text
+    assert_no_error_reported(bot)
+
+
+async def test_the_last_admin_cannot_be_removed_from_the_bot(node_handler, data_access, bot):
+    admin = seed_user(data_access, ADMIN_ID, Role.PLAYER, UserState.DEFAULT, is_admin=True)
+
+    update = await drive_callback(node_handler, ADMIN_ID,
+                                  RoleAssignment.encode_remove_confirmed(admin.user_id))
+
+    assert data_access.get_user_state(ADMIN_ID).is_admin  # still there, still admin
+    assert 'last admin' in update.callback_query.edits[-1].text
+    assert_no_error_reported(bot)
+
+
+async def test_non_admin_cannot_remove_a_user(node_handler, data_access, bot):
+    seed_user(data_access, NON_ADMIN_ID, Role.PLAYER, UserState.DEFAULT)
+    target = seed_user(data_access, TARGET_ID, Role.PLAYER, UserState.DEFAULT)
+
+    await drive_callback(node_handler, NON_ADMIN_ID,
+                         RoleAssignment.encode_remove_confirmed(target.user_id))
+
+    assert data_access.get_user_state(TARGET_ID).role == Role.PLAYER
     assert_no_error_reported(bot)
 
 

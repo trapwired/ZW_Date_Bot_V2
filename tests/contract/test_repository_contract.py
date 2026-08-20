@@ -185,6 +185,36 @@ def test_player_metric_created_once_and_self_heals_duplicates(repository):
     assert len(repository.get_all_player_metrics()) == 1  # collapsed back to one
 
 
+def test_delete_user_data_purges_every_trace_of_one_user_only(repository):
+    user = _seed_user(repository, telegram_id=801)
+    _seed_state(repository, user)
+    other = _seed_user(repository, telegram_id=802)
+    _seed_state(repository, other)
+
+    repository.add(Attendance(user.doc_id, 'ev-1', AttendanceState.YES), Table.GAME_ATTENDANCE_TABLE)
+    repository.add(Attendance(user.doc_id, 'ev-2', AttendanceState.NO), Table.TRAINING_ATTENDANCE_TABLE)
+    repository.add(Attendance(other.doc_id, 'ev-1', AttendanceState.YES), Table.GAME_ATTENDANCE_TABLE)
+    repository.get_player_metric(user)  # self-creates the metric row
+    draft = TempData(user.doc_id, Event.GAME, None, None, None, 5, 71)
+    draft.add_document_id(repository.add(draft, Table.TEMP_DATA_TABLE))
+
+    repository.delete_user_data(user.doc_id)
+
+    with pytest.raises(ObjectNotFoundException):
+        repository.get_user(user.doc_id)
+    with pytest.raises(ObjectNotFoundException):
+        repository.get_user_state(user)
+    assert repository.get_all_user_event_attendance(user, Event.GAME) == []
+    assert repository.get_all_user_event_attendance(user, Event.TRAINING) == []
+    assert len(repository.get_all_player_metrics()) == 0
+    with pytest.raises(NoTempDataFoundException):
+        repository.get_temp_data(user.doc_id)
+
+    # The other user's rows are untouched.
+    assert repository.get_user_state(other) is not None
+    assert len(repository.get_all_user_event_attendance(other, Event.GAME)) == 1
+
+
 # --- temp data, settings, teams --------------------------------------------
 
 def test_temp_data_lookup_and_delete(repository):

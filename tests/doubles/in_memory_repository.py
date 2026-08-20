@@ -453,6 +453,22 @@ class InMemoryRepository(Repository):
     def delete_all_player_metrics(self) -> int:
         return self._delete_documents(Table.PLAYER_METRIC, self._collection(Table.PLAYER_METRIC).get())
 
+    def delete_user_data(self, user_doc_id: str):
+        for event_type in Event:
+            table = self._get_event_attendance_table(event_type)
+            self._delete_documents(
+                table, self._collection(table).where(_FieldFilter("userId", "==", user_doc_id)).get())
+        self._delete_documents(
+            Table.PLAYER_METRIC,
+            self._collection(Table.PLAYER_METRIC).where(_FieldFilter("userId", "==", user_doc_id)).get())
+        self._delete_documents(
+            Table.TEMP_DATA_TABLE,
+            self._collection(Table.TEMP_DATA_TABLE).where(_FieldFilter("userDocId", "==", user_doc_id)).get())
+        self._delete_documents(
+            Table.USERS_TO_STATE_TABLE,
+            self._collection(Table.USERS_TO_STATE_TABLE).where(_FieldFilter("userId", "==", user_doc_id)).get())
+        self._collection(Table.USERS_TABLE).document(user_doc_id).delete()
+
     def _delete_documents(self, table: Table, docs) -> int:
         deleted_count = 0
         for doc in docs:

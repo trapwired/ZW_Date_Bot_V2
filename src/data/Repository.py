@@ -178,5 +178,12 @@ class Repository(ABC):
         ...
 
     @abstractmethod
+    def delete_user_data(self, user_doc_id: str):
+        """Permanently delete one user's rows across every table: team-scoped
+        leftovers (attendance, player metric, temp data) and the global identity
+        pair (users_to_state, users)."""
+        ...
+
+    @abstractmethod
     def reset_all_player_event_attendance(self, doc_id: str, table: Table):
         ...
