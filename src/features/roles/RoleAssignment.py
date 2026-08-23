@@ -1,3 +1,5 @@
+import base64
+import uuid
 from dataclasses import dataclass
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -46,9 +48,44 @@ class UserListEntry:
         return f'{label} {ADMIN_MARKER}' if self.is_admin else label
 
 
+# Telegram rejects callback_data over 64 bytes (Button_data_invalid) - and rejects
+# the WHOLE markup, so one oversized button freezes the menu. Post-migration Postgres
+# doc ids are 36-char UUIDs (legacy Firestore ids: 20 chars), which blew the budget
+# on user buttons; UUID args therefore travel base64-packed (36 -> 22 chars + marker).
+CALLBACK_DATA_BYTE_LIMIT = 64
+_UUID_MARKER = 'u:'
+
+
+def _pack_arg(value: str) -> str:
+    try:
+        parsed = uuid.UUID(value)
+    except ValueError:
+        return value
+    if str(parsed) != value:
+        # Non-canonical spellings (uppercase, dashless) would not round-trip back to
+        # the exact text primary key - leave them unpacked.
+        return value
+    packed = base64.urlsafe_b64encode(parsed.bytes).rstrip(b'=').decode()
+    return f'{_UUID_MARKER}{packed}'
+
+
+def _unpack_arg(value: str) -> str:
+    if not value.startswith(_UUID_MARKER):
+        return value
+    try:
+        raw = base64.urlsafe_b64decode(value[len(_UUID_MARKER):] + '==')
+        return str(uuid.UUID(bytes=raw))
+    except ValueError:
+        return value
+
+
 def _encode(action: str, *args) -> str:
-    # THE encoder: every button goes through here so none can miss the team stamp.
-    return TeamStamp.stamp(DELIMITER.join([PREFIX, action, *[str(a) for a in args]]))
+    # THE encoder: every button goes through here so none can miss the team stamp
+    # and none can silently blow the Telegram byte budget.
+    data = TeamStamp.stamp(DELIMITER.join([PREFIX, action, *[_pack_arg(str(a)) for a in args]]))
+    if len(data.encode()) > CALLBACK_DATA_BYTE_LIMIT:
+        raise ValueError(f'callback_data exceeds {CALLBACK_DATA_BYTE_LIMIT} bytes: {data!r}')
+    return data
 
 
 def encode_list_users(role: Role) -> str:
@@ -128,7 +165,7 @@ def parse(data: str) -> tuple[str, list[str]] | None:
     parts = TeamStamp.strip(data).split(DELIMITER)
     if len(parts) < 2:
         return None
-    return parts[1], parts[2:]
+    return parts[1], [_unpack_arg(part) for part in parts[2:]]
 
 
 def build_overview_markup(counts: dict[Role, int], admin_count: int,

@@ -40,6 +40,28 @@ async def test_report_exception_notifies_without_stacktrace_for_expected_excepti
     assert not any(r.levelno == logging.ERROR for r in caplog.records)
 
 
+async def test_long_alert_splits_into_valid_html_chunks(services, bot):
+    """A huge diagnostic (str(update) is one multi-KB line) used to be wrapped in ONE
+    <pre> block and then split mid-block - Telegram rejected every chunk ("can't find
+    end tag pre") and the maintainer never learned of the original error."""
+    from Utils import PrintUtils
+
+    telegram_service = services["telegram_service"]
+    # One giant line with HTML-significant chars sprinkled in, like a real Update dump.
+    diagnostic_error = ValueError("x & <y> " * 2000)
+
+    await telegram_service.send_maintainer_message("big failure", diagnostic_error)
+
+    assert len(bot.sent) > 1
+    for message in bot.sent:
+        assert len(message.text) <= PrintUtils.TELEGRAM_MESSAGE_LIMIT
+        assert message.text.count("<pre>") == 1
+        assert message.text.count("</pre>") == 1
+        # No entity may be cut at a chunk boundary (a dangling '&am' is unparseable).
+        content = message.text[message.text.index("<pre>") + 5:message.text.index("</pre>")]
+        assert not content.endswith(("&", "&a", "&am", "&amp", "&l", "&lt", "&g", "&gt"))
+
+
 async def test_report_exception_survives_a_failing_alert(services, monkeypatch, caplog):
     telegram_service = services["telegram_service"]
 
