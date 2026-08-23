@@ -236,10 +236,12 @@ def pretty_print_event_statistics(game_statistics: dict, event_type: Event):
     return result
 
 
-def split_message(message: str) -> list[str]:
+TELEGRAM_MESSAGE_LIMIT = 4096
+
+
+def split_message(message: str, max_length: int = TELEGRAM_MESSAGE_LIMIT) -> list[str]:
     # Telegram caps messages at 4096 chars. Split on line boundaries so HTML tags
     # (which never span lines in our messages) are never cut in half.
-    max_length = 4096
     if len(message) <= max_length:
         return [message]
 
@@ -250,8 +252,9 @@ def split_message(message: str) -> list[str]:
             if current:
                 chunks.append(current)
                 current = ''
-            chunks.append(line[:max_length])
-            line = line[max_length:]
+            cut = _entity_safe_cut(line, max_length)
+            chunks.append(line[:cut])
+            line = line[cut:]
         if len(current) + len(line) > max_length:
             chunks.append(current)
             current = ''
@@ -259,3 +262,24 @@ def split_message(message: str) -> list[str]:
     if current:
         chunks.append(current)
     return chunks
+
+
+def _entity_safe_cut(line: str, limit: int) -> int:
+    # A hard cut inside an HTML entity (&amp; / &lt; / &gt;, max 5 chars) leaves a
+    # dangling '&am' that makes the whole message unparseable for Telegram.
+    ampersand = line.rfind('&', max(0, limit - 4), limit)
+    if ampersand > 0 and ';' not in line[ampersand:limit]:
+        return ampersand
+    return limit
+
+
+def split_pre_report(prefix: str, diagnostic: str) -> list[str]:
+    """Messages for `prefix` followed by `diagnostic` in a monospace block: the
+    diagnostic is escaped, chunked, and every chunk wrapped in its OWN closed <pre>
+    so each message parses on its own - a block cut mid-way is invalid HTML
+    ("can't find end tag") and Telegram rejects the send. `prefix` must already be
+    safe HTML and short enough to share a message with a chunk."""
+    budget = TELEGRAM_MESSAGE_LIMIT - len(prefix) - len('<pre></pre>')
+    chunks = split_message(Format.escape(diagnostic), budget)
+    return [(prefix if index == 0 else '') + f'<pre>{chunk}</pre>'
+            for index, chunk in enumerate(chunks)]

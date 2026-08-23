@@ -4,6 +4,8 @@ The wire format is a PERSISTENCE contract: callback_data lives inside Telegram
 messages already delivered to users, so a merge must reproduce these exact strings
 or old buttons stop working. Hence exact-string assertions, not just round-trips.
 """
+import pytest
+
 from Enums.Event import Event
 from Enums.EventField import EventField
 from Enums.AttendanceState import AttendanceState
@@ -109,6 +111,40 @@ def test_role_callback_detection_and_parse():
     assert RoleAssignment.parse("ROLES#A#u1#42") == ("A", ["u1", "42"])   # pre-stamp buttons
     assert RoleAssignment.parse("ROLES#A#u1#42#t:team1") == ("A", ["u1", "42"])
     assert RoleAssignment.parse("EDIT#GAME#YES#x") is None
+
+
+def test_role_callback_packs_uuid_doc_ids_under_telegram_byte_limit():
+    # Postgres-minted doc ids are 36-char UUIDs; unpacked they push user buttons over
+    # Telegram's 64-byte callback_data cap (Button_data_invalid froze the PLAYER list).
+    uuid_id = '85d618c3-abc7-4032-a73c-a6b1d1ae9918'
+    with team_context('x' * 20):  # real team ids are 20 chars
+        encoded_callbacks = [
+            RoleAssignment.encode_select_user(uuid_id, '0'),
+            RoleAssignment.encode_select_user(uuid_id, RoleAssignment.FROM_ADMIN_LIST),
+            RoleAssignment.encode_assign(uuid_id, Role.INACTIVE),
+            RoleAssignment.encode_toggle_admin(uuid_id),
+            RoleAssignment.encode_remove(uuid_id),
+            RoleAssignment.encode_remove_confirmed(uuid_id),
+            RoleAssignment.encode_rename(uuid_id),
+        ]
+    for encoded in encoded_callbacks:
+        assert len(encoded.encode()) <= RoleAssignment.CALLBACK_DATA_BYTE_LIMIT
+
+
+def test_role_callback_uuid_roundtrip():
+    uuid_id = '85d618c3-abc7-4032-a73c-a6b1d1ae9918'
+    with team_context('team1'):
+        encoded = RoleAssignment.encode_select_user(uuid_id, '0')
+    assert uuid_id not in encoded  # travels packed
+    assert RoleAssignment.parse(encoded) == (RoleAssignment.SELECT_USER, [uuid_id, '0'])
+
+
+def test_role_callback_encode_fails_loud_over_byte_limit():
+    # The budget is an invariant of the encoder, not a comment: blowing it must raise
+    # at render time instead of Telegram rejecting the whole markup at send time.
+    with team_context('t' * 60):
+        with pytest.raises(ValueError):
+            RoleAssignment.encode_toggle_admin('85d618c3-abc7-4032-a73c-a6b1d1ae9918')
 
 
 def test_team_stamp_leaves_undelimited_data_alone():

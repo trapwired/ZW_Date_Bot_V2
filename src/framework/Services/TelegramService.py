@@ -169,28 +169,24 @@ class TelegramService(object):
     @dispatch(str)
     async def send_maintainer_message(self, message: str):
         # Diagnostic content is arbitrary (may contain HTML-significant chars or our own
-        # markup), so it is escaped wholesale into a monospace block.
-        text = Format.bold('ℹ️ INFO') + '\n' + Format.pre(message)
-        messages_to_send = PrintUtils.split_message(text)
+        # markup), so it is escaped wholesale into a monospace block. Only the first
+        # chunk is sent - an INFO notice must not flood the maintainer chat.
+        messages_to_send = PrintUtils.split_pre_report(Format.bold('ℹ️ INFO') + '\n', message)
         return await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=messages_to_send[0],
                                            parse_mode=telegram.constants.ParseMode.HTML)
 
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):
-        error_message = repr(error) + '\n' + traceback.format_exc()
-        text = Format.bold('⚠️ ERROR') + '\n' + Format.escape(description) + '\n' + Format.pre(error_message)
-        messages_to_send = PrintUtils.split_message(text)
-        for message_to_send in messages_to_send:
-            await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
-                                        parse_mode=telegram.constants.ParseMode.HTML)
+        await self._send_error_report(description, repr(error) + '\n' + traceback.format_exc())
 
     @dispatch(str, Update, Exception)
     async def send_maintainer_message(self, description: str, update: Update, error: Exception):
-        error_message = repr(error) + '\n' + traceback.format_exc()
-        text = Format.bold('⚠️ ERROR') + '\n' + Format.escape(description) + '\n' \
-            + Format.pre(str(update) + '\n\n' + error_message)
-        messages_to_send = PrintUtils.split_message(text)
-        for message_to_send in messages_to_send:
+        await self._send_error_report(
+            description, str(update) + '\n\n' + repr(error) + '\n' + traceback.format_exc())
+
+    async def _send_error_report(self, description: str, diagnostic: str):
+        header = Format.bold('⚠️ ERROR') + '\n' + Format.escape(description) + '\n'
+        for message_to_send in PrintUtils.split_pre_report(header, diagnostic):
             await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=message_to_send,
                                         parse_mode=telegram.constants.ParseMode.HTML)
 
