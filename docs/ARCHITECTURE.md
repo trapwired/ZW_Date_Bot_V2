@@ -32,7 +32,10 @@ across horizontal layers.
    `ROLES#` role assignment; old-format attendance buttons are adapted, any other
    pre-redesign button gets an "expired menu" notice). Callback nodes are additionally
    audience-gated (`CallbackNode.audience`; admin is the orthogonal `is_admin` flag,
-   see ADR 0005).
+   see ADR 0005). Telegram caps callback_data at 64 bytes and rejects the whole markup
+   on one oversized button; the `ROLES#` codec enforces that budget at encode time and
+   base64-packs UUID doc ids (Postgres-minted ids are 36 chars vs. 20 for legacy
+   Firestore ones — see `RoleAssignment._pack_arg`).
 2. The node parses the input and calls its slice **Service** for orchestration.
 3. The service works through **`domain`** models and rules, and reads/writes via the
    **`data`** layer to **Postgres**.

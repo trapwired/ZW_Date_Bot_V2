@@ -39,6 +39,11 @@ deleted (console-recoverable until ~21.08., then gone).
   and retiring the password flow + its throttle (`domain/SpectatorPasswordPolicy`)
   once links prove themselves.
 
+- [ ] **Callback byte-budget guard for the other channels (S).** Telegram's 64-byte
+  callback_data cap is enforced (with UUID packing) only in the `ROLES#` codec
+  (PR #70). `EV#` and `AP#` carry UUID event ids too but sit at ~45 bytes today —
+  add the same encode-time guard there so a future arg can't silently freeze a menu.
+
 - [ ] **Live-test the full multi-team flow (THE gate before advertising).** With a
   second account and the scratch test group, walk everything end-to-end with real
   chat ids: add bot to group (setup DM to the adder, group fallback link) → members
@@ -48,6 +53,9 @@ deleted (console-recoverable until ~21.08., then gone).
   summaries routing → forwarded admin button pressed cross-team (refused) → remove
   bot from a fresh team (full rollback). Goal: team isolation + the new onboarding
   hold outside the fake-Firestore tests.
+  Progress 23.08.: roles menu live-tested on the real bot — found and fixed the
+  frozen PLAYER bucket (UUID ids over the callback byte limit, PR #70); `/privacy`
+  rewritten for the current setup in all four locales (PR #71).
 
 - [ ] **Onboarding screenshots / video.** The guided flows exist (teamless choice
   screen, add-bot-to-group setup trigger, admin setup DM); once the UI is stable,
