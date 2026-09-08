@@ -50,3 +50,42 @@ volume with `down -v` first.)
 
 Tear down: `docker compose -f deploy/compose.local.yml down` (`-v` to drop the
 data volume too).
+
+## Testing the SHV schedule sync locally
+
+The sync is off until a team has an SHV team id (the number in a matchcenter
+team URL, e.g. `handball.ch/de/matchcenter/teams/41317`). Enable it for the
+local team:
+
+```bash
+docker exec -i zwdatebot-local-postgres psql -U zwdatebot -d zwdatebot -c \
+  "INSERT INTO settings (id, team_id, shv_team_id)
+   SELECT 'config', id, 41317 FROM teams LIMIT 1
+   ON CONFLICT (team_id, id) DO UPDATE SET shv_team_id = EXCLUDED.shv_team_id;"
+```
+
+Then trigger one sync run against the live API without waiting for the daily job:
+
+```bash
+venv/bin/python -c "
+import sys, asyncio; sys.path.insert(0, 'src')
+from Utils.ApiConfig import ApiConfig
+from data.DataAccess import DataAccess
+from data.TenantContext import team_context
+from features.shvsync import ShvApiClient, GameSyncPlanner
+
+data_access = DataAccess(ApiConfig())
+team = data_access.get_all_teams()[0]
+with team_context(team.doc_id):
+    shv_games = asyncio.run(ShvApiClient.fetch_games(data_access.get_shv_team_id()))
+    plan = GameSyncPlanner.plan([g for g in shv_games if not g.is_played],
+                                data_access.get_ordered_games())
+    print('add:', *plan.to_add, sep='\n  ')
+    print('update:', *plan.to_update, sep='\n  ')
+    print('vanished:', *plan.vanished, sep='\n  ')
+"
+```
+
+That prints the plan without writing; to apply + get the Telegram notification,
+run the bot (`python src/main.py`) and temporarily move the `shv_sync_service`
+job in `main.py` to `job_queue.run_once(shv_sync_service.sync_all_teams, 5)`.

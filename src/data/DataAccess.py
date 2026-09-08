@@ -323,7 +323,20 @@ class DataAccess(object):
         return settings.website if settings else None
 
     def set_website(self, website: str):
-        self.repository.set_settings(Settings(website))
+        # set_settings overwrites the whole settings doc, so a partial update must
+        # go through the current doc or it silently wipes the other settings.
+        settings = self.repository.get_settings() or Settings(None)
+        settings.website = website
+        self.repository.set_settings(settings)
+
+    def get_shv_team_id(self) -> int | None:
+        settings = self.repository.get_settings()
+        return settings.shv_team_id if settings else None
+
+    def set_shv_team_id(self, shv_team_id: int | None):
+        settings = self.repository.get_settings() or Settings(None)
+        settings.shv_team_id = shv_team_id
+        self.repository.set_settings(settings)
 
     def add_names(self, doc_id_list: list) -> list[TelegramUser]:
         result = []

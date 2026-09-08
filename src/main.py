@@ -25,6 +25,7 @@ from features.attendance.AttendanceService import AttendanceService
 from features.roles.RoleService import RoleService
 from framework.Services.TeamService import TeamService
 from features.website.WebsiteService import WebsiteService
+from features.shvsync.ShvSyncService import ShvSyncService
 
 
 def initialize_logging():
@@ -47,9 +48,10 @@ def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _attendance_service = AttendanceService(_data_access)
     _role_service = RoleService(_data_access)
     _website_service = WebsiteService(_data_access)
+    _shv_sync_service = ShvSyncService(_data_access, _telegram_service)
     return _telegram_service, _user_state_service, _ics_service, _data_access, _scheduling_service, \
         _trigger_service, _event_service, _attendance_service, _role_service, _website_service, \
-        _statistics_service, _team_service
+        _statistics_service, _team_service, _shv_sync_service
 
 
 async def send_hi(context: ContextTypes.DEFAULT_TYPE):
@@ -117,6 +119,13 @@ def run_job_queue():
         datetime.time(7, 30, 0)
     )
 
+    # SHV schedule sync, each day at 6:30 local time - before the 7:59 game
+    # summaries, so a same-day change is already synced when summaries go out.
+    job_queue.run_daily(
+        shv_sync_service.sync_all_teams,
+        datetime.time(4, 30, 0)
+    )
+
 
 if __name__ == "__main__":
     initialize_logging()
@@ -126,8 +135,8 @@ if __name__ == "__main__":
     application = ApplicationBuilder().token(api_config.get_key('Telegram', 'api_token')).build()
 
     telegram_service, user_state_service, ics_service, data_access, scheduling_service, trigger_service, \
-        event_service, attendance_service, role_service, website_service, statistics_service, team_service = \
-        initialize_services(application.bot, api_config)
+        event_service, attendance_service, role_service, website_service, statistics_service, team_service, \
+        shv_sync_service = initialize_services(application.bot, api_config)
 
     node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service,
                                ics_service, data_access, trigger_service, event_service, attendance_service,

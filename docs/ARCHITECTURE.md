@@ -15,7 +15,7 @@ src/
                CommandDescriptions
   features/    one folder per capability, each owning its Node(s) + Service:
                events · adminpanel · eventmgmt · attendance · stats · roles · website
-               · onboarding · menu
+               · onboarding · menu · shvsync
   domain/      entities + business rules (policies, parsing) — no Telegram, no SQL
   data/        DataAccess + PostgresRepository (the storage boundary)
   Enums/  Utils/   shared cross-cutting code
@@ -106,6 +106,16 @@ chat — group membership is what lets `/start` re-join them.
 
 `SchedulingService` runs on APScheduler to send attendance reminders and trainer
 summaries. It reads events via `data` and sends via `TelegramService`.
+
+`ShvSyncService` (features/shvsync) syncs the games table daily against the SHV
+matchcenter GraphQL API (handball.ch, unofficial/no auth). Per team, gated on the
+`shv_team_id` setting: new games are imported, moved games updated in place
+(matching by `shv_game_id`, else by opponent — so manually entered games get
+adopted, and attendance answers survive reschedules), and the game trainers are
+notified of every change. Nothing is deleted automatically; games that vanish
+from the SHV feed are only reported. Every scheduled job iterates teams through
+`framework/TeamIteration.for_each_team` (tenant + language context, per-team
+error isolation).
 
 ## Decisions (ADRs)
 

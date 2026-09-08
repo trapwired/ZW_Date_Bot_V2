@@ -2,8 +2,8 @@ import datetime
 import random
 
 from data.DataAccess import DataAccess
-from data.TenantContext import team_context
 
+from framework.TeamIteration import for_each_team
 from framework.Services.TelegramService import TelegramService
 from features.stats.StatisticsService import StatisticsService
 
@@ -21,8 +21,6 @@ from Utils.ApiConfig import ApiConfig
 
 from domain.entities.TelegramUser import TelegramUser
 
-from localization.LanguageContext import language_context
-from localization.Languages import DEFAULT_LANGUAGE
 from localization.Translator import t
 
 from framework.RecipientLanguage import recipient_language_context
@@ -61,25 +59,7 @@ class SchedulingService:
         self.is_test_system = api_config.get_bool('Flags', 'TEST_SYSTEM')
 
     async def _for_each_team(self, job_body, *args):
-        """Every scheduled job runs once per team, inside that team's tenant context, so
-        all reads inside the body are team-scoped (message routing becomes per-team with
-        the routing rework). The loop itself guarantees one team's failure cannot skip
-        the remaining teams - it does not rely on each body catching its own errors."""
-        try:
-            teams = self.data_access.get_all_teams()
-        except Exception as e:
-            await self.telegram_service.report_exception('Exception listing teams for scheduled job', e)
-            return
-        for team in teams:
-            # The team's language is the ambient default for this iteration (group
-            # summaries, trainer messages); per-recipient DM sends override it.
-            # getattr: fail open for team doubles/docs without the field.
-            with team_context(team.doc_id), language_context(getattr(team, 'language', DEFAULT_LANGUAGE)):
-                try:
-                    await job_body(*args)
-                except Exception as e:
-                    await self.telegram_service.report_exception(
-                        f'Exception in scheduled job for team {team.doc_id}', e)
+        await for_each_team(self.data_access, self.telegram_service, job_body, *args)
 
     async def send_same_day_game_reminder(self, context: ContextTypes.DEFAULT_TYPE):
         await self._for_each_team(self._send_same_day_game_reminder)

@@ -36,13 +36,16 @@ CREATE TABLE IF NOT EXISTS teams (
 );
 
 CREATE TABLE IF NOT EXISTS games (
-    id        text PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    team_id   text NOT NULL,
-    timestamp timestamptz,
-    location  text,
-    opponent  text
+    id          text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    team_id     text NOT NULL,
+    timestamp   timestamptz,
+    location    text,
+    opponent    text,
+    -- SHV matchcenter objectId for API-synced games; NULL for manually added ones.
+    shv_game_id bigint
 );
 CREATE INDEX IF NOT EXISTS games_team_ts ON games (team_id, timestamp);
+ALTER TABLE games ADD COLUMN IF NOT EXISTS shv_game_id bigint;
 
 CREATE TABLE IF NOT EXISTS trainings (
     id        text PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -103,8 +106,11 @@ CREATE INDEX IF NOT EXISTS temp_data_user ON temp_data (team_id, user_doc_id);
 -- Firestore held one settings doc per team under the fixed id 'config'; the id
 -- column keeps that shape so get/set semantics carry over unchanged.
 CREATE TABLE IF NOT EXISTS settings (
-    id      text NOT NULL,
-    team_id text NOT NULL,
-    website text,
+    id          text NOT NULL,
+    team_id     text NOT NULL,
+    website     text,
+    -- SHV matchcenter team id for the schedule sync; NULL disables the sync.
+    shv_team_id bigint,
     PRIMARY KEY (team_id, id)
 );
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS shv_team_id bigint;
