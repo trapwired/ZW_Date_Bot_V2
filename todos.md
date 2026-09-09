@@ -18,15 +18,12 @@ deleted (console-recoverable until ~21.08., then gone).
 
 ## Features (M)
 
-- [ ] **SHV schedule sync follow-ups** (slice exists: `features/shvsync`, daily job,
-  gated on the `shv_team_id` setting — currently set via SQL only).
-    - Admin flow to set/clear `shv_team_id` (same shape as the website setting in
-      `features/website/`), so enabling the sync needs no DB access.
-    - Vanished games are re-reported on every sync until an admin deletes the game —
-      fine as a nag, but consider a "seen" marker if it gets noisy.
-    - Opponent adoption is exact-match after normalization (casefold + whitespace);
-      manually entered spellings that differ more ("Arbon" vs "HC Arbon 3") create a
-      duplicate instead of adopting. Fuzzy matching only if it actually bites.
+- [ ] **SHV schedule sync follow-ups** (slice exists: `features/shvsync`, daily job;
+  team id derived from the website setting, so admins enable it via ⚙️ Setup → 🌐).
+    - Maintainer visibility into the ignore list: declined decisions (kept manual
+      games, split adopt pairs) live in `shv_sync_decisions` with reasons — a way to
+      clear one, and to re-enable a disabled team (`shv_sync_disabled`), without SQL
+      would round it off.
 
 - [ ] **Trigger: warn trainers when all keepers said no to a game.**
     - The stub comment already sits in `TriggerService.initialize_triggers`; the trigger

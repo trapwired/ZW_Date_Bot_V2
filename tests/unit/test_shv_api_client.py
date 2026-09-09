@@ -1,6 +1,6 @@
 """Unit: mapping the SHV matchcenter payload onto ShvGame (the HTTP call itself is
 not under test - parse_game is the seam)."""
-from features.shvsync.ShvApiClient import parse_game
+from features.shvsync.ShvApiClient import parse_game, parse_team_id
 
 TEAM_ID = 41317
 
@@ -45,3 +45,14 @@ def test_played_game_is_flagged():
     game = parse_game(_payload(gameStatusId=2), TEAM_ID)
 
     assert game.is_played
+
+
+def test_team_id_is_parsed_from_matchcenter_website_variants():
+    assert parse_team_id('https://www.handball.ch/de/matchcenter/teams/36769') == 36769
+    assert parse_team_id('https://www.handball.ch/de/matchcenter/teams/36769#/games') == 36769
+    assert parse_team_id('https://www.handball.ch/fr/matchcenter/teams/41317/') == 41317
+
+
+def test_non_matchcenter_websites_yield_no_team_id():
+    assert parse_team_id('https://zueri-west.ch') is None
+    assert parse_team_id('https://www.handball.ch/de/news') is None

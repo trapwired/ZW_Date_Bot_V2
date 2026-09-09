@@ -179,13 +179,14 @@ class TelegramService(object):
                 await self._send_message(chat_id=chat_id, message=message_to_send, reply_markup=None)
 
     @dispatch(str)
-    async def send_maintainer_message(self, message: str):
+    async def send_maintainer_message(self, message: str, reply_markup=None):
         # Diagnostic content is arbitrary (may contain HTML-significant chars or our own
         # markup), so it is escaped wholesale into a monospace block. Only the first
         # chunk is sent - an INFO notice must not flood the maintainer chat.
         messages_to_send = PrintUtils.split_pre_report(Format.bold('ℹ️ INFO') + '\n', message)
         return await self.bot.send_message(chat_id=int(self.maintainer_chat_id), text=messages_to_send[0],
-                                           parse_mode=telegram.constants.ParseMode.HTML)
+                                           parse_mode=telegram.constants.ParseMode.HTML,
+                                           reply_markup=reply_markup)
 
     @dispatch(str, Exception)
     async def send_maintainer_message(self, description: str, error: Exception):

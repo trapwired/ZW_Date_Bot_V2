@@ -101,7 +101,10 @@ TABLE_SPECS = {
         'opponent': 'opponent', 'chatId': 'chat_id', 'queryId': 'query_id', 'step': 'step',
         'eventType': 'event_type', 'promptMessageId': 'prompt_message_id'}, team_scoped=True),
     Table.SETTINGS_TABLE: TableSpec('settings', {
-        'website': 'website', 'shvTeamId': 'shv_team_id'}, team_scoped=True),
+        'website': 'website', 'shvSyncDisabled': 'shv_sync_disabled'}, team_scoped=True),
+    Table.SHV_SYNC_DECISIONS_TABLE: TableSpec('shv_sync_decisions', {
+        'token': 'token', 'kind': 'kind', 'status': 'status', 'shvGameId': 'shv_game_id',
+        'gameDocId': 'game_doc_id', 'reason': 'reason', 'askedAt': 'asked_at'}, team_scoped=True),
 }
 if set(TABLE_SPECS) != set(Table):
     raise AssertionError('every Table must have a TableSpec')
@@ -293,13 +296,19 @@ class PostgresRepository(Repository):
     def set_settings(self, settings: Settings):
         # Upsert: creates the single settings row on first save, overwrites afterwards.
         self._execute(
-            'INSERT INTO settings (id, team_id, website, shv_team_id) VALUES (%s, %s, %s, %s) '
+            'INSERT INTO settings (id, team_id, website, shv_sync_disabled) VALUES (%s, %s, %s, %s) '
             'ON CONFLICT (team_id, id) DO UPDATE SET website = EXCLUDED.website, '
-            'shv_team_id = EXCLUDED.shv_team_id',
-            (SETTINGS_DOC_ID, current_team_id(), settings.website, settings.shv_team_id))
+            'shv_sync_disabled = EXCLUDED.shv_sync_disabled',
+            (SETTINGS_DOC_ID, current_team_id(), settings.website, settings.shv_sync_disabled))
 
     def get_future_events(self, table: Table) -> list:
         return self._select(table, 'timestamp > %s', (datetime.now(),))
+
+    def get_shv_sync_decisions(self) -> list:
+        return self._select(Table.SHV_SYNC_DECISIONS_TABLE)
+
+    def delete_shv_sync_decision(self, doc_id: str):
+        self._delete_by_id(Table.SHV_SYNC_DECISIONS_TABLE, doc_id)
 
     def get_attendance_list(self, doc_id: str, table: Table):
         return self._select(table, 'event_id = %s', (doc_id,))

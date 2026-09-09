@@ -108,12 +108,24 @@ chat — group membership is what lets `/start` re-join them.
 summaries. It reads events via `data` and sends via `TelegramService`.
 
 `ShvSyncService` (features/shvsync) syncs the games table daily against the SHV
-matchcenter GraphQL API (handball.ch, unofficial/no auth). Per team, gated on the
-`shv_team_id` setting: new games are imported, moved games updated in place
-(matching by `shv_game_id`, else by opponent — so manually entered games get
-adopted, and attendance answers survive reschedules), and the game trainers are
-notified of every change. Nothing is deleted automatically; games that vanish
-from the SHV feed are only reported. Every scheduled job iterates teams through
+matchcenter GraphQL API (handball.ch, unofficial/no auth). Per team: the SHV team
+id is derived from the team's website setting (a matchcenter team URL); no
+website skips the team, a non-matchcenter website alerts the maintainer with a
+disable button (`settings.shv_sync_disabled`), and fetch failures alert the
+maintainer with the website and tried path. Unambiguous changes apply
+automatically: matching by
+`shv_game_id` first, else by normalized opponent (manual entries get adopted;
+updates keep the row, so attendance answers survive; moves > 2h reuse the
+`AttendanceResetPolicy` reset + player re-ask, smaller changes only land in an
+admin report). Everything ambiguous becomes an inline yes/no question to the
+admins (import a new game / same-date-different-opponent adoption / delete a
+vanished or never-on-SHV game; an empty schedule gets one bulk-import question).
+Questions and their answers live in `shv_sync_decisions` (short `token` = the
+callback payload, SHV# channel, team-stamped): unanswered or declined questions
+wait `REASK_AFTER` before re-asking, while "keep this manual game" and "these
+are different games" are final; declines capture a free-text reason
+(`UserState.SHV_DECLINE_REASON`) and are reported to the maintainer. Nothing is
+ever deleted without an explicit yes. Every scheduled job iterates teams through
 `framework/TeamIteration.for_each_team` (tenant + language context, per-team
 error isolation).
 

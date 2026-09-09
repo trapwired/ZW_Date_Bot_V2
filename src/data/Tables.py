@@ -19,7 +19,8 @@ def initialize_tables(api_config: ApiConfig):
         Table.PLAYER_METRIC: api_config.get_key('Tables', 'PLAYER_METRIC'),
         Table.TEMP_DATA_TABLE: api_config.get_key('Tables', 'TEMP_DATA'),
         Table.SETTINGS_TABLE: api_config.get_key('Tables', 'SETTINGS_TABLE'),
-        Table.TEAMS_TABLE: api_config.get_key('Tables', 'TEAMS_TABLE')
+        Table.TEAMS_TABLE: api_config.get_key('Tables', 'TEAMS_TABLE'),
+        Table.SHV_SYNC_DECISIONS_TABLE: api_config.get_key('Tables', 'SHV_SYNC_DECISIONS_TABLE')
     }
 
 
@@ -49,6 +50,7 @@ TEAM_SCOPED_TABLES = {
     Table.GAMES_TABLE, Table.TRAININGS_TABLE, Table.TIMEKEEPING_TABLE,
     Table.GAME_ATTENDANCE_TABLE, Table.TRAINING_ATTENDANCE_TABLE, Table.TIMEKEEPING_ATTENDANCE_TABLE,
     Table.PLAYER_METRIC, Table.TEMP_DATA_TABLE, Table.SETTINGS_TABLE,
+    Table.SHV_SYNC_DECISIONS_TABLE,
 }
 if GLOBAL_TABLES | TEAM_SCOPED_TABLES != set(Table) or GLOBAL_TABLES & TEAM_SCOPED_TABLES:
     # A new Table member must be consciously classified as global or team-scoped;

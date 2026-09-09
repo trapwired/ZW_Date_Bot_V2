@@ -103,14 +103,31 @@ CREATE TABLE IF NOT EXISTS temp_data (
 );
 CREATE INDEX IF NOT EXISTS temp_data_user ON temp_data (team_id, user_doc_id);
 
+-- Open and answered questions of the SHV schedule sync (create/adopt/delete
+-- prompts to the admins). token = the short id carried in the inline buttons
+-- (uuids would blow Telegram's 64-byte callback_data budget).
+CREATE TABLE IF NOT EXISTS shv_sync_decisions (
+    id          text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    team_id     text NOT NULL,
+    token       text NOT NULL,
+    kind        integer NOT NULL,
+    status      integer NOT NULL,
+    shv_game_id bigint,
+    game_doc_id text,
+    reason      text,
+    asked_at    timestamptz
+);
+CREATE INDEX IF NOT EXISTS shv_sync_decisions_team ON shv_sync_decisions (team_id);
+
 -- Firestore held one settings doc per team under the fixed id 'config'; the id
 -- column keeps that shape so get/set semantics carry over unchanged.
 CREATE TABLE IF NOT EXISTS settings (
-    id          text NOT NULL,
-    team_id     text NOT NULL,
-    website     text,
-    -- SHV matchcenter team id for the schedule sync; NULL disables the sync.
-    shv_team_id bigint,
+    id                text NOT NULL,
+    team_id           text NOT NULL,
+    website           text,
+    -- Maintainer switch: the SHV schedule sync derives its team id from the website
+    -- and runs unless this is set (for teams whose portal the sync cannot read).
+    shv_sync_disabled boolean NOT NULL DEFAULT false,
     PRIMARY KEY (team_id, id)
 );
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS shv_team_id bigint;
+ALTER TABLE settings ADD COLUMN IF NOT EXISTS shv_sync_disabled boolean NOT NULL DEFAULT false;

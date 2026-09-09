@@ -5,6 +5,7 @@ it may change without notice, so failures must surface via the maintainer alert,
 never pass silently. `objectId` is the stable per-game identifier ('gameId' in the
 same payload is always 0, 'gameNumber' is 'prov.' for unconfirmed games).
 """
+import re
 from dataclasses import dataclass
 
 import httpx
@@ -31,6 +32,17 @@ _GAME_STATUS_PLAYED = 2
 
 class ShvApiError(Exception):
     """The SHV API answered, but not with the games we asked for."""
+
+
+_TEAM_URL_PATTERN = re.compile(r'/matchcenter/teams/(\d+)')
+
+
+def parse_team_id(website: str) -> int | None:
+    """The SHV team id from a matchcenter team URL as stored in the team's website
+    setting (e.g. https://www.handball.ch/de/matchcenter/teams/36769#/games);
+    None when the website is no such URL - the GraphQL API only needs the number."""
+    match = _TEAM_URL_PATTERN.search(website)
+    return int(match.group(1)) if match else None
 
 
 @dataclass(frozen=True)

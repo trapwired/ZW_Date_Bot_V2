@@ -45,6 +45,10 @@ from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
 from features.roles.RenamePlayerNode import RenamePlayerNode
 from features.language import LanguageMenu
 from features.language.LanguageCallbackNode import LanguageCallbackNode
+from features.shvsync import SyncMenu
+from features.shvsync.ShvSyncCallbackNode import ShvSyncCallbackNode
+from features.shvsync.ShvSyncService import ShvSyncService
+from features.shvsync.DeclineReasonNode import DeclineReasonNode
 
 from domain.entities.UsersToState import UsersToState
 
@@ -288,6 +292,10 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         rename_player_node = RenamePlayerNode(UserState.ADMIN_UPDATE_PLAYER_NAME, telegram_service,
                                               user_state_service, data_access)
 
+        self.shv_sync_service = ShvSyncService(data_access, telegram_service)
+        shv_decline_reason_node = DeclineReasonNode(UserState.SHV_DECLINE_REASON, telegram_service,
+                                                    user_state_service, data_access, self.shv_sync_service)
+
         return {
             UserState.INIT: init_node,
             UserState.REJECTED: rejected_node,
@@ -299,6 +307,7 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             UserState.ADMIN_ANNOUNCE: announce_node,
             UserState.ADMIN_UPDATE_TEAM_NAME: update_team_name_node,
             UserState.ADMIN_UPDATE_PLAYER_NAME: rename_player_node,
+            UserState.SHV_DECLINE_REASON: shv_decline_reason_node,
         }
 
     def initialize_callback_nodes(self, telegram_service: TelegramService, data_access: DataAccess,
@@ -317,6 +326,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                                                 user_state_service)
         self.language_callback_node = LanguageCallbackNode(telegram_service, data_access, trigger_service,
                                                            user_state_service, self)
+        self.shv_sync_callback_node = ShvSyncCallbackNode(telegram_service, data_access, trigger_service,
+                                                          user_state_service, self.shv_sync_service)
 
     def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)
@@ -340,6 +351,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             return self.onboarding_callback_node
         if LanguageMenu.is_language_callback(callback_data):
             return self.language_callback_node
+        if SyncMenu.is_shv_sync_callback(callback_data):
+            return self.shv_sync_callback_node
         return None
 
     def get_node(self, user_state: UserState):
