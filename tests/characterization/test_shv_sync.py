@@ -382,18 +382,37 @@ async def test_manual_game_kept_with_reason_is_never_asked_about_again(sync, api
 # BULK IMPORT #
 ###############
 
-async def test_empty_schedule_gets_one_bulk_question_and_yes_imports_everything(sync):
+async def test_empty_schedule_gets_one_bulk_question_capped_at_the_import_window(sync):
+    # Five games on the feed, window of three: no wall of texts - the two later
+    # games slide in on later syncs, one create question at a time.
     sync.feed.extend([_shv_game(), _shv_game(shv_game_id=502, day=15, opponent='HC Romanshorn'),
-                      _shv_game(shv_game_id=503, day=22, opponent='HC Rheintal 2')])
+                      _shv_game(shv_game_id=503, day=22, opponent='HC Rheintal 2'),
+                      _shv_game(shv_game_id=504, day=25, opponent='TV Teufen 2'),
+                      _shv_game(shv_game_id=505, day=28, opponent='SG Bruggen 2')])
 
     await sync.run()
     tokens = _question_tokens(sync.bot, ADMIN_ID)
-    assert len(tokens) == 1  # ONE question, not three
+    assert len(tokens) == 1  # ONE question, not five
 
     update = await drive_callback(sync.node_handler, ADMIN_ID, tokens[0])
 
     games = sync.data_access.get_ordered_games()
-    assert sorted(game.shv_game_id for game in games) == [501, 502, 503]
+    assert sorted(game.shv_game_id for game in games) == [501, 502, 503]  # the next three only
     assert 'Imported 3 games' in update.callback_query.edits[-1].text
     assert len(_messages_to(sync.bot, PLAYER_ID)) == 4  # one intro + three attendance cards
+    assert_no_error_reported(sync.bot)
+
+
+async def test_games_beyond_the_import_window_are_not_asked_about_yet(sync):
+    # The next three feed games are already in the bot; game four waits its turn.
+    for shv_game_id, day in ((501, 1), (502, 8), (503, 15)):
+        sync.data_access.add(Game(_ts(day), 'Uzwil bzu', f'Opponent {shv_game_id}', shv_game_id))
+        sync.feed.append(_shv_game(shv_game_id=shv_game_id, day=day,
+                                   opponent=f'Opponent {shv_game_id}'))
+    sync.feed.append(_shv_game(shv_game_id=504, day=22, opponent='TV Teufen 2'))
+
+    await sync.run()
+
+    assert _question_tokens(sync.bot, ADMIN_ID) == []
+    assert len(sync.data_access.get_ordered_games()) == 3
     assert_no_error_reported(sync.bot)

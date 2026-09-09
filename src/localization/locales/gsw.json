@@ -115,7 +115,7 @@
  "Thanks, passed it on 👍": "Merci, ha s wiitergleitet 👍",
  "That date/time does not exist, please try again (Exception for reference: {exception})": "Das Datum/die Ziit git s nöd, bitte versuechs nomal (Fähler als Referänz: {exception})",
  "That date/time is in the past - please enter a date in the future": "Das Datum liit i de Vergangeheit - bitte gib es Datum i de Zuekunft ii",
- "The SHV schedule has {count} upcoming games and the bot none yet - should I import them all?": "De SHV-Spielplan hät {count} anstehendi Match und de Bot no keini - söll ich alli importiere?",
+ "The bot has no upcoming games yet - should I import the next {count} games from the SHV schedule?": "De Bot hät no keini anstehende Match - söll ich di nächschte {count} Match us em SHV-Spielplan importiere?",
  "The spectator password for this team is currently:\n{current}\n\nSend me the new password.": "S Zueschauer-Passwort vo dem Team isch im Momänt:\n{current}\n\nSchick mer s neue Passwort.",
  "The team is currently named:\n{current}\n\nSend me the new name.": "S Team heisst im Momänt:\n{current}\n\nSchick mer de neu Name.",
  "The website link is not configured yet - an admin can set it via the admin menu.": "De Website-Link isch no nöd iigrichtet - en Admin cha en im Admin-Menü setze.",

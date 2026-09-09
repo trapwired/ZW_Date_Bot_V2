@@ -115,7 +115,7 @@
  "Thanks, passed it on 👍": "Danke, habe es weitergeleitet 👍",
  "That date/time does not exist, please try again (Exception for reference: {exception})": "Dieses Datum/diese Zeit existiert nicht, bitte versuch es nochmals (Fehler als Referenz: {exception})",
  "That date/time is in the past - please enter a date in the future": "Dieses Datum liegt in der Vergangenheit - bitte gib ein Datum in der Zukunft ein",
- "The SHV schedule has {count} upcoming games and the bot none yet - should I import them all?": "Der SHV-Spielplan hat {count} kommende Spiele und der Bot noch keine - soll ich alle importieren?",
+ "The bot has no upcoming games yet - should I import the next {count} games from the SHV schedule?": "Der Bot hat noch keine kommenden Spiele - soll ich die nächsten {count} Spiele aus dem SHV-Spielplan importieren?",
  "The spectator password for this team is currently:\n{current}\n\nSend me the new password.": "Das Zuschauer-Passwort dieses Teams ist zurzeit:\n{current}\n\nSchick mir das neue Passwort.",
  "The team is currently named:\n{current}\n\nSend me the new name.": "Das Team heisst zurzeit:\n{current}\n\nSchick mir den neuen Namen.",
  "The website link is not configured yet - an admin can set it via the admin menu.": "Der Website-Link ist noch nicht konfiguriert - ein Admin kann ihn im Admin-Menü setzen.",

@@ -120,6 +120,10 @@ updates keep the row, so attendance answers survive; moves > 2h reuse the
 admin report). Everything ambiguous becomes an inline yes/no question to the
 admins (import a new game / same-date-different-opponent adoption / delete a
 vanished or never-on-SHV game; an empty schedule gets one bulk-import question).
+Imports are capped to a rolling window of the next `IMPORT_WINDOW_GAMES` feed
+games (played one slides the next in), so neither admins nor players face a
+whole-season wall of messages; matching and vanished-detection still use the
+full feed.
 Questions and their answers live in `shv_sync_decisions` (short `token` = the
 callback payload, SHV# channel, team-stamped): unanswered or declined questions
 wait `REASK_AFTER` before re-asking, while "keep this manual game" and "these

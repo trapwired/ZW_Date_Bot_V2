@@ -56,6 +56,13 @@ from Utils.CustomExceptions import ObjectNotFoundException
 # 'different games' answers are final and never re-asked.
 REASK_AFTER = pd.Timedelta(days=14)
 
+# Only the next few SHV games are ever imported (a rolling window: when one is
+# played, the next slides in) - importing the whole season at once walls both the
+# admins (questions) and the players (attendance cards). Matching, moves and
+# vanished-detection always run against the FULL feed, so later manual entries
+# are still recognized.
+IMPORT_WINDOW_GAMES = 3
+
 REPORT_HEADER = '📅 <b>SHV schedule update</b> (handball.ch)'
 
 
@@ -127,7 +134,7 @@ class ShvSyncService:
             await self._send_to_admins('\n\n'.join([t(REPORT_HEADER)] + report_lines))
 
         decisions = self._drop_stale_decisions(decisions, upcoming, bot_games)
-        await self._ask_questions(sync_plan, decisions, bot_games)
+        await self._ask_questions(sync_plan, decisions, bot_games, upcoming)
 
     async def _fetch_upcoming(self, shv_team_id: int) -> list[ShvGame]:
         shv_games = await ShvApiClient.fetch_games(shv_team_id)
@@ -154,15 +161,17 @@ class ShvSyncService:
     #############
 
     async def _ask_questions(self, sync_plan: SyncPlan, decisions: list[ShvSyncDecision],
-                             bot_games: list[Game]):
+                             bot_games: list[Game], upcoming: list[ShvGame]):
+        importable = _importable_new_games(sync_plan, upcoming)
         questions = []  # (kind, shv_game_id, game_doc_id, text)
-        if not bot_games and sync_plan.new_games:
+        if not bot_games and importable:
             # Empty schedule: one bulk question instead of a wall of per-game ones.
             questions.append((ShvDecisionKind.BULK_IMPORT, None, None,
-                              t('The SHV schedule has {count} upcoming games and the bot none yet '
-                                '- should I import them all?', count=len(sync_plan.new_games))))
+                              t('The bot has no upcoming games yet - should I import the '
+                                'next {count} games from the SHV schedule?',
+                                count=len(importable))))
         else:
-            for shv_game in sync_plan.new_games:
+            for shv_game in importable:
                 questions.append((ShvDecisionKind.CREATE, shv_game.shv_game_id, None,
                                   t('New game on the SHV schedule - should I add it?')
                                   + '\n' + _shv_game_line(shv_game)))
@@ -279,7 +288,7 @@ class ShvSyncService:
         sync_plan = GameSyncPlanner.plan(upcoming, self.data_access.get_ordered_games())
         created = [self.data_access.add(Game(shv_game.timestamp, shv_game.location,
                                              shv_game.opponent, shv_game.shv_game_id))
-                   for shv_game in sync_plan.new_games]
+                   for shv_game in _importable_new_games(sync_plan, upcoming)]
         await self._notify_players_bulk(created)
         self.data_access.delete_shv_sync_decision(decision)
         return t('Imported {count} games 👍 - players were notified.', count=len(created))
@@ -371,6 +380,16 @@ class ShvSyncService:
                     await self.telegram_service.send_message(
                         update=player, all_buttons=None, message=message_text,
                         reply_markup=EventsMenu.build_attendance_markup(Event.GAME, game.doc_id))
+
+
+def _importable_new_games(sync_plan: SyncPlan, upcoming: list[ShvGame]) -> list[ShvGame]:
+    """The unimported games inside the rolling window: of the next IMPORT_WINDOW_GAMES
+    upcoming feed games (matched ones count against the window), the ones not in the
+    bot yet - soonest first."""
+    window = sorted(upcoming, key=lambda game: game.timestamp)[:IMPORT_WINDOW_GAMES]
+    window_ids = {game.shv_game_id for game in window}
+    return sorted((game for game in sync_plan.new_games if game.shv_game_id in window_ids),
+                  key=lambda game: game.timestamp)
 
 
 def _declined_adopt_pairs(decisions: list[ShvSyncDecision]) -> set[tuple[int, str]]:
