@@ -70,6 +70,33 @@ def test_unlinked_game_with_matching_opponent_is_adopted_automatically():
     _empty(sync_plan, 'auto_updates')
 
 
+def test_manual_entry_is_adopted_by_its_own_round_despite_feed_order():
+    # Found in live testing: the feed lists home/away rounds arbitrarily - the
+    # February return round must not grab a manual 31.10 entry just because the
+    # API happened to list it first.
+    manual = _bot_game(day=1, doc_id='october-entry')
+    return_round = ShvGame(shv_game_id=602, timestamp=_ts(1) + pd.Timedelta(days=98),
+                           opponent='HC Arbon 3', location='Uzwil bzu', is_played=False)
+
+    sync_plan = GameSyncPlanner.plan([return_round, _shv_game(shv_game_id=601, day=1)], [manual])
+
+    assert [update.game.shv_game_id for update in sync_plan.auto_updates] == [601]
+    assert [game.shv_game_id for game in sync_plan.new_games] == [602]
+
+
+def test_opponent_adoption_never_reaches_across_to_the_other_round():
+    # Only a far-away entry exists (the return round, pre-entered): the near feed
+    # game must become a create question, not drag that entry months backwards.
+    far_manual = _bot_game(day=1, doc_id='february-entry')
+    near_feed_game = ShvGame(shv_game_id=601, timestamp=_ts(1) - pd.Timedelta(days=98),
+                             opponent='HC Arbon 3', location='Uzwil bzu', is_played=False)
+
+    sync_plan = GameSyncPlanner.plan([near_feed_game], [far_manual])
+
+    assert [game.shv_game_id for game in sync_plan.new_games] == [601]
+    assert [game.doc_id for game in sync_plan.manual_leftovers] == ['february-entry']
+
+
 def test_opponent_adoption_picks_the_candidate_closest_in_time():
     home_round = _bot_game(day=1, doc_id='home-round')
     away_round = _bot_game(day=20, doc_id='away-round')

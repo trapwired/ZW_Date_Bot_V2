@@ -22,6 +22,11 @@ import pandas as pd
 from domain.entities.Game import Game
 from features.shvsync.ShvApiClient import ShvGame
 
+# Opponent-based adoption only within this distance: home and away round share the
+# opponent months apart, and a reschedule moves a game by days - an entry further
+# away than this belongs to the OTHER round and must not be auto-grabbed.
+ADOPT_MAX_DISTANCE = pd.Timedelta(days=30)
+
 
 @dataclass(frozen=True)
 class GameUpdate:
@@ -53,6 +58,11 @@ def plan(shv_games: list[ShvGame], bot_games: list[Game],
     by_shv_id = {game.shv_game_id: game for game in bot_games if game.shv_game_id is not None}
     unlinked = [game for game in bot_games
                 if game.shv_game_id is None and game.doc_id not in kept_manual_doc_ids]
+
+    # Chronological, NOT feed order: home and away round share the opponent, and the
+    # feed lists them arbitrarily - the round nearest its manual entry must get first
+    # pick, or a manual 31.10 game gets adopted by the February return round.
+    shv_games = sorted(shv_games, key=lambda game: game.timestamp)
 
     auto_updates, adopt_questions, new_games = [], [], []
     for shv_game in shv_games:
@@ -87,7 +97,8 @@ def _applied(bot_game: Game, shv_game: ShvGame) -> Game:
 
 def _match_by_opponent(unlinked: list[Game], shv_game: ShvGame) -> Game | None:
     candidates = [game for game in unlinked
-                  if _normalize(game.opponent) == _normalize(shv_game.opponent)]
+                  if _normalize(game.opponent) == _normalize(shv_game.opponent)
+                  and abs(game.timestamp - shv_game.timestamp) <= ADOPT_MAX_DISTANCE]
     return _take_closest(unlinked, candidates, shv_game)
 
 
