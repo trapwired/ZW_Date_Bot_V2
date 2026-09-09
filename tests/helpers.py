@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from telegram import Update, Message, Chat, User, ChatMemberAdministrator
 from telegram.constants import ChatType
-from telegram.error import Forbidden
+from telegram.error import BadRequest, Forbidden
 
 from Enums.Role import Role
 from Enums.UserState import UserState
@@ -167,6 +167,19 @@ def forbid_chat(bot, forbidden_chat_id) -> None:
     async def send(chat_id, text, reply_markup=None, parse_mode=None):
         if chat_id == forbidden_chat_id:
             raise Forbidden('bot was kicked')
+        return await original(chat_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
+
+    bot.send_message = send
+
+
+def make_chat_unknown(bot, unknown_chat_id, error_message: str = 'Chat not found') -> None:
+    """Make sends to one chat raise BadRequest (stale/deleted chat id); every other
+    chat passes through to the recording FakeBot. Mirrors forbid_chat."""
+    original = bot.send_message
+
+    async def send(chat_id, text, reply_markup=None, parse_mode=None):
+        if chat_id == unknown_chat_id:
+            raise BadRequest(error_message)
         return await original(chat_id, text, reply_markup=reply_markup, parse_mode=parse_mode)
 
     bot.send_message = send

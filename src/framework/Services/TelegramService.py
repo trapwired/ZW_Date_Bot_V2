@@ -150,6 +150,16 @@ class TelegramService(object):
                 action = 'Setting User to Inactive'
             await self.send_maintainer_message(
                 f'Exception in _send_message: Forbidden\nChat: {chat_id}\n{action}\nMessage: {message}\nError: {e}')
+        except BadRequest as e:
+            # BadRequest also covers caller bugs (broken HTML markup etc.) that must stay
+            # loud - only a stale/deleted chat id is survivable per-recipient. The id is
+            # admin-owned data (trainer roster / group on the Team doc), so it is reported
+            # for manual cleanup rather than auto-removed.
+            if 'chat not found' not in str(e).lower():
+                raise
+            await self.send_maintainer_message(
+                f'Exception in _send_message: Chat not found (stale chat id?)\n'
+                f'Chat: {chat_id}\nMessage: {message}\nError: {e}')
 
     async def send_message(self, update: Update | TelegramUser, all_buttons: [str], message_type: MessageType = None,
                            message: str = None, message_extra_text: str = '', reply_markup=None):
