@@ -15,7 +15,7 @@ src/
                CommandDescriptions
   features/    one folder per capability, each owning its Node(s) + Service:
                events · adminpanel · eventmgmt · attendance · stats · roles · website
-               · onboarding · menu
+               · onboarding · menu · shvsync
   domain/      entities + business rules (policies, parsing) — no Telegram, no SQL
   data/        DataAccess + PostgresRepository (the storage boundary)
   Enums/  Utils/   shared cross-cutting code
@@ -106,6 +106,32 @@ chat — group membership is what lets `/start` re-join them.
 
 `SchedulingService` runs on APScheduler to send attendance reminders and trainer
 summaries. It reads events via `data` and sends via `TelegramService`.
+
+`ShvSyncService` (features/shvsync) syncs the games table daily against the SHV
+matchcenter GraphQL API (handball.ch, unofficial/no auth). Per team: the SHV team
+id is derived from the team's website setting (a matchcenter team URL); no
+website skips the team, a non-matchcenter website alerts the maintainer with a
+disable button (`settings.shv_sync_disabled`), and fetch failures alert the
+maintainer with the website and tried path. Unambiguous changes apply
+automatically: matching by
+`shv_game_id` first, else by normalized opponent (manual entries get adopted;
+updates keep the row, so attendance answers survive; moves > 2h reuse the
+`AttendanceResetPolicy` reset + player re-ask, smaller changes only land in an
+admin report). Everything ambiguous becomes an inline yes/no question to the
+admins (import a new game / same-date-different-opponent adoption / delete a
+vanished or never-on-SHV game; an empty schedule gets one bulk-import question).
+Imports are capped to a rolling window of the next `IMPORT_WINDOW_GAMES` feed
+games (played one slides the next in), so neither admins nor players face a
+whole-season wall of messages; matching and vanished-detection still use the
+full feed.
+Questions and their answers live in `shv_sync_decisions` (short `token` = the
+callback payload, SHV# channel, team-stamped): unanswered or declined questions
+wait `REASK_AFTER` before re-asking, while "keep this manual game" and "these
+are different games" are final; declines capture a free-text reason
+(`UserState.SHV_DECLINE_REASON`) and are reported to the maintainer. Nothing is
+ever deleted without an explicit yes. Every scheduled job iterates teams through
+`framework/TeamIteration.for_each_team` (tenant + language context, per-team
+error isolation).
 
 ## Decisions (ADRs)
 

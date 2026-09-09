@@ -21,6 +21,7 @@ from domain.entities.Attendance import Attendance
 from domain.entities.PlayerMetric import PlayerMetric
 from domain.entities.TempData import TempData
 from domain.entities.Settings import Settings
+from domain.entities.ShvSyncDecision import ShvSyncDecision
 
 from Utils import PrintUtils
 from Utils.CustomExceptions import ObjectNotFoundException, DocumentIdNotPresentException
@@ -323,7 +324,44 @@ class DataAccess(object):
         return settings.website if settings else None
 
     def set_website(self, website: str):
-        self.repository.set_settings(Settings(website))
+        # set_settings overwrites the whole settings doc, so a partial update must
+        # go through the current doc or it silently wipes the other settings.
+        settings = self.repository.get_settings() or Settings(None)
+        settings.website = website
+        self.repository.set_settings(settings)
+
+    def is_shv_sync_disabled(self) -> bool:
+        settings = self.repository.get_settings()
+        return settings.shv_sync_disabled if settings else False
+
+    def set_shv_sync_disabled(self, disabled: bool):
+        settings = self.repository.get_settings() or Settings(None)
+        settings.shv_sync_disabled = disabled
+        self.repository.set_settings(settings)
+
+    @dispatch(ShvSyncDecision)
+    def add(self, decision: ShvSyncDecision) -> ShvSyncDecision:
+        doc_id = self.repository.add(decision, Table.SHV_SYNC_DECISIONS_TABLE)
+        return decision.add_document_id(doc_id)
+
+    @dispatch(ShvSyncDecision)
+    def update(self, decision: ShvSyncDecision):
+        if decision.doc_id is None:
+            raise DocumentIdNotPresentException()
+        return self.repository.update(decision, Table.SHV_SYNC_DECISIONS_TABLE)
+
+    def get_shv_sync_decisions(self) -> list[ShvSyncDecision]:
+        rows = self.repository.get_shv_sync_decisions()
+        return [ShvSyncDecision.from_dict(row.id, row.to_dict()) for row in rows]
+
+    def find_shv_sync_decision(self, token: str) -> ShvSyncDecision | None:
+        # A team holds a handful of decisions at most - filtering the list beats a
+        # dedicated per-backend query.
+        return next((decision for decision in self.get_shv_sync_decisions()
+                     if decision.token == token), None)
+
+    def delete_shv_sync_decision(self, decision: ShvSyncDecision):
+        self.repository.delete_shv_sync_decision(decision.doc_id)
 
     def add_names(self, doc_id_list: list) -> list[TelegramUser]:
         result = []

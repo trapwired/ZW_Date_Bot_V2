@@ -305,6 +305,12 @@ class InMemoryRepository(Repository):
         return self._collection(table).where(
             _FieldFilter("timestamp", ">", datetime.now())).get()
 
+    def get_shv_sync_decisions(self) -> list:
+        return self._collection(Table.SHV_SYNC_DECISIONS_TABLE).get()
+
+    def delete_shv_sync_decision(self, doc_id: str):
+        self._collection(Table.SHV_SYNC_DECISIONS_TABLE).document(doc_id).delete()
+
     def get_attendance_list(self, doc_id: str, table: Table):
         return self._collection(table).where(_FieldFilter("eventId", "==", doc_id)).get()
 

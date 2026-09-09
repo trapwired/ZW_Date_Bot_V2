@@ -231,8 +231,41 @@ def test_temp_data_lookup_and_delete(repository):
 def test_settings_upsert_roundtrip(repository):
     assert repository.get_settings() is None
     repository.set_settings(Settings('https://one.example'))
-    repository.set_settings(Settings('https://two.example'))
-    assert repository.get_settings().website == 'https://two.example'
+    repository.set_settings(Settings('https://two.example', shv_sync_disabled=True))
+    settings = repository.get_settings()
+    assert settings.website == 'https://two.example'
+    assert settings.shv_sync_disabled is True
+
+
+def test_shv_sync_decision_roundtrip_update_and_delete(repository):
+    import pandas as pd
+    from domain.entities.ShvSyncDecision import ShvSyncDecision
+    from Enums.ShvSync import ShvDecisionKind, ShvDecisionStatus
+    from Utils import DateTimeUtils
+
+    asked_at = DateTimeUtils.add_zurich_timezone(pd.Timestamp(2030, 11, 1, 6, 30))
+    decision = ShvSyncDecision('tok_abc123', ShvDecisionKind.CREATE, ShvDecisionStatus.PENDING,
+                               shv_game_id=509764, asked_at=asked_at)
+    doc_id = repository.add(decision, Table.SHV_SYNC_DECISIONS_TABLE)
+
+    rows = repository.get_shv_sync_decisions()
+    assert len(rows) == 1
+    loaded = ShvSyncDecision.from_dict(rows[0].id, rows[0].to_dict())
+    assert (loaded.token, loaded.kind, loaded.status) == \
+        ('tok_abc123', ShvDecisionKind.CREATE, ShvDecisionStatus.PENDING)
+    assert loaded.shv_game_id == 509764
+    assert loaded.game_doc_id is None and loaded.reason is None
+    assert loaded.asked_at == asked_at  # same instant, tz-representation-independent
+
+    loaded.status = ShvDecisionStatus.DECLINED
+    loaded.reason = 'friendly game'
+    repository.update(loaded, Table.SHV_SYNC_DECISIONS_TABLE)
+    reloaded = ShvSyncDecision.from_dict(doc_id, repository.get_shv_sync_decisions()[0].to_dict())
+    assert reloaded.status == ShvDecisionStatus.DECLINED
+    assert reloaded.reason == 'friendly game'
+
+    repository.delete_shv_sync_decision(doc_id)
+    assert repository.get_shv_sync_decisions() == []
 
 
 def test_team_roundtrip_arrays_and_delete_team_purges_scoped_rows(repository):

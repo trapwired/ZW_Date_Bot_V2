@@ -18,6 +18,13 @@ deleted (console-recoverable until ~21.08., then gone).
 
 ## Features (M)
 
+- [ ] **SHV schedule sync follow-ups** (slice exists: `features/shvsync`, daily job;
+  team id derived from the website setting, so admins enable it via ⚙️ Setup → 🌐).
+    - Maintainer visibility into the ignore list: declined decisions (kept manual
+      games, split adopt pairs) live in `shv_sync_decisions` with reasons — a way to
+      clear one, and to re-enable a disabled team (`shv_sync_disabled`), without SQL
+      would round it off.
+
 - [ ] **Trigger: warn trainers when all keepers said no to a game.**
     - The stub comment already sits in `TriggerService.initialize_triggers`; the trigger
       itself is the easy part (pre_condition NO + GAME, condition via a domain predicate

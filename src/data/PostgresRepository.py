@@ -80,7 +80,8 @@ TABLE_SPECS = {
         'name': 'name', 'groupChatId': 'group_chat_id', 'spectatorPassword': 'spectator_password',
         'trainersGames': 'trainers_games', 'trainersTraining': 'trainers_training',
         'inviteTokens': 'invite_tokens', 'language': 'language'}, team_scoped=False),
-    Table.GAMES_TABLE: TableSpec('games', {**_EVENT_COLUMNS, 'opponent': 'opponent'}, team_scoped=True),
+    Table.GAMES_TABLE: TableSpec('games', {
+        **_EVENT_COLUMNS, 'opponent': 'opponent', 'shvGameId': 'shv_game_id'}, team_scoped=True),
     Table.TRAININGS_TABLE: TableSpec('trainings', dict(_EVENT_COLUMNS), team_scoped=True),
     Table.TIMEKEEPING_TABLE: TableSpec('timekeepings', {
         **_EVENT_COLUMNS, 'people_required': 'people_required'}, team_scoped=True),
@@ -99,7 +100,11 @@ TABLE_SPECS = {
         'userDocId': 'user_doc_id', 'timestamp': 'timestamp', 'location': 'location',
         'opponent': 'opponent', 'chatId': 'chat_id', 'queryId': 'query_id', 'step': 'step',
         'eventType': 'event_type', 'promptMessageId': 'prompt_message_id'}, team_scoped=True),
-    Table.SETTINGS_TABLE: TableSpec('settings', {'website': 'website'}, team_scoped=True),
+    Table.SETTINGS_TABLE: TableSpec('settings', {
+        'website': 'website', 'shvSyncDisabled': 'shv_sync_disabled'}, team_scoped=True),
+    Table.SHV_SYNC_DECISIONS_TABLE: TableSpec('shv_sync_decisions', {
+        'token': 'token', 'kind': 'kind', 'status': 'status', 'shvGameId': 'shv_game_id',
+        'gameDocId': 'game_doc_id', 'reason': 'reason', 'askedAt': 'asked_at'}, team_scoped=True),
 }
 if set(TABLE_SPECS) != set(Table):
     raise AssertionError('every Table must have a TableSpec')
@@ -291,12 +296,19 @@ class PostgresRepository(Repository):
     def set_settings(self, settings: Settings):
         # Upsert: creates the single settings row on first save, overwrites afterwards.
         self._execute(
-            'INSERT INTO settings (id, team_id, website) VALUES (%s, %s, %s) '
-            'ON CONFLICT (team_id, id) DO UPDATE SET website = EXCLUDED.website',
-            (SETTINGS_DOC_ID, current_team_id(), settings.website))
+            'INSERT INTO settings (id, team_id, website, shv_sync_disabled) VALUES (%s, %s, %s, %s) '
+            'ON CONFLICT (team_id, id) DO UPDATE SET website = EXCLUDED.website, '
+            'shv_sync_disabled = EXCLUDED.shv_sync_disabled',
+            (SETTINGS_DOC_ID, current_team_id(), settings.website, settings.shv_sync_disabled))
 
     def get_future_events(self, table: Table) -> list:
         return self._select(table, 'timestamp > %s', (datetime.now(),))
+
+    def get_shv_sync_decisions(self) -> list:
+        return self._select(Table.SHV_SYNC_DECISIONS_TABLE)
+
+    def delete_shv_sync_decision(self, doc_id: str):
+        self._delete_by_id(Table.SHV_SYNC_DECISIONS_TABLE, doc_id)
 
     def get_attendance_list(self, doc_id: str, table: Table):
         return self._select(table, 'event_id = %s', (doc_id,))

@@ -14,3 +14,4 @@ class Table(IntEnum):
     TEMP_DATA_TABLE = 9
     SETTINGS_TABLE = 10
     TEAMS_TABLE = 11
+    SHV_SYNC_DECISIONS_TABLE = 12

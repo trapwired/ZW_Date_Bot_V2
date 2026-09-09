@@ -50,3 +50,48 @@ volume with `down -v` first.)
 
 Tear down: `docker compose -f deploy/compose.local.yml down` (`-v` to drop the
 data volume too).
+
+## Testing the SHV schedule sync locally
+
+The sync derives its team id from the team's **website setting** - point it at a
+matchcenter team URL (admin panel → ⚙️ Setup → 🌐 Website), e.g.
+`https://www.handball.ch/de/matchcenter/teams/41317`, or via SQL:
+
+```bash
+docker exec -i zwdatebot-local-postgres psql -U zwdatebot -d zwdatebot -c \
+  "INSERT INTO settings (id, team_id, website)
+   SELECT 'config', id, 'https://www.handball.ch/de/matchcenter/teams/41317' FROM teams LIMIT 1
+   ON CONFLICT (team_id, id) DO UPDATE SET website = EXCLUDED.website;"
+```
+
+No website = the team is skipped; a non-matchcenter website alerts the
+maintainer (with a button to disable the sync for that team,
+`settings.shv_sync_disabled`).
+
+Then trigger one sync run against the live API without waiting for the daily job:
+
+```bash
+venv/bin/python -c "
+import sys, asyncio; sys.path.insert(0, 'src')
+from Utils.ApiConfig import ApiConfig
+from data.DataAccess import DataAccess
+from data.TenantContext import team_context
+from features.shvsync import ShvApiClient, GameSyncPlanner
+
+data_access = DataAccess(ApiConfig())
+team = data_access.get_all_teams()[0]
+with team_context(team.doc_id):
+    shv_games = asyncio.run(ShvApiClient.fetch_games(
+        ShvApiClient.parse_team_id(data_access.get_website())))
+    plan = GameSyncPlanner.plan([g for g in shv_games if not g.is_played],
+                                data_access.get_ordered_games())
+    for field in ('auto_updates', 'adopt_questions', 'new_games', 'vanished', 'manual_leftovers'):
+        print(field + ':', *getattr(plan, field), sep='\n  ')
+"
+```
+
+That prints the plan without writing; to run the real thing (auto-updates applied,
+admin questions with buttons in your DM), run the bot (`python src/main.py`) and
+temporarily move the `shv_sync_service` job in `main.py` to
+`job_queue.run_once(shv_sync_service.sync_all_teams, 5)`. You must be an admin of
+the local team to receive and answer the questions.

@@ -82,6 +82,14 @@ class Repository(ABC):
         ...
 
     @abstractmethod
+    def get_shv_sync_decisions(self) -> list:
+        ...
+
+    @abstractmethod
+    def delete_shv_sync_decision(self, doc_id: str):
+        ...
+
+    @abstractmethod
     def get_attendance_list(self, doc_id: str, table: Table):
         ...
 
