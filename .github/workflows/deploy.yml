@@ -13,6 +13,11 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # Docs and the Dependabot config never reach the image; a push that touches
+    # nothing else would only rebuild and recreate the container for no change.
+    paths-ignore:
+      - "**.md"
+      - ".github/dependabot.yml"
   workflow_dispatch: {}   # manual runs: prove the pipeline
 # Two quick merges would race on the image push + deploy; serialize and drop superseded runs.
 concurrency:
