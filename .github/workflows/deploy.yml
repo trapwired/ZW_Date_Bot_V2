@@ -54,6 +54,25 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/zwdatebot:latest
             ghcr.io/${{ github.repository_owner }}/zwdatebot:${{ github.sha }}
 
+      # Image scan (DomiCloud handbook 8.11) with a checksum-verified trivy release.
+      # The first pass only lists every HIGH/CRITICAL finding in the log; the second
+      # fails the job — and with it the deploy, since the webhook step never runs — on
+      # a CRITICAL that has a fix available. Unfixed findings cannot be acted on, so
+      # they never block. Bump TRIVY_VERSION + TRIVY_SHA256 together (release page →
+      # trivy_<v>_checksums.txt).
+      - name: Scan image (HIGH+CRITICAL listed, fixable CRITICAL blocks)
+        env:
+          TRIVY_VERSION: "0.75.0"
+          TRIVY_SHA256: "c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f"
+          IMAGE: ghcr.io/${{ github.repository_owner }}/zwdatebot@${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o trivy.tgz
+          echo "${TRIVY_SHA256}  trivy.tgz" | sha256sum -c -
+          tar xzf trivy.tgz trivy
+          ./trivy image --severity HIGH,CRITICAL --exit-code 0 "$IMAGE"
+          ./trivy image --severity CRITICAL --ignore-unfixed --exit-code 1 "$IMAGE"
+
       - name: Install cosign
         uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
 
