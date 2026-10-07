@@ -1,6 +1,8 @@
 name: Deploy
-# Runs only after a PR is merged (push to main). Tests already ran as a required check on
-# the PR, so deployment does not re-run them.
+# test:   every pull request against main and every push to main, so a direct push can no
+#         longer deploy untested code (2026-10-07; the job used to live in ci.yml, PR-only).
+# deploy: push to main only, after test; its own concurrency group serializes deploys
+#         without queueing PR test runs behind them.
 #
 # Pull-based deploy (DomiCloud WIREGUARD_MIGRATION_PLAN.md, Phase B): build the image on
 # the runner, push it to GHCR, then poke a signed webhook. The VPS pulls the image itself
@@ -19,15 +21,53 @@ on:
       - "**.md"
       - ".github/dependabot.yml"
   workflow_dispatch: {}   # manual runs: prove the pipeline
-# Two quick merges would race on the image push + deploy; serialize and drop superseded runs.
-concurrency:
-  group: deploy
-  cancel-in-progress: true
+  pull_request:
+    branches: [main]
 permissions:
   contents: read
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: zwdatebot
+          POSTGRES_PASSWORD: zwdatebot
+          POSTGRES_DB: zwdatebot_test
+        ports: ['5433:5432']
+        options: >-
+          --health-cmd "pg_isready -U zwdatebot"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      # Contract tests run against a real Postgres (they SKIP without one, so this
+      # service is what makes CI actually enforce backend parity).
+      POSTGRES_TEST_DSN: postgresql://zwdatebot:zwdatebot@localhost:5433/zwdatebot_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+      - name: Provide test config
+        # The real secrets/api_config.ini is gitignored; the tracked example carries every
+        # section the tests need (storage is in-memory or the service container, no real secrets).
+        run: cp secrets/example_api_config.ini secrets/api_config.ini
+      - name: Run tests
+        run: pytest -q
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # Two quick merges would race on the image push + deploy; serialize and drop
+    # superseded runs. Job-level so PR test runs never wait behind a deploy.
+    concurrency:
+      group: deploy
+      cancel-in-progress: true
     permissions:
       contents: read
       packages: write        # push the image to GHCR
