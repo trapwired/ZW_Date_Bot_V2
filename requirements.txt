@@ -22,5 +22,5 @@ TatSu==5.15.1
 typing_extensions==4.16.0
 tzdata==2026.4
 tzlocal==5.4.4
-psycopg[binary]==3.3.1
+psycopg[binary]==3.3.6
 psycopg-pool==3.3.3
