@@ -33,6 +33,11 @@ def initialize_logging():
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO
     )
+    # httpx logs every request URL at INFO, and for a Telegram bot that URL is
+    # https://api.telegram.org/bot<TOKEN>/getUpdates — the bot token in every
+    # log line, readable by anyone with access to the container log
+    # (found 2026-10-07). Warnings and errors still come through.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
