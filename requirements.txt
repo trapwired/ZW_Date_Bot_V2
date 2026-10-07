@@ -18,7 +18,7 @@ pandas==3.0.3
 python-dateutil==2.9.0.post0
 pytz==2026.2
 six==1.17.0
-TatSu==5.15.1
+TatSu==5.24.0
 typing_extensions==4.15.0
 tzdata==2026.2
 tzlocal==5.4.3
