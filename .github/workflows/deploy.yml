@@ -26,6 +26,7 @@ jobs:
     permissions:
       contents: read
       packages: write        # push the image to GHCR
+      id-token: write        # OIDC token for keyless cosign signing
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -37,6 +38,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push image
+        id: push
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
@@ -47,12 +49,22 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/zwdatebot:latest
             ghcr.io/${{ github.repository_owner }}/zwdatebot:${{ github.sha }}
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
+
+      - name: Sign image digest (keyless, GitHub OIDC)
+        env:
+          COSIGN_YES: "true"
+        run: cosign sign ghcr.io/${{ github.repository_owner }}/zwdatebot@${{ steps.push.outputs.digest }}
+
       - name: Trigger deploy webhook
         env:
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
           set -euo pipefail
-          BODY="{\"app\":\"zwdatebot\",\"sha\":\"${GITHUB_SHA}\"}"
+          BODY=$(jq -cn --arg app 'zwdatebot' --arg ref "$GITHUB_REF" --arg run "$GITHUB_RUN_ID" \
+            --arg i1 'ghcr.io/${{ github.repository_owner }}/zwdatebot' --arg d1 '${{ steps.push.outputs.digest }}' \
+            '{app:$app, digests:{($i1):$d1}, ref:$ref, run_id:$run, ts:(now|floor)}')
           SIG="sha256=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print $NF}')"
           curl -fsS --retry 3 --retry-delay 5 -X POST \
             -H 'Content-Type: application/json' \
