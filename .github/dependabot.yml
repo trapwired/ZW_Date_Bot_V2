@@ -1,0 +1,14 @@
+# Weekly bumps with a 7-day cooldown: a freshly published version is only
+# proposed once it has been public for a week; poisoned releases (Shai-Hulud-
+# class npm worms, tj-actions/changed-files) are pulled within days.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+  - package-ecosystem: pip
+    directory: /
+    schedule: { interval: weekly }
+    cooldown: { default-days: 7 }
+    open-pull-requests-limit: 5
