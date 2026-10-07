@@ -7,11 +7,22 @@
 # The central VPS backup auto-discovers the container (nightly pg_dumpall).
 services:
   zwdatebot:
-    # Built + pushed by .github/workflows/deploy.yml; the server pulls it on a
-    # signed webhook (no SSH). Rollback: retag a :<sha> image to :latest, up -d.
+    # Built+pushed by CI; pulled here on a signed webhook (no SSH).
     image: ghcr.io/trapwired/zwdatebot:latest
     container_name: zwdatebot
     restart: unless-stopped
+    # default = egress (Telegram long polling); db = internal, postgres only
+    networks:
+      - default
+      - db
+    # master plan M3 waves 1-4 (2026-10): NNP, caps, limits, read-only where tolerated
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 512m
+    init: true
     env_file: .env
     depends_on:
       postgres:
@@ -24,6 +35,21 @@ services:
     image: postgres:16
     container_name: zwdatebot-postgres
     restart: unless-stopped
+    networks:
+      - db
+    # master plan M3 waves 1-4 (2026-10): NNP, caps, limits, read-only where tolerated
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+      - FOWNER
+    pids_limit: 256
+    mem_limit: 768m
     environment:
       POSTGRES_USER: zwdatebot
       # Set in /srv/apps/zwdatebot/.env (never in this public repo); the same
@@ -40,3 +66,9 @@ services:
 
 volumes:
   pgdata:
+
+networks:
+  # master plan M3 db network (2026-10): postgres has no gateway and no NAT — unreachable from and
+  # unable to reach anything outside the project (handbook 10.3).
+  db:
+    internal: true
