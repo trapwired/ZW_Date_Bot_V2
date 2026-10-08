@@ -14,7 +14,7 @@ ics==0.7.3
 idna==3.18
 multipledispatch==1.0.0
 numpy==2.5.3
-pandas==3.0.3
+pandas==3.0.6
 python-dateutil==2.9.0.post0
 pytz==2026.4
 six==1.17.0
