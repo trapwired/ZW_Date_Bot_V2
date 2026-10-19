@@ -11,7 +11,7 @@ httpcore==1.0.9
 httpx==0.28.1
 hyperframe==6.1.0
 ics==0.7.3
-idna==3.18
+idna==3.20
 multipledispatch==1.0.0
 numpy==2.5.3
 pandas==3.0.3
