@@ -79,6 +79,7 @@ def services(data_access, bot, api_config):
     from features.stats.StatisticsService import StatisticsService
     from framework.Services.TeamService import TeamService
     from framework.Services.SchedulingService import SchedulingService
+    from features.calendarfeed.CalendarFeedService import CalendarFeedConfig, CalendarFeedService
 
     user_state_service = UserStateService(data_access)
     team_service = TeamService(data_access)
@@ -96,6 +97,8 @@ def services(data_access, bot, api_config):
         "website_service": WebsiteService(data_access),
         "statistics_service": statistics_service,
         "scheduling_service": SchedulingService(data_access, telegram_service, statistics_service, api_config),
+        # Explicit config, not the developer's api_config.ini: the feature is on in tests.
+        "calendar_feed_service": CalendarFeedService(data_access, CalendarFeedConfig('http://test.local', 8080)),
     }
 
 
@@ -107,5 +110,5 @@ def node_handler(bot, api_config, data_access, services):
         services["telegram_service"], services["user_state_service"],
         services["ics_service"], data_access, services["trigger_service"], services["event_service"],
         services["attendance_service"], services["role_service"], services["website_service"],
-        services["statistics_service"], services["team_service"],
+        services["statistics_service"], services["team_service"], services["calendar_feed_service"],
     )

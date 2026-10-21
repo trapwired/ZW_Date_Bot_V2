@@ -9,6 +9,7 @@ from Utils.ApiConfig import ApiConfig
 
 from framework import Heartbeat
 from framework.CommandDescriptions import CommandDescriptions
+from framework.HttpServer import HttpServer
 from framework.NodeHandler import NodeHandler
 from localization.Languages import SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
 from localization.Translator import translate
@@ -26,6 +27,8 @@ from features.roles.RoleService import RoleService
 from framework.Services.TeamService import TeamService
 from features.website.WebsiteService import WebsiteService
 from features.shvsync.ShvSyncService import ShvSyncService
+from features.calendarfeed.CalendarFeedService import CalendarFeedConfig, CalendarFeedService
+from features.calendarfeed.FeedRoutes import build_feed_app
 
 
 def initialize_logging():
@@ -54,16 +57,32 @@ def initialize_services(bot: telegram.Bot, api_config: ApiConfig):
     _role_service = RoleService(_data_access)
     _website_service = WebsiteService(_data_access)
     _shv_sync_service = ShvSyncService(_data_access, _telegram_service)
+    _calendar_feed_service = CalendarFeedService(_data_access, CalendarFeedConfig.from_api_config(api_config))
     return _telegram_service, _user_state_service, _ics_service, _data_access, _scheduling_service, \
         _trigger_service, _event_service, _attendance_service, _role_service, _website_service, \
-        _statistics_service, _team_service, _shv_sync_service
+        _statistics_service, _team_service, _shv_sync_service, _calendar_feed_service
 
 
 async def send_hi(context: ContextTypes.DEFAULT_TYPE):
     await telegram_service.send_maintainer_hi('Bot was restarted')
 
 
-MENU_COMMANDS = ['start', 'help', 'privacy', 'language']
+# Set in __main__ only when the calendar feed is on. PTB runs post_init/post_shutdown
+# on run_polling's loop, so the feed shares the bot's loop and lifetime (plan §4).
+http_server: HttpServer | None = None
+
+
+async def start_http_server(_application) -> None:
+    if http_server is not None:
+        await http_server.start()
+
+
+async def stop_http_server(_application) -> None:
+    if http_server is not None:
+        await http_server.stop()
+
+
+MENU_COMMANDS = ['start', 'help', 'privacy', 'language', 'calendar']
 
 
 async def register_bot_commands(context: ContextTypes.DEFAULT_TYPE):
@@ -137,15 +156,22 @@ if __name__ == "__main__":
 
     api_config = ApiConfig()
 
-    application = ApplicationBuilder().token(api_config.get_key('Telegram', 'api_token')).build()
+    application = (ApplicationBuilder().token(api_config.get_key('Telegram', 'api_token'))
+                   .post_init(start_http_server)
+                   .post_shutdown(stop_http_server)
+                   .build())
 
     telegram_service, user_state_service, ics_service, data_access, scheduling_service, trigger_service, \
         event_service, attendance_service, role_service, website_service, statistics_service, team_service, \
-        shv_sync_service = initialize_services(application.bot, api_config)
+        shv_sync_service, calendar_feed_service = initialize_services(application.bot, api_config)
+
+    if calendar_feed_service.enabled:
+        http_server = HttpServer(build_feed_app(calendar_feed_service), calendar_feed_service.config.http_port)
 
     node_handler = NodeHandler(application.bot, api_config, telegram_service, user_state_service,
                                ics_service, data_access, trigger_service, event_service, attendance_service,
-                               role_service, website_service, statistics_service, team_service)
+                               role_service, website_service, statistics_service, team_service,
+                               calendar_feed_service)
     application.add_handler(node_handler)
 
     run_job_queue()

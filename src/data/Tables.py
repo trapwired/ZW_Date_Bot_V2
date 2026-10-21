@@ -20,7 +20,11 @@ def initialize_tables(api_config: ApiConfig):
         Table.TEMP_DATA_TABLE: api_config.get_key('Tables', 'TEMP_DATA'),
         Table.SETTINGS_TABLE: api_config.get_key('Tables', 'SETTINGS_TABLE'),
         Table.TEAMS_TABLE: api_config.get_key('Tables', 'TEAMS_TABLE'),
-        Table.SHV_SYNC_DECISIONS_TABLE: api_config.get_key('Tables', 'SHV_SYNC_DECISIONS_TABLE')
+        Table.SHV_SYNC_DECISIONS_TABLE: api_config.get_key('Tables', 'SHV_SYNC_DECISIONS_TABLE'),
+        # The server's api_config.ini is hand-edited, so a missing key must not
+        # crash the bot at deploy.
+        Table.CALENDAR_TOKENS_TABLE: api_config.get_key('Tables', 'CALENDAR_TOKENS_TABLE',
+                                                        default='calendar_tokens')
     }
 
 
@@ -44,8 +48,10 @@ EVENT_ATTENDANCE_TABLES = {Event.GAME: Table.GAME_ATTENDANCE_TABLE,
 
 # Tenancy classification (ADR 0001): identity and the team registry itself are global -
 # team resolution needs the user record before a team is known; everything else is
-# team-partitioned and unreachable without a tenant context.
-GLOBAL_TABLES = {Table.USERS_TABLE, Table.USERS_TO_STATE_TABLE, Table.TEAMS_TABLE}
+# team-partitioned and unreachable without a tenant context. Calendar tokens are
+# user-bound: the feed server looks one up by hash first, then resolves the team.
+GLOBAL_TABLES = {Table.USERS_TABLE, Table.USERS_TO_STATE_TABLE, Table.TEAMS_TABLE,
+                 Table.CALENDAR_TOKENS_TABLE}
 TEAM_SCOPED_TABLES = {
     Table.GAMES_TABLE, Table.TRAININGS_TABLE, Table.TIMEKEEPING_TABLE,
     Table.GAME_ATTENDANCE_TABLE, Table.TRAINING_ATTENDANCE_TABLE, Table.TIMEKEEPING_ATTENDANCE_TABLE,

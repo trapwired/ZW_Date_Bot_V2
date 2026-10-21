@@ -29,6 +29,25 @@ Message your dev bot on Telegram: events menu, admin panel, attendance — all
 against the seeded local Postgres. Re-run the seed script anytime for a clean
 slate (it truncates and re-seeds).
 
+## Calendar feed
+
+The bot serves the personal calendar feed on port 8080, published to
+`127.0.0.1:8080` by `deploy/compose.local.yml`. It is on when `secrets-local/api_config.ini`
+has `[Calendar] public_origin` (the example config sets it to `http://127.0.0.1:8080`;
+add the section if your copy predates it). After the seed, check that the server is up:
+
+```bash
+curl -i http://127.0.0.1:8080/cal/x.ics
+```
+
+Expect `404` with a body starting «Dieser Kalender-Link gilt nicht mehr.» (German, then
+the English half) — every unknown, rotated or malformed link answers
+exactly that. A real link comes from the bot itself: events menu → «📆 Kalender
+abonnieren» (or `/calendar` in a private chat) sends it; `curl` it to see the `.ics`.
+A calendar app on another device cannot reach `127.0.0.1`, so subscribing from a
+phone needs a tunnel or the real-device checks after the prod switch-on
+(`deploy/VPS_HANDOFF.md`).
+
 ## Real-data variant (pre-merge confidence)
 
 Restore last night's central VPS backup into the local postgres — real shapes,

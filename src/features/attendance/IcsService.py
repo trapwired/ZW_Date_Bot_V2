@@ -6,9 +6,11 @@ from data.DataAccess import DataAccess
 
 from Enums.Event import Event as Ev
 
-from Utils import PathUtils
+from domain.calendar.CalendarFeed import EVENT_DURATION
+from domain.calendar.EventSummary import event_summary
+from domain.calendar.Ics import event_uid
 
-from localization.Translator import t
+from Utils import PathUtils
 
 
 def init_directory():
@@ -23,39 +25,18 @@ class IcsService(object):
         self.team_service = team_service
         init_directory()
 
-        self.DURATION_GAME = timedelta(minutes=90)
-        self.DURATION_TRAINING = timedelta(minutes=90)
-        self.DURATION_TIMEKEEPING = timedelta(minutes=90)
-
     def get_ics(self, event_type: Ev, doc_id: str):
 
         event = self.data_access.get_event(event_type, doc_id)
-        event_title = event_type.name.lower()
+        name = event_summary(event_type, event, self.team_service.current_team().name)
 
-        name = t('Handball {type} {team}', type=t(event_title.capitalize()),
-                 team=self.team_service.current_team().name)
-        begin = event.timestamp
+        ics_event = Event(uid=event_uid(doc_id), name=name, begin=event.timestamp, duration=EVENT_DURATION,
+                          location=event.location, alarms=[alarm.DisplayAlarm(trigger=timedelta(hours=-24))])
 
-        match event_type:
-            case Ev.GAME:
-                name += f' ({event.opponent})'
-                duration = self.DURATION_GAME
-            case Ev.TRAINING:
-                duration = self.DURATION_TRAINING
-            case Ev.TIMEKEEPING:
-                duration = self.DURATION_TIMEKEEPING
-            case _:
-                raise TypeError('Event type not known')
-
-        location = event.location
-
-        event = Event(name=name, begin=begin, duration=duration, location=location,
-                      alarms=[alarm.DisplayAlarm(trigger=timedelta(hours=-24))])
-
-        filename = f'{event_title}-{doc_id}.ics'
+        filename = f'{event_type.name.lower()}-{doc_id}.ics'
         ics_file_path = os.path.join(PathUtils.get_ics_files_path(), filename)
         cal = Calendar()
-        cal.events.add(event)
+        cal.events.add(ics_event)
         with open(ics_file_path, mode="w+") as ics_file:
             ics_file.writelines(cal.serialize_iter())
 

@@ -14,6 +14,8 @@ services:
   zwdatebot:
     build: ..
     container_name: zwdatebot-local
+    ports:
+      - "127.0.0.1:8080:8080"   # calendar feed for local testing (needs [Calendar], as in the example config)
     depends_on:
       postgres:
         condition: service_healthy

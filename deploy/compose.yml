@@ -1,6 +1,8 @@
 # Lives at /srv/apps/zwdatebot/compose.yml on the VPS.
 # NOT shipped automatically (pull-based deploy) — when this file changes, update the
-# server copy by hand. Long polling: no ports, no networks, no Caddy site block.
+# server copy by hand. Long polling plus the calendar feed on :8080 (aiohttp in the bot
+# process): no `ports:`, Caddy reaches it over the external `web` network
+# (site block + steps: deploy/VPS_HANDOFF.md).
 #
 # The bot runs on [Database] backend = postgres + dsn =
 # postgresql://zwdatebot:...@postgres:5432/zwdatebot in the server's api_config.ini.
@@ -11,10 +13,12 @@ services:
     image: ghcr.io/trapwired/zwdatebot:latest
     container_name: zwdatebot
     restart: unless-stopped
-    # default = egress (Telegram long polling); db = internal, postgres only
+    # default = egress (Telegram long polling); db = internal, postgres only;
+    # web = Caddy reaches the calendar feed at zwdatebot:8080 (never published)
     networks:
       - default
       - db
+      - web
     # master plan M3 waves 1-4 (2026-10): NNP, caps, limits, read-only where tolerated
     security_opt:
       - no-new-privileges:true
@@ -72,3 +76,6 @@ networks:
   # unable to reach anything outside the project (handbook 10.3).
   db:
     internal: true
+  # Created by the caddy project; only the feed is reachable on it.
+  web:
+    external: true

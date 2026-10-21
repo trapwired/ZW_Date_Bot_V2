@@ -12,10 +12,10 @@ The code is organized as **vertical slices** on a shared spine:
 src/
   framework/   feature-agnostic runtime: NodeHandler, Node/CallbackNode, Transitions,
                TelegramService, UserStateService, TriggerService, SchedulingService,
-               CommandDescriptions
+               CommandDescriptions, HttpServer
   features/    one folder per capability, each owning its Node(s) + Service:
                events · adminpanel · eventmgmt · attendance · stats · roles · website
-               · onboarding · menu · shvsync
+               · onboarding · menu · shvsync · calendarfeed
   domain/      entities + business rules (policies, parsing) — no Telegram, no SQL
   data/        DataAccess + PostgresRepository (the storage boundary)
   Enums/  Utils/   shared cross-cutting code
@@ -133,13 +133,33 @@ ever deleted without an explicit yes. Every scheduled job iterates teams through
 `framework/TeamIteration.for_each_team` (tenant + language context, per-team
 error isolation).
 
+## HTTP ingress
+
+The bot also serves a small HTTP surface, the only inbound HTTP there is.
+`framework/HttpServer` is a feature-agnostic aiohttp `AppRunner`: started in the PTB
+`post_init`, stopped in `post_shutdown`, so it shares the bot's process and event loop
+(hosting option A in [`CALENDAR_FEED_PLAN.md`](CALENDAR_FEED_PLAN.md) §4). The `calendarfeed`
+slice registers the routes `GET /cal/<token>.ics` (the member's personal live calendar
+feed) and `GET /healthz`. A request is not a Telegram update, so each handler sets the
+tenant and language context itself — resolved from the token's user, the way
+`NodeHandler` does once per update — and every database call goes through
+`asyncio.to_thread`: `PostgresRepository` is synchronous and a slow query must not stall
+Telegram handling on the shared loop. The listener binds the container-internal port
+8080 (`[Calendar] http_port`); Caddy reaches it over the `web` network and the port is
+never published. Without `[Calendar] public_origin` the server is not started.
+
 ## Decisions (ADRs)
 
 - [ADR 0001 — Multi-team tenancy](adr/0001-multi-team-tenancy.md): scope at the data
-  boundary off an ambient tenant context; one Telegram user ↔ one team. Not yet
-  implemented.
+  boundary, one team per Telegram user.
 - [ADR 0002 — State migration strategy](adr/0002-state-migration-strategy.md):
   schema-affecting state changes self-heal on read, no bulk migration.
+- [ADR 0003 — Repartition existing single-team data](adr/0003-team-repartition-migration.md):
+  a one-off idempotent migration script, not a lazy per-read move.
+- [ADR 0004 — Per-user language (i18n)](adr/0004-i18n-per-user-language.md): each
+  user is served in their own language; the English string is the catalog key.
+- [ADR 0005 — Admin is a flag, orthogonal to the membership role](adr/0005-admin-orthogonal-to-role.md):
+  admin no longer sits inside the role enum.
 
 ## Known-open items
 

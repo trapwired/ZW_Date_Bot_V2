@@ -12,6 +12,8 @@ from framework.Services.UserStateService import UserStateService
 from data.DataAccess import DataAccess
 
 from features.adminpanel import AdminMenu
+from features.calendarfeed.CalendarFeedReplies import send_link_overview
+from features.calendarfeed.CalendarFeedService import CalendarFeedService
 from features.events.EventsView import EventsView
 
 from localization.Translator import t
@@ -22,11 +24,13 @@ class DefaultNode(Node):
     keyboard's entries open inline menus (events, admin) or answer directly."""
 
     def __init__(self, state: UserState, telegram_service: TelegramService, user_state_service: UserStateService,
-                 data_access: DataAccess, website_service, events_view: EventsView, team_service):
+                 data_access: DataAccess, website_service, events_view: EventsView, team_service,
+                 calendar_feed_service: CalendarFeedService):
         super().__init__(state, telegram_service, user_state_service, data_access)
         self.website_service = website_service
         self.events_view = events_view
         self.team_service = team_service
+        self.calendar_feed_service = calendar_feed_service
 
     async def handle_events(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         text, markup = self.events_view.build_list(user_to_state, update.effective_chat.id, None)
@@ -58,6 +62,12 @@ class DefaultNode(Node):
             all_buttons=None,
             message_type=MessageType.WEBSITE,
             reply_markup=reply_markup)
+
+    async def handle_calendar(self, update: Update, user_to_state: UsersToState, new_state: UserState):
+        # Private chats only by construction: NodeHandler drops group messages before
+        # any node runs, so the link can't land in a group.
+        await send_link_overview(self.telegram_service, self.calendar_feed_service, update,
+                                 update.effective_chat.id, rotate=False)
 
     async def handle_privacy(self, update: Update, user_to_state: UsersToState, new_state: UserState):
         await self.telegram_service.send_message(

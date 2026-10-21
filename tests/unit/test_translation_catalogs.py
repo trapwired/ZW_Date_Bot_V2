@@ -23,7 +23,7 @@ LOCALES_PATH = os.path.join(SRC_ROOT, 'localization', 'locales')
 # their full key sets are pinned in _enum_derived_keys below.
 KNOWN_DYNAMIC_KEY_SITES = (
     'Utils/PrintUtils.py',
-    'features/attendance/IcsService.py',
+    'domain/calendar/EventSummary.py',
     'localization/CommandLabels.py',
 )
 

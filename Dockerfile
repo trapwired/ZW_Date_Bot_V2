@@ -1,5 +1,7 @@
-# Long-polling Telegram bot - no ports, no web server. Secrets are bind-mounted
-# at runtime (public repo: nothing sensitive may ever land in this image).
+# Long-polling Telegram bot that also serves the calendar feed on port 8080 (aiohttp, in
+# the bot process). Internal only: Caddy reaches it over the `web` network, never published.
+# Secrets are bind-mounted at runtime (public repo: nothing sensitive may ever land in
+# this image).
 FROM python:3.13-slim
 
 WORKDIR /app
@@ -19,4 +21,5 @@ RUN useradd --create-home appuser \
 USER appuser
 
 ENV PYTHONUNBUFFERED=1
+EXPOSE 8080
 CMD ["python", "src/main.py"]

@@ -8,6 +8,7 @@ Contracts every backend must honour (DataAccess depends on all three):
 - Reads/updates against a missing document raise ObjectNotFoundException.
 """
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from Enums.Event import Event
 from Enums.Role import Role
@@ -82,11 +83,31 @@ class Repository(ABC):
         ...
 
     @abstractmethod
+    def get_events_since(self, table: Table, since: datetime) -> list:
+        """The current team's events of one type starting at or after `since`, which
+        must be timezone-aware (compared as an instant, unlike get_future_events)."""
+        ...
+
+    @abstractmethod
     def get_shv_sync_decisions(self) -> list:
         ...
 
     @abstractmethod
+    def get_calendar_token_by_user(self, user_id: str):
+        """The user's calendar token row, or None. Global table: needs no tenant context."""
+        ...
+
+    @abstractmethod
+    def get_calendar_token_by_hash(self, token_hash: str):
+        """The calendar token row with this hash, or None."""
+        ...
+
+    @abstractmethod
     def delete_shv_sync_decision(self, doc_id: str):
+        ...
+
+    @abstractmethod
+    def delete_calendar_token(self, user_id: str) -> None:
         ...
 
     @abstractmethod
@@ -162,6 +183,17 @@ class Repository(ABC):
         ...
 
     @abstractmethod
+    def replace_calendar_token(self, user_id: str, token_hash: str, created_at: datetime) -> None:
+        """Atomically make `token_hash` the user's only token: any previous one stops
+        resolving and last_used_at starts over as None."""
+        ...
+
+    @abstractmethod
+    def touch_calendar_token(self, token_hash: str, used_at: datetime) -> None:
+        """Stamp last_used_at; a hash that no longer exists is a silent no-op."""
+        ...
+
+    @abstractmethod
     def delete_temp_data(self, temp_data: TempData):
         ...
 
@@ -188,8 +220,8 @@ class Repository(ABC):
     @abstractmethod
     def delete_user_data(self, user_doc_id: str):
         """Permanently delete one user's rows across every table: team-scoped
-        leftovers (attendance, player metric, temp data) and the global identity
-        pair (users_to_state, users)."""
+        leftovers (attendance, player metric, temp data) and the global rows
+        (calendar token, users_to_state, users)."""
         ...
 
     @abstractmethod

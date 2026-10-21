@@ -105,6 +105,9 @@ TABLE_SPECS = {
     Table.SHV_SYNC_DECISIONS_TABLE: TableSpec('shv_sync_decisions', {
         'token': 'token', 'kind': 'kind', 'status': 'status', 'shvGameId': 'shv_game_id',
         'gameDocId': 'game_doc_id', 'reason': 'reason', 'askedAt': 'asked_at'}, team_scoped=True),
+    Table.CALENDAR_TOKENS_TABLE: TableSpec('calendar_tokens', {
+        'tokenHash': 'token_hash', 'userId': 'user_id', 'createdAt': 'created_at',
+        'lastUsedAt': 'last_used_at'}, team_scoped=False),
 }
 if set(TABLE_SPECS) != set(Table):
     raise AssertionError('every Table must have a TableSpec')
@@ -304,8 +307,19 @@ class PostgresRepository(Repository):
     def get_future_events(self, table: Table) -> list:
         return self._select(table, 'timestamp > %s', (datetime.now(),))
 
+    def get_events_since(self, table: Table, since: datetime) -> list:
+        return self._select(table, 'timestamp >= %s', (_to_sql_value(since),))
+
     def get_shv_sync_decisions(self) -> list:
         return self._select(Table.SHV_SYNC_DECISIONS_TABLE)
+
+    def get_calendar_token_by_user(self, user_id: str):
+        rows = self._select(Table.CALENDAR_TOKENS_TABLE, 'user_id = %s', (user_id,))
+        return rows[0] if rows else None
+
+    def get_calendar_token_by_hash(self, token_hash: str):
+        rows = self._select(Table.CALENDAR_TOKENS_TABLE, 'token_hash = %s', (token_hash,))
+        return rows[0] if rows else None
 
     def delete_shv_sync_decision(self, doc_id: str):
         self._delete_by_id(Table.SHV_SYNC_DECISIONS_TABLE, doc_id)
@@ -408,6 +422,18 @@ class PostgresRepository(Repository):
         user.add_document_id(user_id)
         return self.update(user, Table.USERS_TABLE)
 
+    def replace_calendar_token(self, user_id: str, token_hash: str, created_at: datetime) -> None:
+        # One statement = atomic: the unique user_id index turns "replace" into an upsert.
+        self._execute(
+            'INSERT INTO calendar_tokens (user_id, token_hash, created_at) VALUES (%s, %s, %s) '
+            'ON CONFLICT (user_id) DO UPDATE SET token_hash = EXCLUDED.token_hash, '
+            'created_at = EXCLUDED.created_at, last_used_at = NULL',
+            (user_id, token_hash, _to_sql_value(created_at)))
+
+    def touch_calendar_token(self, token_hash: str, used_at: datetime) -> None:
+        self._execute('UPDATE calendar_tokens SET last_used_at = %s WHERE token_hash = %s',
+                      (_to_sql_value(used_at), token_hash))
+
     ##########
     # DELETE #
     ##########
@@ -424,6 +450,9 @@ class PostgresRepository(Repository):
     def delete_timekeeping(self, doc_id: str):
         self._delete_by_id(Table.TIMEKEEPING_TABLE, doc_id)
 
+    def delete_calendar_token(self, user_id: str) -> None:
+        self._execute('DELETE FROM calendar_tokens WHERE user_id = %s', (user_id,))
+
     def delete_event_attendances(self, event_type: Event, event_doc_id: str):
         spec = self._spec(_attendance_table(event_type))
         self._execute(
@@ -435,7 +464,7 @@ class PostgresRepository(Repository):
         return result.rowcount
 
     def delete_user_data(self, user_doc_id: str):
-        # Team-scoped leftovers first, then the global identity pair - one transaction,
+        # Team-scoped leftovers first, then the global rows - one transaction,
         # so a failure never leaves a half-deleted user behind.
         team_id = current_team_id()
         with self.pool.connection() as connection:
@@ -445,6 +474,7 @@ class PostgresRepository(Repository):
                                (user_doc_id, team_id))
             connection.execute('DELETE FROM temp_data WHERE user_doc_id = %s AND team_id = %s',
                                (user_doc_id, team_id))
+            connection.execute('DELETE FROM calendar_tokens WHERE user_id = %s', (user_doc_id,))
             connection.execute('DELETE FROM users_to_state WHERE user_id = %s', (user_doc_id,))
             connection.execute('DELETE FROM users WHERE id = %s', (user_doc_id,))
 
