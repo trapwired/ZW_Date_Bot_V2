@@ -8,34 +8,36 @@ from Enums.Event import Event
 from Enums.Role import Role
 from Enums import Audience
 
+from domain.EventVisibility import visible_event_types
+
 from Utils import Format
 from Utils import PrintUtils
 
+from features.calendarfeed import CalendarFeedMenu
 from features.events import EventsMenu
 from features.language import LanguageMenu
 
 from localization.Translator import t
 
-EVENT_TYPES_IN_ORDER = [Event.GAME, Event.TRAINING, Event.TIMEKEEPING]
-
 
 class EventsView:
     PAGE_SIZE = 8
 
-    def __init__(self, event_service, attendance_service, statistics_service):
+    def __init__(self, event_service, attendance_service, statistics_service, calendar_feed_enabled: bool):
         self.event_service = event_service
         self.attendance_service = attendance_service
         self.statistics_service = statistics_service
+        self.calendar_feed_enabled = calendar_feed_enabled
 
     def build_list(self, user_to_state, telegram_id: int, selected_type: Event | None,
                    page: int = 0) -> tuple[str, InlineKeyboardMarkup | None]:
         role = user_to_state.role
         events_by_type = self._upcoming_by_type(role)
         if len(events_by_type) == 0:
-            # Even the empty list keeps the language entry - a new member's first
-            # screen is often this one.
+            # Even the empty list keeps the member entries - a new member's first
+            # screen is often this one, and a subscription fills up later on its own.
             return (t('There are no upcoming events at the moment.'),
-                    InlineKeyboardMarkup([LanguageMenu.build_entry_row()]))
+                    InlineKeyboardMarkup(self._member_entry_rows()))
         available_types = list(events_by_type.keys())
         if selected_type not in events_by_type:
             selected_type = available_types[0]
@@ -58,8 +60,7 @@ class EventsView:
                 callback_data=EventsMenu.encode_card(selected_type, event.doc_id))])
         if last_page > 0:
             rows.append(EventsMenu.build_page_row(selected_type, page, last_page))
-        # The per-member language switch lives on the menu every member opens.
-        rows.append(LanguageMenu.build_entry_row())
+        rows += self._member_entry_rows()
 
         header = t('<b>Upcoming {event_type}</b>',
                    event_type=Format.escape(t(EventsMenu.FILTER_LABELS[selected_type])))
@@ -90,11 +91,15 @@ class EventsView:
         markup = EventsMenu.build_card_markup(event_type, doc_id, can_attend, is_admin=user_to_state.is_admin)
         return text, markup
 
+    def _member_entry_rows(self) -> list[list[InlineKeyboardButton]]:
+        # The per-member entries (calendar subscription, language switch) live on the
+        # menu every member opens.
+        rows = [CalendarFeedMenu.build_entry_row()] if self.calendar_feed_enabled else []
+        rows.append(LanguageMenu.build_entry_row())
+        return rows
+
     def _upcoming_by_type(self, role: Role) -> dict[Event, list]:
-        # Timekeeping events are deliberately hidden from spectators.
-        types = [t for t in EVENT_TYPES_IN_ORDER
-                 if not (role is Role.SPECTATOR and t is Event.TIMEKEEPING)]
-        by_type = {t: self.event_service.get_upcoming(t) for t in types}
+        by_type = {t: self.event_service.get_upcoming(t) for t in visible_event_types(role)}
         return {t: events for t, events in by_type.items() if len(events) > 0}
 
     def _list_button_label(self, event, own_attendances: dict, role: Role) -> str:

@@ -9,6 +9,10 @@ tracks each player's attendance.
 - 📅 **Events & attendance** — games, trainings and timekeeping duties as inline
   cards: details, live counts, Yes / No / Unsure buttons and calendar export on one
   message.
+- 📆 **Calendar subscription** — a personal, live `.ics` link per member: subscribe once
+  in Apple or Google Calendar and the season's games, trainings and timekeeping duties
+  appear (✅ yes, ❓ unsure or unanswered; declined ones disappear). A new link revokes
+  the old one.
 - 🔔 **Reminders** — scheduled private nudges for unanswered events, trainer
   summaries, and a warning when too few players are available for a game.
 - 👥 **Roles & admin** — admin is a flag orthogonal to the membership role
@@ -37,6 +41,7 @@ src/
                TelegramService, UserStateService, SchedulingService, ...
   features/    one folder per capability, each owning its Node(s) + Service:
                eventmgmt · attendance · stats · roles · website · onboarding · menu
+               · calendarfeed
   domain/      entities + business rules (policies, parsing) — no Telegram, no SQL
   data/        DataAccess + PostgresRepository (the storage boundary)
   Enums/  Utils/   shared cross-cutting code

@@ -1,7 +1,8 @@
-"""Dead-man ping for the polling bot: no HTTP endpoint exists, so liveness is proven
-actively - a job on the bot's own event loop pings healthchecks.io. If the process,
-the loop or the job queue silently dies, the ping stops and the check alerts
-(alert on absence of success - the box cannot report its own death)."""
+"""Dead-man ping for the polling bot: an HTTP endpoint now exists (the calendar feed), but
+it says nothing about the polling loop, so liveness is still proven actively - a job on
+the bot's own event loop pings healthchecks.io. If the process, the loop or the job queue
+silently dies, the ping stops and the check alerts (alert on absence of success - the
+box cannot report its own death)."""
 import logging
 import os
 

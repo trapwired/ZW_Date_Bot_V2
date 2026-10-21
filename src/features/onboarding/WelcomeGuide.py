@@ -29,7 +29,9 @@ def _player_guide(team_name: str) -> str:
              '🔔 <b>Reminders</b> - no answer yet for an upcoming event? The bot sends you '
              'a private reminder ahead of time. Answer once and it stays quiet.\n\n'
              '📆 <b>Calendar</b> - every event card has a calendar button that sends the '
-             'event as a file for your phone\'s calendar app.\n\n'
+             'event as a file for your phone\'s calendar app. A personal subscription link '
+             '(«📆 Subscribe calendar» in the events list, or /calendar) keeps the whole season '
+             'in your phone\'s calendar, each event marked ✅ or ❓ by your answer.\n\n'
              '🌐 <b>Website</b> - tap <code>website</code> for the team\'s page.\n\n'
              '❓ /help shows everything you can do; /privacy explains what data the bot keeps.',
              team=Format.escape(team_name))

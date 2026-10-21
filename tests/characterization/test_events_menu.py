@@ -35,8 +35,9 @@ async def test_events_entry_sends_event_list_with_card_buttons(node_handler, dat
     await drive(node_handler, PLAYER_ID, "Events")
 
     buttons = _buttons(_last_markup(bot, PLAYER_ID))
-    # One card button per event, plus the trailing per-member language entry.
-    assert [b.callback_data for b in buttons] == [EventsMenu.encode_card(Event.GAME, game.doc_id), 'LANG#P']
+    # One card button per event, plus the trailing per-member entries (calendar, language).
+    assert [b.callback_data for b in buttons] == [EventsMenu.encode_card(Event.GAME, game.doc_id),
+                                                  'CAL#S', 'LANG#P']
     assert_no_error_reported(bot)
 
 

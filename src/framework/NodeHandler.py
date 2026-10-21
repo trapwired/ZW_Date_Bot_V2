@@ -45,6 +45,9 @@ from features.roles.AssignRolesCallbackNode import AssignRolesCallbackNode
 from features.roles.RenamePlayerNode import RenamePlayerNode
 from features.language import LanguageMenu
 from features.language.LanguageCallbackNode import LanguageCallbackNode
+from features.calendarfeed import CalendarFeedMenu
+from features.calendarfeed.CalendarFeedCallbackNode import CalendarFeedCallbackNode
+from features.calendarfeed.CalendarFeedService import CalendarFeedService
 from features.shvsync import SyncMenu
 from features.shvsync.ShvSyncCallbackNode import ShvSyncCallbackNode
 from features.shvsync.ShvSyncService import ShvSyncService
@@ -109,7 +112,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                  user_state_service: UserStateService, ics_service: IcsService,
                  data_access: DataAccess, trigger_service: TriggerService, event_service: EventService,
                  attendance_service: AttendanceService, role_service: RoleService, website_service: WebsiteService,
-                 statistics_service: StatisticsService, team_service: TeamService):
+                 statistics_service: StatisticsService, team_service: TeamService,
+                 calendar_feed_service: CalendarFeedService):
         super().__init__(self.handle_message)
         self.bot = bot
         self.user_state_service = user_state_service
@@ -121,10 +125,12 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
         self.website_service = website_service
         self.statistics_service = statistics_service
         self.team_service = team_service
+        self.calendar_feed_service = calendar_feed_service
         self.team_registration = TeamRegistration(bot, telegram_service, user_state_service, team_service,
                                                   data_access, self)
 
-        self.events_view = EventsView(event_service, attendance_service, statistics_service)
+        self.events_view = EventsView(event_service, attendance_service, statistics_service,
+                                      calendar_feed_service.enabled)
 
         self.nodes = self.initialize_nodes(telegram_service, user_state_service, data_access, api_config)
         self.initialize_callback_nodes(telegram_service, data_access, trigger_service, ics_service,
@@ -264,10 +270,12 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                      self.team_service)
 
         default_node = DefaultNode(UserState.DEFAULT, telegram_service, user_state_service, data_access,
-                                   self.website_service, self.events_view, self.team_service)
+                                   self.website_service, self.events_view, self.team_service,
+                                   self.calendar_feed_service)
         default_node.add_transition('events', default_node.handle_events)
         default_node.add_transition('admin', default_node.handle_admin, audience=Audience.ADMINS)
         default_node.add_transition('website', default_node.handle_website)
+        default_node.add_transition('/calendar', default_node.handle_calendar, in_keyboard=False)
         default_node.add_transition('/privacy', default_node.handle_privacy, audience=Audience.REALLY_EVERYONE,
                                     in_keyboard=False)
 
@@ -328,6 +336,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
                                                            user_state_service, self)
         self.shv_sync_callback_node = ShvSyncCallbackNode(telegram_service, data_access, trigger_service,
                                                           user_state_service, self.shv_sync_service)
+        self.calendar_feed_callback_node = CalendarFeedCallbackNode(telegram_service, data_access, trigger_service,
+                                                                    self.calendar_feed_service)
 
     def do_checks(self, api_config: ApiConfig):
         check_all_user_states_have_node(self.nodes)
@@ -353,6 +363,8 @@ class NodeHandler(BaseHandler[Update, CallbackContext, None]):
             return self.language_callback_node
         if SyncMenu.is_shv_sync_callback(callback_data):
             return self.shv_sync_callback_node
+        if CalendarFeedMenu.is_calendar_feed_callback(callback_data):
+            return self.calendar_feed_callback_node
         return None
 
     def get_node(self, user_state: UserState):

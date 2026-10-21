@@ -20,7 +20,9 @@ existing members joined before the guide existed and won't `/start` again. Repla
 > reminder ahead of time. Answer once and it stays quiet.
 >
 > 📆 **Calendar** — every event card has a calendar button that sends the event as a
-> file for your phone's calendar app.
+> file for your phone's calendar app. A personal subscription link («📆 Subscribe
+> calendar» in the events list, or `/calendar`) keeps the whole season in your phone's
+> calendar, each event marked ✅ or ❓ by your answer.
 >
 > 🌐 **Website** — tap `website` for the team's page.
 >

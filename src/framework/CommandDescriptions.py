@@ -12,6 +12,7 @@ class CommandDescriptions(object):
         'website': 'Show the website-link of the team',
         '/cancel': 'Cancel the current input and go back to the main menu',
         '/language': 'Change the language I talk to you in',
+        '/calendar': 'Subscribe to your team\'s events in your phone\'s calendar app',
     }
 
     @classmethod

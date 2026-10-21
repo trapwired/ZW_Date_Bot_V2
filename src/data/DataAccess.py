@@ -1,8 +1,10 @@
+from datetime import datetime
+
 import pandas as pd
 from multipledispatch import dispatch
 
 from data.RepositoryFactory import create_repository
-from data.Tables import EVENT_ATTENDANCE_TABLES
+from data.Tables import EVENT_ATTENDANCE_TABLES, EVENT_TABLES
 
 from Enums.UserState import UserState
 from Enums.Table import Table
@@ -11,6 +13,7 @@ from Enums.AttendanceState import AttendanceState
 from Enums.Event import Event
 from Enums.EventField import EventField
 
+from domain.entities.CalendarToken import CalendarToken
 from domain.entities.Game import Game
 from domain.entities.Team import Team
 from domain.entities.TelegramUser import TelegramUser
@@ -230,6 +233,15 @@ class DataAccess(object):
             timekeepings_list.append(new_timekeeping)
         return sorted(timekeepings_list, key=lambda t: t.timestamp)
 
+    def get_events_since(self, event_type: Event, since: datetime) -> list:
+        # The calendar feed's window: past events included, unlike get_ordered_*.
+        if since.tzinfo is None:
+            raise ValueError('since must be timezone-aware')
+        rows = self.repository.get_events_since(EVENT_TABLES[event_type], since)
+        event_class = {Event.GAME: Game, Event.TRAINING: Training, Event.TIMEKEEPING: TimekeepingEvent}[event_type]
+        return sorted((event_class.from_dict(row.id, row.to_dict()) for row in rows),
+                      key=lambda event: event.timestamp)
+
     def get_all_players(self) -> [TelegramUser]:
         all_users_to_state = self.repository.get_all_active_players_to_state()
         all_players = []
@@ -363,6 +375,23 @@ class DataAccess(object):
     def delete_shv_sync_decision(self, decision: ShvSyncDecision):
         self.repository.delete_shv_sync_decision(decision.doc_id)
 
+    def replace_calendar_token(self, user_doc_id: str, token_hash: str, created_at: datetime) -> None:
+        self.repository.replace_calendar_token(user_doc_id, token_hash, created_at)
+
+    def get_calendar_token(self, user_doc_id: str) -> CalendarToken | None:
+        row = self.repository.get_calendar_token_by_user(user_doc_id)
+        return CalendarToken.from_dict(row.id, row.to_dict()) if row else None
+
+    def find_calendar_token_by_hash(self, token_hash: str) -> CalendarToken | None:
+        row = self.repository.get_calendar_token_by_hash(token_hash)
+        return CalendarToken.from_dict(row.id, row.to_dict()) if row else None
+
+    def touch_calendar_token(self, token_hash: str, used_at: datetime) -> None:
+        self.repository.touch_calendar_token(token_hash, used_at)
+
+    def delete_calendar_token(self, user_doc_id: str) -> None:
+        self.repository.delete_calendar_token(user_doc_id)
+
     def add_names(self, doc_id_list: list) -> list[TelegramUser]:
         result = []
         for doc in doc_id_list:
@@ -444,7 +473,7 @@ class DataAccess(object):
 
     def delete_user_data(self, user_doc_id: str) -> None:
         """Permanently delete one user everywhere: attendance answers, reminder
-        statistics, wizard drafts, state and identity. Irreversible."""
+        statistics, wizard drafts, calendar-feed token, state and identity. Irreversible."""
         self.repository.delete_user_data(user_doc_id)
 
     def reset_statistics(self) -> int:

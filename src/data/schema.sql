@@ -131,3 +131,16 @@ CREATE TABLE IF NOT EXISTS settings (
     PRIMARY KEY (team_id, id)
 );
 ALTER TABLE settings ADD COLUMN IF NOT EXISTS shv_sync_disabled boolean NOT NULL DEFAULT false;
+
+-- One live calendar-feed link per user (hash only: the raw token is shown once and
+-- never stored). Global like users: the feed server finds the row by hash first and
+-- resolves the user's team afterwards.
+CREATE TABLE IF NOT EXISTS calendar_tokens (
+    id           text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    token_hash   text NOT NULL,
+    user_id      text NOT NULL,
+    created_at   timestamptz NOT NULL,
+    last_used_at timestamptz
+);
+CREATE UNIQUE INDEX IF NOT EXISTS calendar_tokens_hash ON calendar_tokens (token_hash);
+CREATE UNIQUE INDEX IF NOT EXISTS calendar_tokens_user ON calendar_tokens (user_id);

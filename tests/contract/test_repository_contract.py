@@ -7,6 +7,7 @@ tenancy scoping).
 """
 from datetime import datetime, timedelta
 
+import pandas as pd
 import pytest
 
 from Enums.AttendanceState import AttendanceState
@@ -18,15 +19,21 @@ from Enums.UserState import UserState
 from data.TenantContext import set_current_team, reset_current_team
 
 from domain.entities.Attendance import Attendance
+from domain.entities.CalendarToken import CalendarToken
 from domain.entities.Game import Game
 from domain.entities.Settings import Settings
 from domain.entities.Team import Team
 from domain.entities.TelegramUser import TelegramUser
 from domain.entities.TempData import TempData
+from domain.entities.Training import Training
 from domain.entities.UsersToState import UsersToState
 
+from Utils import DateTimeUtils
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, \
     NoTempDataFoundException
+
+
+_CREATED_AT = DateTimeUtils.add_zurich_timezone(pd.Timestamp(2030, 6, 1, 12, 0))
 
 
 def _seed_user(repository, telegram_id=777):
@@ -127,6 +134,48 @@ def test_future_events_excludes_past(repository):
     assert [row.id for row in rows] == [future_id]
 
 
+def test_events_since_includes_the_boundary_and_excludes_earlier_events(repository):
+    since = DateTimeUtils.add_zurich_timezone(pd.Timestamp(2030, 6, 1, 18, 0))
+    repository.add(Game(since - timedelta(minutes=1), 'before', 'X'), Table.GAMES_TABLE)
+    on_boundary = repository.add(Game(since, 'boundary', 'Y'), Table.GAMES_TABLE)
+    after = repository.add(Game(since + timedelta(days=30), 'after', 'Z'), Table.GAMES_TABLE)
+    repository.add(Training(since + timedelta(hours=1), 'other table'), Table.TRAININGS_TABLE)
+
+    assert {row.id for row in repository.get_events_since(Table.GAMES_TABLE, since)} == {on_boundary, after}
+    # The same instant written as a UTC wall clock must select the same events.
+    in_utc = since.tz_convert('UTC')
+    assert {row.id for row in repository.get_events_since(Table.GAMES_TABLE, in_utc)} == {on_boundary, after}
+    assert len(repository.get_events_since(Table.TRAININGS_TABLE, since)) == 1
+
+
+def test_events_since_is_scoped_to_the_current_team(repository):
+    since = DateTimeUtils.add_zurich_timezone(pd.Timestamp(2030, 6, 1, 18, 0))
+    repository.add(Game(since, 'ours', 'X'), Table.GAMES_TABLE)
+
+    other_team = repository.add(Team('Other FC', group_chat_id=-200789, spectator_password='other-pass'),
+                                Table.TEAMS_TABLE)
+    token = set_current_team(other_team)
+    try:
+        assert repository.get_events_since(Table.GAMES_TABLE, since) == []
+    finally:
+        reset_current_team(token)
+
+
+def test_data_access_events_since_returns_sorted_entities_and_rejects_naive_bounds(repository, api_config):
+    from data.DataAccess import DataAccess
+    data_access = DataAccess(api_config, repository=repository)
+    since = DateTimeUtils.add_zurich_timezone(pd.Timestamp(2030, 6, 1, 18, 0))
+    later = repository.add(Game(since + timedelta(days=2), 'later', 'B'), Table.GAMES_TABLE)
+    sooner = repository.add(Game(since, 'sooner', 'A'), Table.GAMES_TABLE)
+
+    games = data_access.get_events_since(Event.GAME, since)
+
+    assert [game.doc_id for game in games] == [sooner, later]
+    assert all(isinstance(game, Game) for game in games)
+    with pytest.raises(ValueError):
+        data_access.get_events_since(Event.GAME, datetime(2030, 6, 1, 18, 0))
+
+
 def test_attendance_isolated_per_event_type(repository):
     user = _seed_user(repository)
     game_att = Attendance(user.doc_id, 'event-1', AttendanceState.YES)
@@ -197,6 +246,8 @@ def test_delete_user_data_purges_every_trace_of_one_user_only(repository):
     repository.get_player_metric(user)  # self-creates the metric row
     draft = TempData(user.doc_id, Event.GAME, None, None, None, 5, 71)
     draft.add_document_id(repository.add(draft, Table.TEMP_DATA_TABLE))
+    repository.replace_calendar_token(user.doc_id, 'hash-gone', _CREATED_AT)
+    repository.replace_calendar_token(other.doc_id, 'hash-stays', _CREATED_AT)
 
     repository.delete_user_data(user.doc_id)
 
@@ -210,9 +261,106 @@ def test_delete_user_data_purges_every_trace_of_one_user_only(repository):
     with pytest.raises(NoTempDataFoundException):
         repository.get_temp_data(user.doc_id)
 
+    assert repository.get_calendar_token_by_user(user.doc_id) is None
+    assert repository.get_calendar_token_by_hash('hash-gone') is None
+
     # The other user's rows are untouched.
     assert repository.get_user_state(other) is not None
     assert len(repository.get_all_user_event_attendance(other, Event.GAME)) == 1
+    assert repository.get_calendar_token_by_hash('hash-stays') is not None
+
+
+# --- calendar tokens --------------------------------------------------------
+
+def test_replacing_a_calendar_token_retires_the_previous_one(repository):
+    user = _seed_user(repository)
+    repository.replace_calendar_token(user.doc_id, 'hash-old', _CREATED_AT)
+    repository.replace_calendar_token(user.doc_id, 'hash-new', _CREATED_AT + timedelta(hours=1))
+
+    assert repository.get_calendar_token_by_hash('hash-old') is None
+    current = repository.get_calendar_token_by_user(user.doc_id)
+    token = CalendarToken.from_dict(current.id, current.to_dict())
+    assert token.token_hash == 'hash-new'
+    assert token.created_at == _CREATED_AT + timedelta(hours=1)  # same instant, tz-independent
+    assert repository.get_calendar_token_by_hash('hash-new').id == current.id
+
+
+def test_calendar_token_lookup_by_hash_and_by_user_keeps_users_apart(repository):
+    alice = _seed_user(repository, telegram_id=901)
+    bob = _seed_user(repository, telegram_id=902)
+    repository.replace_calendar_token(alice.doc_id, 'hash-alice', _CREATED_AT)
+    repository.replace_calendar_token(bob.doc_id, 'hash-bob', _CREATED_AT)
+
+    by_hash = repository.get_calendar_token_by_hash('hash-alice')
+    assert by_hash.to_dict()['userId'] == alice.doc_id
+    assert by_hash.to_dict()['lastUsedAt'] is None
+    assert repository.get_calendar_token_by_user(bob.doc_id).to_dict()['tokenHash'] == 'hash-bob'
+
+    assert repository.get_calendar_token_by_hash('no-such-hash') is None
+    assert repository.get_calendar_token_by_user('no-such-user') is None
+
+
+def test_touching_a_calendar_token_stamps_last_used_and_replacing_resets_it(repository):
+    user = _seed_user(repository)
+    repository.replace_calendar_token(user.doc_id, 'hash-1', _CREATED_AT)
+    used_at = _CREATED_AT + timedelta(days=2)
+
+    repository.touch_calendar_token('hash-1', used_at)
+    stamped = CalendarToken.from_dict('x', repository.get_calendar_token_by_hash('hash-1').to_dict())
+    assert stamped.last_used_at == used_at
+    assert stamped.created_at == _CREATED_AT  # touching never moves the creation time
+
+    repository.touch_calendar_token('no-such-hash', used_at)  # lost a race with a rotation: no-op
+
+    repository.replace_calendar_token(user.doc_id, 'hash-2', _CREATED_AT)
+    assert repository.get_calendar_token_by_user(user.doc_id).to_dict()['lastUsedAt'] is None
+
+
+def test_deleting_a_calendar_token_by_user_leaves_other_users_alone(repository):
+    alice = _seed_user(repository, telegram_id=903)
+    bob = _seed_user(repository, telegram_id=904)
+    repository.replace_calendar_token(alice.doc_id, 'hash-alice', _CREATED_AT)
+    repository.replace_calendar_token(bob.doc_id, 'hash-bob', _CREATED_AT)
+
+    repository.delete_calendar_token(alice.doc_id)
+    repository.delete_calendar_token(alice.doc_id)  # already gone: no-op
+
+    assert repository.get_calendar_token_by_user(alice.doc_id) is None
+    assert repository.get_calendar_token_by_hash('hash-alice') is None
+    assert repository.get_calendar_token_by_hash('hash-bob') is not None
+
+
+def test_calendar_tokens_need_no_tenant_context(repository):
+    # The feed server resolves a token before it knows which team the user belongs to.
+    tenant = set_current_team(None)
+    try:
+        repository.replace_calendar_token('user-1', 'hash-1', _CREATED_AT)
+        assert repository.get_calendar_token_by_hash('hash-1') is not None
+        repository.touch_calendar_token('hash-1', _CREATED_AT)
+        assert repository.get_calendar_token_by_user('user-1') is not None
+        repository.delete_calendar_token('user-1')
+        assert repository.get_calendar_token_by_hash('hash-1') is None
+    finally:
+        reset_current_team(tenant)
+
+
+def test_data_access_calendar_token_wrappers_return_entities(repository, api_config):
+    from data.DataAccess import DataAccess
+    data_access = DataAccess(api_config, repository=repository)
+    user = _seed_user(repository)
+    assert data_access.get_calendar_token(user.doc_id) is None
+    assert data_access.find_calendar_token_by_hash('hash-1') is None
+
+    data_access.replace_calendar_token(user.doc_id, 'hash-1', _CREATED_AT)
+    data_access.touch_calendar_token('hash-1', _CREATED_AT + timedelta(hours=3))
+
+    token = data_access.get_calendar_token(user.doc_id)
+    assert (token.token_hash, token.user_id, token.created_at) == ('hash-1', user.doc_id, _CREATED_AT)
+    assert token.last_used_at == _CREATED_AT + timedelta(hours=3)
+    assert data_access.find_calendar_token_by_hash('hash-1').doc_id == token.doc_id
+
+    data_access.delete_calendar_token(user.doc_id)
+    assert data_access.get_calendar_token(user.doc_id) is None
 
 
 # --- temp data, settings, teams --------------------------------------------

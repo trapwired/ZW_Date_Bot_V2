@@ -21,6 +21,7 @@ from Enums.Role import Role
 from Enums.Event import Event
 
 from domain.Season import get_current_season_dates
+from domain.entities.CalendarToken import CalendarToken
 from domain.entities.DatabaseEntity import DatabaseEntity
 from domain.entities.Game import Game
 from domain.entities.Team import Team
@@ -305,8 +306,25 @@ class InMemoryRepository(Repository):
         return self._collection(table).where(
             _FieldFilter("timestamp", ">", datetime.now())).get()
 
+    def get_events_since(self, table: Table, since: datetime) -> list:
+        # Compared as instants, like Postgres' timestamptz. The generic _FieldFilter
+        # would strip tz and compare wall clocks across zones.
+        return [row for row in self._collection(table).get()
+                if row.to_dict().get('timestamp') is not None
+                and pd.Timestamp(row.to_dict()['timestamp']) >= since]
+
     def get_shv_sync_decisions(self) -> list:
         return self._collection(Table.SHV_SYNC_DECISIONS_TABLE).get()
+
+    def get_calendar_token_by_user(self, user_id: str):
+        rows = self._collection(Table.CALENDAR_TOKENS_TABLE).where(
+            _FieldFilter("userId", "==", user_id)).get()
+        return rows[0] if rows else None
+
+    def get_calendar_token_by_hash(self, token_hash: str):
+        rows = self._collection(Table.CALENDAR_TOKENS_TABLE).where(
+            _FieldFilter("tokenHash", "==", token_hash)).get()
+        return rows[0] if rows else None
 
     def delete_shv_sync_decision(self, doc_id: str):
         self._collection(Table.SHV_SYNC_DECISIONS_TABLE).document(doc_id).delete()
@@ -435,6 +453,16 @@ class InMemoryRepository(Repository):
         user.add_document_id(user_id)  # sets doc_id in place (add_document_id mutates + returns self)
         return self.update(user, Table.USERS_TABLE)
 
+    def replace_calendar_token(self, user_id: str, token_hash: str, created_at: datetime) -> None:
+        self.delete_calendar_token(user_id)
+        self._collection(Table.CALENDAR_TOKENS_TABLE).add(
+            CalendarToken(token_hash, user_id, created_at).to_dict())
+
+    def touch_calendar_token(self, token_hash: str, used_at: datetime) -> None:
+        collection = self._collection(Table.CALENDAR_TOKENS_TABLE)
+        for row in collection.where(_FieldFilter("tokenHash", "==", token_hash)).get():
+            collection.document(row.id).update({'lastUsedAt': used_at})
+
     ##########
     # DELETE #
     ##########
@@ -450,6 +478,11 @@ class InMemoryRepository(Repository):
 
     def delete_timekeeping(self, doc_id: str):
         self._collection(Table.TIMEKEEPING_TABLE).document(doc_id).delete()
+
+    def delete_calendar_token(self, user_id: str) -> None:
+        self._delete_documents(
+            Table.CALENDAR_TOKENS_TABLE,
+            self._collection(Table.CALENDAR_TOKENS_TABLE).where(_FieldFilter("userId", "==", user_id)).get())
 
     def delete_event_attendances(self, event_type: Event, event_doc_id: str):
         table = self._get_event_attendance_table(event_type)
@@ -470,6 +503,7 @@ class InMemoryRepository(Repository):
         self._delete_documents(
             Table.TEMP_DATA_TABLE,
             self._collection(Table.TEMP_DATA_TABLE).where(_FieldFilter("userDocId", "==", user_doc_id)).get())
+        self.delete_calendar_token(user_doc_id)
         self._delete_documents(
             Table.USERS_TO_STATE_TABLE,
             self._collection(Table.USERS_TO_STATE_TABLE).where(_FieldFilter("userId", "==", user_doc_id)).get())
