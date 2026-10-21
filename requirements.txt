@@ -6,7 +6,7 @@ anyio==4.15.1
 APScheduler==3.11.3
 arrow==1.4.0
 attrs==26.1.0
-certifi==2026.7.22
+certifi==2026.10.19
 frozenlist==1.8.0
 h11==0.16.0
 h2==4.4.1
