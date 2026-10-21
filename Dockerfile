@@ -7,7 +7,12 @@ FROM python:3.13-slim
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# pip is build-time only. Its vendored libraries (certifi, urllib3, ...) are scanned by
+# the deploy's trivy gate like our own pins but are not covered by Dependabot, so a
+# vendored CVE would block every deploy until a pip release ships the fix. Removing pip
+# keeps the scan on requirements.txt alone.
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall -y pip
 
 COPY src/ src/
 COPY scripts/ scripts/
