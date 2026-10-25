@@ -4,11 +4,13 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
+    assignees: ["trapwired"]
     directory: /
     schedule: { interval: weekly }
     cooldown: { default-days: 7 }
     groups: { actions: { patterns: ["*"] } }
   - package-ecosystem: pip
+    assignees: ["trapwired"]
     directory: /
     schedule: { interval: weekly }
     cooldown: { default-days: 7 }
