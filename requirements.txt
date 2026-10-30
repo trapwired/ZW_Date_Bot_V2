@@ -27,7 +27,7 @@ six==1.17.0
 TatSu==5.15.1
 typing_extensions==4.16.0
 tzdata==2026.5
-tzlocal==5.4.4
+tzlocal==5.4.5
 yarl==1.25.1
 psycopg[binary]==3.3.6
 psycopg-pool==3.3.3
