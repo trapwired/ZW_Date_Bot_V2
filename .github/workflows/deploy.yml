@@ -1,8 +1,8 @@
 name: Deploy
 # test:   every pull request against main and every push to main, so a direct push can no
 #         longer deploy untested code (2026-10-07; the job used to live in ci.yml, PR-only).
-# deploy: push to main only, after test; its own concurrency group serializes deploys
-#         without queueing PR test runs behind them.
+# deploy: push to main only, after test, and only while the commit is still main's head;
+#         its own concurrency group serializes deploys without queueing PR test runs behind them.
 #
 # Pull-based deploy (DomiCloud WIREGUARD_MIGRATION_PLAN.md, Phase B): build the image on
 # the runner, push it to GHCR, then poke a signed webhook. The VPS pulls the image itself
@@ -59,9 +59,33 @@ jobs:
       - name: Run tests
         run: pytest -q
 
-  deploy:
+  # The deploy concurrency group cancels by ARRIVAL order - whichever run's test finishes
+  # last keeps its deploy - not by commit order, so a burst of merges can ship an older
+  # commit and cancel the head's run (2026-11-06: #117 deployed over #118). Gate the deploy
+  # on this commit still being main's head; the deploy job is skipped otherwise.
+  still-main-head:
     needs: test
     if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      is_head: ${{ steps.check.outputs.is_head }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          head=$(gh api "repos/${GITHUB_REPOSITORY}/branches/main" --jq .commit.sha)
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            echo "is_head=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_head=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::main moved on to ${head}; not deploying ${GITHUB_SHA}"
+          fi
+
+  deploy:
+    needs: [test, still-main-head]
+    if: needs.still-main-head.outputs.is_head == 'true'
     runs-on: ubuntu-latest
     # Two quick merges would race on the image push + deploy; serialize and drop
     # superseded runs. Job-level so PR test runs never wait behind a deploy.
