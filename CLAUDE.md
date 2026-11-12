@@ -117,10 +117,11 @@ overflow. Team stamping of admin buttons: `framework/TeamStamp.py`.
 commit that flow's staged value. The team-name, announce and rename commit handlers check
 that the user's state is their own flow's — do the same in every new flow.
 
-**Time.** CI runs UTC and the image sets no `TZ`; the domain is Europe/Zurich. A test that
-fails around midnight is a frame bug until proven otherwise — verify under `TZ=UTC`.
-Take "now" from `DateTimeUtils.get_local_now()` (aware Zurich time, whatever the host
-clock); a naive `datetime.now()` / `datetime.today()` follows the host clock.
+**Time.** CI and prod run UTC (no `TZ` set anywhere); the domain is Europe/Zurich. Take
+"now" and "today" from `DateTimeUtils.get_local_now()` — in tests too; a naive
+`datetime.now()` / `date.today()` follows the host clock. The suite passes under any host
+clock: check a time change with `TZ=UTC` and `TZ=Asia/Tokyo`. `tests/helpers.host_clock_in`
+moves the clock inside one test.
 
 **Sending.** `TelegramService._send_message` swallows Forbidden (sets the user INACTIVE)
 and "chat not found" and DMs the maintainer, so one dead chat cannot abort a loop.

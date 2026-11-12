@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pandas as pd
 
 from framework.Services.SchedulingService import SchedulingService
+from Utils import DateTimeUtils
 
 
 class _RecordingTelegram:
@@ -52,7 +53,7 @@ def _event(doc_id, day, hour, **extra):
 
 
 async def test_previous_day_training_reminder_sends_one_summary_per_event(api_config):
-    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+    tomorrow = DateTimeUtils.get_local_now().date() + datetime.timedelta(days=1)
     trainings = [_event("t1", tomorrow, 18), _event("t2", tomorrow, 20)]
     telegram = _RecordingTelegram()
     scheduling = SchedulingService(_StubDataAccess(trainings=trainings), telegram, object(), api_config)
@@ -65,7 +66,7 @@ async def test_previous_day_training_reminder_sends_one_summary_per_event(api_co
 
 
 async def test_same_day_game_reminder_sends_one_summary_per_game(api_config):
-    today = datetime.date.today()
+    today = DateTimeUtils.get_local_now().date()
     games = [_event("g1", today, 14, opponent="rivals"), _event("g2", today, 16, opponent="foes")]
     telegram = _RecordingTelegram()
     scheduling = SchedulingService(_StubDataAccess(games=games), telegram, object(), api_config)

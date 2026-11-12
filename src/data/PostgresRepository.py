@@ -305,7 +305,7 @@ class PostgresRepository(Repository):
             (SETTINGS_DOC_ID, current_team_id(), settings.website, settings.shv_sync_disabled))
 
     def get_future_events(self, table: Table) -> list:
-        return self._select(table, 'timestamp > %s', (datetime.now(),))
+        return self._select(table, 'timestamp > %s', (_to_sql_value(DateTimeUtils.get_local_now()),))
 
     def get_events_since(self, table: Table, since: datetime) -> list:
         return self._select(table, 'timestamp >= %s', (_to_sql_value(since),))

@@ -12,12 +12,13 @@ from domain.entities.Team import Team
 from domain.entities.Training import Training
 from domain.EventDateTimeParser import parse
 from data.TenantContext import team_context
+from Utils import DateTimeUtils
 
 TEAM_B_GROUP = -200999888
 
 
 def _training_in_days(data_access, days: int, location: str):
-    day = datetime.date.today() + datetime.timedelta(days=days)
+    day = DateTimeUtils.get_local_now().date() + datetime.timedelta(days=days)
     return data_access.add(Training(parse(f"{day.strftime('%d.%m.%Y')} 19:00").value, location))
 
 
