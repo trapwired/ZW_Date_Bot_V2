@@ -56,7 +56,6 @@ workflows with `docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:latest
 ## PR conventions
 
 - Branch from a freshly fetched `origin/main`; one concern per PR; tests green before push.
-- Copilot reviews each PR: address the valid comments, resolve the threads.
 - Before merging, read the PR's commit list: GitHub "potential fix" auto-commits can change
   code silently.
 - Merge = squash, branch deleted: `gh pr merge N --squash --delete-branch`. Stacked PRs
