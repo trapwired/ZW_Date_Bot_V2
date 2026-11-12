@@ -29,10 +29,6 @@ tracks each player's attendance.
 
 ## Architecture
 
-Interactive diagram:
-**[Architecture Overview (Excalidraw)](https://app.excalidraw.com/s/3a3Hj2SHqi7/eD5BdVpW7v)**
-— the request pipeline, feature slices, and background jobs at a glance.
-
 The codebase is organized as **vertical slices** on a shared spine:
 
 ```
