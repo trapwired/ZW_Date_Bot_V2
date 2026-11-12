@@ -12,9 +12,8 @@ says more, it wins.
    language, 0005 admin flag.
 4. `docs/local-dev.md` — local bot + Postgres stack, seed script, local SHV sync run.
 5. `todos.md` — the backlog, with entry points.
-6. As needed: `docs/CALENDAR_FEED_PLAN.md` (calendar feed), `docs/onboarding-guide.md`,
-   `deploy/VPS_HANDOFF.md`, and the header comments of `.github/workflows/deploy.yml` and
-   `Dockerfile`.
+6. As needed: `docs/CALENDAR_FEED_PLAN.md` (calendar feed), `docs/onboarding-guide.md`, and
+   the header comments of `.github/workflows/deploy.yml` and `Dockerfile`.
 
 ## Run the tests
 
@@ -80,9 +79,9 @@ to go ahead.
 ## Server work: not from this repo
 
 Sessions in this repo do not SSH to the VPS. Server-side changes — server compose file,
-server `api_config.ini`, reverse proxy, DNS, SQL on prod — are written up as a hand-off in
-the shape of `deploy/VPS_HANDOFF.md` and run by the DomiCloud ops session or the owner,
-after the deploy they depend on. Never start a second process on the prod bot token:
+server `api_config.ini`, reverse proxy, DNS, SQL on prod — are written up as a hand-off
+(numbered steps, each naming who runs it, the target file, a check; a rollback at the end)
+and run by the DomiCloud ops session or the owner, after the deploy they depend on. Never start a second process on the prod bot token:
 Telegram allows one `getUpdates` poller per token; local dev uses its own bot.
 
 ## Intended behaviour that looks like a bug

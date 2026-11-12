@@ -45,16 +45,16 @@ the English half) — every unknown, rotated or malformed link answers
 exactly that. A real link comes from the bot itself: events menu → «📆 Kalender
 abonnieren» (or `/calendar` in a private chat) sends it; `curl` it to see the `.ics`.
 A calendar app on another device cannot reach `127.0.0.1`, so subscribing from a
-phone needs a tunnel or the real-device checks after the prod switch-on
-(`deploy/VPS_HANDOFF.md`).
+phone needs a tunnel or a real-device check against prod
+(`docs/CALENDAR_FEED_PLAN.md` §10).
 
 ## Real-data variant (pre-merge confidence)
 
 Restore last night's central VPS backup into the local postgres — real shapes,
-and a free restore drill:
+and a free restore drill. Copy `zwdatebot-postgres_pg_dumpall.sql.gz` from the server's
+backups first (where they live is in the ops docs, not in this public repo):
 
 ```bash
-scp ubuntu@179.237.110.135:/srv/backups/<date>/zwdatebot-postgres_pg_dumpall.sql.gz .
 gunzip -c zwdatebot-postgres_pg_dumpall.sql.gz | \
   docker exec -i zwdatebot-local-postgres psql -U zwdatebot postgres
 docker exec zwdatebot-local-postgres psql -U zwdatebot -d postgres \

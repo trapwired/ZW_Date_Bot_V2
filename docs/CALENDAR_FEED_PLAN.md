@@ -1,7 +1,7 @@
 # Plan: personal calendar feed («Kalender-Abo») for ZW Date Bot
 
-**Status:** implemented on branch `feat/calendar-feed`, 2026-10-21; hand-offs + device test
-open (§11, §12). This file doubles as the handover. **Pattern source:** JugiBot
+**Status:** live in prod since 2026-10-21; the real-device checks (§10, §12) are still
+open. This file doubles as the handover. **Pattern source:** JugiBot
 `~/dev/JugiBot/docs/CALENDAR_FEED_HANDOVER.md` (sections referenced as «handover §n»).
 **Decided 21.10. with Domi:** hostname `zwbot.fluffyoctopus.ch`, ✅/❓ title prefix,
 window = current season incl. past, entry = events-menu row + `/calendar`.
@@ -215,13 +215,13 @@ Bot surface
 - [x] Locale catalogs de/gsw/fr/it (every new `t()` literal; `test_translation_catalogs` enforces) — also the `/privacy` text (one paragraph on the calendar link) and the welcome guide's «📆 Calendar» paragraph
 
 Config + infra
-- [x] `[Calendar] public_origin` (empty = feature off: no row, `/calendar` says «nicht eingerichtet», no HTTP server), `http_port` (default 8080); example config done. **Open:** server file (hand-off, `deploy/VPS_HANDOFF.md` §3)
+- [x] `[Calendar] public_origin` (empty = feature off: no row, `/calendar` says «nicht eingerichtet», no HTTP server), `http_port` (default 8080); example config done. Server file: set by hand at switch-on (hand-off)
 - [x] `requirements.txt`: `aiohttp` (pinned, with its dependencies)
 - [x] `Dockerfile` comment + `EXPOSE 8080` and `Heartbeat.py` docstring («no HTTP endpoint exists» is gone)
-- [x] `deploy/compose.yml`: `networks: web: external: true` + `networks: [default, db, web]` on the bot service; repo copy synced with the server's `db` network. **Open:** the server copy is edited by hand (pull-based deploy, `deploy/VPS_HANDOFF.md` §2)
+- [x] `deploy/compose.yml`: `networks: web: external: true` + `networks: [default, db, web]` on the bot service; repo copy synced with the server's `db` network. The server copy is edited by hand (pull-based deploy)
 - [x] `deploy/compose.local.yml`: `ports: ["127.0.0.1:8080:8080"]` on the bot service; `docs/local-dev.md`: a `curl http://127.0.0.1:8080/cal/x.ics` step
-- [ ] DNS (Domi): `A zwbot.fluffyoctopus.ch → 179.237.110.135` at the fluffyoctopus.ch registrar; must resolve before Caddy issues the cert
-- [ ] Caddy (DomiCloud chat, via a hand-off file like `~/dev/hoisite/host/VPS_HANDOFF.md`):
+- [x] DNS (Domi): `A zwbot.fluffyoctopus.ch` → the VPS, at the fluffyoctopus.ch registrar; must resolve before Caddy issues the cert
+- [x] Caddy (DomiCloud chat, via a hand-off):
   ```
   zwbot.fluffyoctopus.ch {
       import sec_headers
@@ -232,7 +232,6 @@ Config + infra
   The token sits in the path → it lands in Caddy's access log (accepted, handover §4; drop
   `import accesslog` for this host if you'd rather not). The bot's own aiohttp access log
   omits the request line (§6), so only Caddy has it.
-  Written up for the DomiCloud chat in `deploy/VPS_HANDOFF.md` §4 (not yet executed).
 - [x] Docs: `docs/ARCHITECTURE.md` (HTTP ingress, new slice, the «no HTTP» assumption gone; also its stale ADR list), `README.md` features, this file → now the handover
 
 ## 9. Security model (delta to handover §4)
@@ -273,8 +272,8 @@ Implemented in `tests/unit/test_{calendar_feed,calendar_feed_service,calendar_to
 
 ## 11. Work breakdown and delegation
 
-1. **PR 1 «calendar feed, dormant»** — **implemented** on `feat/calendar-feed`, 2026-10-21;
-   merge + deploy pending (one PR; ~2 focused sessions)
+1. **PR 1 «calendar feed, dormant»** — **merged and live**, 2026-10-21 (one PR; ~2
+   focused sessions)
    - Fable (orchestrator, critical path): extract `visible_event_types` from `EventsView`,
      `main.py`/composition-root wiring, final review.
    - Opus: `domain/calendar/*` + unit tests; `CalendarFeedService` + `FeedRoutes` + `HttpServer`
@@ -282,7 +281,7 @@ Implemented in `tests/unit/test_{calendar_feed,calendar_feed_service,calendar_to
    - Sonnet: repository methods on all three implementations + contract tests; `Table`/`Tables`/
      config; locale catalogs + `CommandDescriptions`; compose/Dockerfile/Heartbeat/docs edits.
    Deploy: nothing visible in prod (feature off).
-2. **Hand-offs, in parallel (pending; written up in `deploy/VPS_HANDOFF.md`):** DNS record (Domi); Caddy
+2. **Hand-offs, in parallel (done):** DNS record (Domi); Caddy
    block + server `compose.yml` network (DomiCloud chat); server `api_config.ini` `[Calendar]`
    section only — no `[Tables]` key needed (§8) (Domi).
 3. **Switch-on:** restart container → `curl -i https://zwbot.fluffyoctopus.ch/cal/x.ics` (expect 404

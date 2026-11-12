@@ -1,8 +1,7 @@
 # Lives at /srv/apps/zwdatebot/compose.yml on the VPS.
 # NOT shipped automatically (pull-based deploy) — when this file changes, update the
 # server copy by hand. Long polling plus the calendar feed on :8080 (aiohttp in the bot
-# process): no `ports:`, Caddy reaches it over the external `web` network
-# (site block + steps: deploy/VPS_HANDOFF.md).
+# process): no `ports:`, Caddy reaches it over the external `web` network.
 #
 # The bot runs on [Database] backend = postgres + dsn =
 # postgresql://zwdatebot:...@postgres:5432/zwdatebot in the server's api_config.ini.
