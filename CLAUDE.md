@@ -119,8 +119,8 @@ that the user's state is their own flow's — do the same in every new flow.
 
 **Time.** CI runs UTC and the image sets no `TZ`; the domain is Europe/Zurich. A test that
 fails around midnight is a frame bug until proven otherwise — verify under `TZ=UTC`.
-`DateTimeUtils.get_local_now()` localizes the process's naive clock: it is Zurich time only
-when the process runs in Zurich.
+Take "now" from `DateTimeUtils.get_local_now()` (aware Zurich time, whatever the host
+clock); a naive `datetime.now()` / `datetime.today()` follows the host clock.
 
 **Sending.** `TelegramService._send_message` swallows Forbidden (sets the user INACTIVE)
 and "chat not found" and DMs the maintainer, so one dead chat cannot abort a loop.

@@ -14,4 +14,4 @@ def utc_to_zurich_timestamp(utc_datetime: pd.Timestamp):
     return pd.Timestamp(result)
 
 def get_local_now():
-    return add_zurich_timezone(pd.Timestamp.now())
+    return pd.Timestamp.now(tz=ZURICH_TIMEZONE)
