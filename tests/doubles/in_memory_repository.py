@@ -303,15 +303,18 @@ class InMemoryRepository(Repository):
         self._collection(Table.SETTINGS_TABLE).document(self.SETTINGS_DOC_ID).set(settings.to_dict())
 
     def get_future_events(self, table: Table) -> list:
-        return self._collection(table).where(
-            _FieldFilter("timestamp", ">", datetime.now())).get()
+        now = DateTimeUtils.get_local_now()
+        return self._events_where_start(table, lambda start: start > now)
 
     def get_events_since(self, table: Table, since: datetime) -> list:
+        return self._events_where_start(table, lambda start: start >= since)
+
+    def _events_where_start(self, table: Table, matches) -> list:
         # Compared as instants, like Postgres' timestamptz. The generic _FieldFilter
         # would strip tz and compare wall clocks across zones.
         return [row for row in self._collection(table).get()
                 if row.to_dict().get('timestamp') is not None
-                and pd.Timestamp(row.to_dict()['timestamp']) >= since]
+                and matches(pd.Timestamp(row.to_dict()['timestamp']))]
 
     def get_shv_sync_decisions(self) -> list:
         return self._collection(Table.SHV_SYNC_DECISIONS_TABLE).get()

@@ -85,7 +85,7 @@ class Repository(ABC):
     @abstractmethod
     def get_events_since(self, table: Table, since: datetime) -> list:
         """The current team's events of one type starting at or after `since`, which
-        must be timezone-aware (compared as an instant, unlike get_future_events)."""
+        must be timezone-aware (compared as an instant)."""
         ...
 
     @abstractmethod

@@ -2,9 +2,11 @@
 backend for season-scoped queries (player metrics, relevant events)."""
 from datetime import datetime
 
+from Utils import DateTimeUtils
+
 
 def get_current_season_dates():
-    today = datetime.today()
+    today = DateTimeUtils.get_local_now()
     current_year = today.year
 
     if today.month < 7:

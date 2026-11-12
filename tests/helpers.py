@@ -1,4 +1,7 @@
 """Shared helpers for characterization tests: Update factories, user seeding, flow drivers."""
+import os
+import time
+from contextlib import contextmanager
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -189,3 +192,18 @@ def assert_no_error_reported(bot) -> None:
     """Fail if the bot was asked to send a maintainer error report — catches silent failures."""
     errors = [m.text for m in bot.sent if "⚠️ ERROR" in m.text]
     assert not errors, f"NodeHandler reported error(s) to maintainer:\n{errors}"
+
+
+@contextmanager
+def host_clock_in(tz_name: str):
+    previous = os.environ.get('TZ')
+    os.environ['TZ'] = tz_name
+    time.tzset()
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop('TZ', None)
+        else:
+            os.environ['TZ'] = previous
+        time.tzset()

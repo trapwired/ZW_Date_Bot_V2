@@ -32,6 +32,8 @@ from Utils import DateTimeUtils
 from Utils.CustomExceptions import ObjectNotFoundException, MoreThanOneObjectFoundException, \
     NoTempDataFoundException
 
+from tests.helpers import host_clock_in
+
 
 _CREATED_AT = DateTimeUtils.add_zurich_timezone(pd.Timestamp(2030, 6, 1, 12, 0))
 
@@ -132,6 +134,17 @@ def test_future_events_excludes_past(repository):
     future_id = repository.add(Game(datetime.now() + timedelta(days=1), 'future', 'Y'), Table.GAMES_TABLE)
     rows = repository.get_future_events(Table.GAMES_TABLE)
     assert [row.id for row in rows] == [future_id]
+
+
+def test_future_events_compare_as_instants_whatever_the_host_clock(repository):
+    now = DateTimeUtils.get_local_now()
+    repository.add(Game(now - pd.Timedelta(hours=1), 'started an hour ago', 'X'), Table.GAMES_TABLE)
+    in_an_hour = repository.add(Game(now + pd.Timedelta(hours=1), 'in an hour', 'Y'), Table.GAMES_TABLE)
+
+    with host_clock_in('Asia/Tokyo'):
+        rows = repository.get_future_events(Table.GAMES_TABLE)
+
+    assert [row.id for row in rows] == [in_an_hour]
 
 
 def test_events_since_includes_the_boundary_and_excludes_earlier_events(repository):
