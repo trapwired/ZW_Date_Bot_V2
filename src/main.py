@@ -5,6 +5,7 @@ import telegram
 from telegram import BotCommand
 from telegram.ext import ApplicationBuilder, ContextTypes
 
+from Utils import DateTimeUtils
 from Utils.ApiConfig import ApiConfig
 
 from framework import Heartbeat
@@ -106,49 +107,24 @@ def run_job_queue():
     job_queue.run_once(register_bot_commands, 1)
     Heartbeat.register(job_queue)
 
-    # Individual event reminders
-    job_queue.run_daily(  # Game Reminders, each day at 11:59 local time
-        scheduling_service.send_individual_game_reminders,
-        datetime.time(9, 59, 0))
+    schedule_daily_jobs(job_queue, scheduling_service, shv_sync_service)
 
-    job_queue.run_daily(  # Training Reminders, each day at 17:59 local time
-        scheduling_service.send_individual_training_reminders,
-        datetime.time(15, 59, 0))
 
-    job_queue.run_daily(  # TKE Reminders, each day at 14:59 local time
-        scheduling_service.send_individual_tke_reminders,
-        datetime.time(12, 59, 0))
-
-    # Summary to trainers / organisators
-    job_queue.run_daily(  # Game summaries, each day at 7:59 local time
-        scheduling_service.send_game_summary,
-        datetime.time(5, 59, 0))
-
-    job_queue.run_daily(  # Training summaries, each day at 18:59 local time
-        scheduling_service.send_training_summary,
-        datetime.time(16, 59, 0))
-
-    job_queue.run_daily(  # Timekeeping summaries, each day at 18:59 local time
-        scheduling_service.send_timekeeping_summary,
-        datetime.time(16, 59, 0))
-
-    # Game Reminder, on day of game
-    job_queue.run_daily(  # same day at 7:00
-        scheduling_service.send_same_day_game_reminder,
-        datetime.time(6, 0, 0)
-    )
-    # Training Reminder, on day before training
-    job_queue.run_daily(  # previous day at 20:30
-        scheduling_service.send_previous_day_training_reminder,
-        datetime.time(7, 30, 0)
-    )
-
-    # SHV schedule sync, each day at 6:30 local time - before the 7:59 game
-    # summaries, so a same-day change is already synced when summaries go out.
-    job_queue.run_daily(
-        shv_sync_service.sync_all_teams,
-        datetime.time(4, 30, 0)
-    )
+def schedule_daily_jobs(job_queue, scheduling_service: SchedulingService, shv_sync_service: ShvSyncService):
+    daily_jobs_at_zurich_time = [
+        (shv_sync_service.sync_all_teams,                         datetime.time(6, 30)),  # before the game summaries, so they see same-day changes
+        (scheduling_service.send_same_day_game_reminder,          datetime.time(7, 0)),
+        (scheduling_service.send_game_summary,                    datetime.time(7, 59)),
+        (scheduling_service.send_previous_day_training_reminder,  datetime.time(8, 30)),
+        (scheduling_service.send_individual_game_reminders,       datetime.time(11, 59)),
+        (scheduling_service.send_individual_tke_reminders,        datetime.time(14, 59)),
+        (scheduling_service.send_individual_training_reminders,   datetime.time(17, 59)),
+        (scheduling_service.send_training_summary,                datetime.time(18, 59)),
+        (scheduling_service.send_timekeeping_summary,             datetime.time(18, 59)),
+    ]
+    for callback, zurich_time in daily_jobs_at_zurich_time:
+        # A naive time runs on UTC (no Defaults.tzinfo), so it would move by an hour with DST.
+        job_queue.run_daily(callback, zurich_time.replace(tzinfo=DateTimeUtils.ZURICH_TIMEZONE))
 
 
 if __name__ == "__main__":
