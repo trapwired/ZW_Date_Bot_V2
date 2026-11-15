@@ -1,6 +1,6 @@
-"""Unit: mapping the SHV matchcenter payload onto ShvGame (the HTTP call itself is
-not under test - parse_game is the seam)."""
-from features.shvsync.ShvApiClient import parse_game, parse_team_id
+"""Unit: mapping the SHV matchcenter payload onto ShvGame, and the TLS trust setup
+(the HTTP call itself is not under test - parse_game is the seam)."""
+from features.shvsync.ShvApiClient import parse_game, parse_team_id, shv_tls_context
 
 TEAM_ID = 41317
 
@@ -56,3 +56,13 @@ def test_team_id_is_parsed_from_matchcenter_website_variants():
 def test_non_matchcenter_websites_yield_no_team_id():
     assert parse_team_id('https://zueri-west.ch') is None
     assert parse_team_id('https://www.handball.ch/de/news') is None
+
+
+def test_tls_context_trusts_the_bundled_intermediate_on_top_of_certifi():
+    trusted_subjects = [dict(field[0] for field in cert['subject'])
+                        for cert in shv_tls_context().get_ca_certs()]
+
+    assert {'commonName': 'SSL.com TLS Issuing RSA CA R1',
+            'organizationName': 'SSL Corporation',
+            'countryName': 'US'} in trusted_subjects
+    assert len(trusted_subjects) > 100

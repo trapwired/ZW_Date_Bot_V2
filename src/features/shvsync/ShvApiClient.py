@@ -6,8 +6,11 @@ never pass silently. `objectId` is the stable per-game identifier ('gameId' in t
 same payload is always 0, 'gameNumber' is 'prov.' for unconfirmed games).
 """
 import re
+import ssl
 from dataclasses import dataclass
+from pathlib import Path
 
+import certifi
 import httpx
 import pandas as pd
 
@@ -18,6 +21,9 @@ SHV_API_URL = 'https://www.handball.ch/Umbraco/Api/MatchCenter/Query'
 # The site's WAF rejects default library user agents (httpx gets a 403, curl passes),
 # so identify as a plain browser.
 _REQUEST_HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; ZWDateBot/1.0)'}
+
+# handball.ch omits its intermediate certificate and OpenSSL does not fetch it, so we ship it.
+_MISSING_INTERMEDIATE_CERT = Path(__file__).with_name('ssl_com_tls_issuing_rsa_ca_r1.pem')
 
 _GAMES_QUERY = """
 query($teamId: Int) {
@@ -55,8 +61,15 @@ class ShvGame:
     is_played: bool
 
 
+def shv_tls_context() -> ssl.SSLContext:
+    context = ssl.create_default_context(cafile=certifi.where())
+    context.load_verify_locations(cafile=_MISSING_INTERMEDIATE_CERT)
+    return context
+
+
 async def fetch_games(shv_team_id: int) -> list[ShvGame]:
-    async with httpx.AsyncClient(timeout=30, headers=_REQUEST_HEADERS) as client:
+    async with httpx.AsyncClient(timeout=30, headers=_REQUEST_HEADERS,
+                                 verify=shv_tls_context()) as client:
         response = await client.post(
             SHV_API_URL, json={'query': _GAMES_QUERY, 'variables': {'teamId': shv_team_id}})
         response.raise_for_status()
